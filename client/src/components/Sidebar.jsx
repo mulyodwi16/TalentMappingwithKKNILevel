@@ -36,7 +36,7 @@ export default function Sidebar() {
   const links = role === "admin"
     ? [...NAV.user, ...NAV.hrd, ...NAV.admin]
     : role === "hrd"
-    ? [...NAV.hrd, ...NAV.user]
+    ? NAV.hrd
     : NAV.user;
 
   return (

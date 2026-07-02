@@ -1,5 +1,6 @@
-import { Suspense, lazy, useEffect, useRef } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { Sun, Moon } from "lucide-react";
 
 const HeroCanvas = lazy(() => import("../three/HeroCanvas.jsx"));
 
@@ -61,6 +62,12 @@ function StatCard({ value, suffix, label }) {
 }
 
 export default function Landing() {
+  const [dark, setDark] = useState(() => localStorage.getItem("theme") === "dark");
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+    localStorage.setItem("theme", dark ? "dark" : "light");
+  }, [dark]);
+
   return (
     <div className="min-h-screen bg-slate-950 text-white overflow-x-hidden">
       {/* Navbar */}
@@ -69,6 +76,10 @@ export default function Landing() {
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-600 to-tosca-500 flex items-center justify-center text-xs font-bold">K</div>
           <span className="font-bold text-sm">KKNI Talent Mapping</span>
         </div>
+        <button onClick={() => setDark(d => !d)} title={dark ? "Light mode" : "Dark mode"}
+          className="p-2 rounded-xl text-slate-400 hover:text-white transition-colors">
+          {dark ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
         <Link to="/login"    className="text-sm text-slate-400 hover:text-white transition-colors">Masuk</Link>
         <Link to="/register" className="btn-primary text-sm py-2 px-4">Daftar Gratis</Link>
       </nav>
