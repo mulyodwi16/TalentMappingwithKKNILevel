@@ -7,6 +7,19 @@ import { dirname, join } from "node:path";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
+// Maps user position/department keywords → available SKKNI folder names
+const PROFESI_MAP = [
+  { folder: "video-editing", keywords: ["video", "edit", "editor", "sinema", "film", "produksi", "konten", "content", "media"] },
+];
+
+export function detectProfesi(position = "", department = "") {
+  const t = `${position} ${department}`.toLowerCase();
+  for (const { folder, keywords } of PROFESI_MAP) {
+    if (keywords.some((k) => t.includes(k))) return folder;
+  }
+  return null; // no matching SKKNI available
+}
+
 export function loadDoc(profesi = "video-editing") {
   return JSON.parse(readFileSync(join(HERE, profesi, "skkni.json"), "utf8"));
 }
@@ -29,7 +42,8 @@ export function retrieve(query, doc, k = 3) {
     .map((r) => r.unit);
 }
 
-export async function analyze({ profile, query, profesi = "video-editing", k = 3 }) {
+export async function analyze({ profile, query, profesi, k = 3 }) {
+  profesi = profesi || "video-editing";
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) throw new Error("OPENROUTER_API_KEY not set (see .env.example)");
   const model = process.env.OPENROUTER_MODEL || "deepseek/deepseek-chat";

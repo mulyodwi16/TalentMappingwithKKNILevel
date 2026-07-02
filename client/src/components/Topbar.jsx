@@ -1,26 +1,26 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bell, Sun, Moon } from "lucide-react";
+import { Bell, Sun, Moon, Menu } from "lucide-react";
 import api from "../api/client.js";
 import useAuthStore from "../store/authStore.js";
 
 const TITLES = {
-  "/app/dashboard":      "Dashboard",
-  "/app/cv-upload":      "Upload CV",
-  "/app/exam":           "Ujian Kompetensi",
-  "/app/skill-gap":      "Skill Gap Analyzer",
-  "/app/learning-path":  "Learning Path",
-  "/app/hrd":            "Dashboard HRD",
-  "/app/admin":          "Dashboard Admin",
-  "/app/admin/users":    "Manajemen Pengguna",
-  "/app/admin/rules":    "Aturan Mapping",
-  "/app/admin/questions":"Bank Soal",
-  "/app/admin/requests": "Inbox Request",
-  "/app/admin/audit":    "Audit Log",
+  "/app/dashboard":       "Dashboard",
+  "/app/cv-upload":       "Upload CV",
+  "/app/exam":            "Ujian Kompetensi",
+  "/app/skill-gap":       "Skill Gap Analyzer",
+  "/app/learning-path":   "Learning Path",
+  "/app/hrd":             "Dashboard HRD",
+  "/app/admin":           "Dashboard Admin",
+  "/app/admin/users":     "Manajemen Pengguna",
+  "/app/admin/rules":     "Aturan Mapping",
+  "/app/admin/questions": "Bank Soal",
+  "/app/admin/requests":  "Inbox Request",
+  "/app/admin/audit":     "Audit Log",
 };
 
-export default function Topbar() {
+export default function Topbar({ onBurger }) {
   const { pathname } = useLocation();
   const { user } = useAuthStore();
   const [showNotif, setShowNotif] = useState(false);
@@ -52,19 +52,32 @@ export default function Topbar() {
     return () => document.removeEventListener("click", close);
   }, [showNotif]);
 
-  const iconBtn = "p-2 rounded-xl transition-colors";
+  const iconBtn = "p-2 rounded-xl transition-colors hover:bg-brand-50";
 
   return (
-    <header className="h-14 flex items-center px-6 gap-3"
-      style={{ backgroundColor: "var(--bg-surface)", borderBottom: "1px solid var(--border)" }}>
-      <h1 className="flex-1 text-sm font-semibold" style={{ color: "var(--text-base)" }}>
+    <header
+      className="h-14 flex items-center px-4 sm:px-6 gap-2 sm:gap-3 sticky top-0 z-20"
+      style={{ backgroundColor: "var(--bg-surface)", borderBottom: "1px solid var(--border)" }}
+    >
+      {/* Burger — mobile only */}
+      <button
+        onClick={onBurger}
+        className={`lg:hidden ${iconBtn}`}
+        style={{ color: "var(--text-3)" }}
+        aria-label="Buka menu"
+      >
+        <Menu size={20} />
+      </button>
+
+      {/* Page title */}
+      <h1 className="flex-1 text-sm font-semibold truncate" style={{ color: "var(--text-base)" }}>
         {TITLES[pathname] || "KKNI Talent"}
       </h1>
 
       {/* Theme toggle */}
       <button
         onClick={() => setDark((d) => !d)}
-        title={dark ? "Switch to light mode" : "Switch to dark mode"}
+        title={dark ? "Mode terang" : "Mode gelap"}
         className={iconBtn}
         style={{ color: "var(--text-3)" }}
       >
@@ -77,6 +90,7 @@ export default function Topbar() {
           onClick={() => setShowNotif((v) => !v)}
           className={`${iconBtn} relative`}
           style={{ color: "var(--text-3)" }}
+          aria-label="Notifikasi"
         >
           <Bell size={18} />
           {unread > 0 && (
@@ -102,7 +116,7 @@ export default function Topbar() {
               ) : (
                 notifs.slice(0, 10).map((n) => (
                   <div key={n.id} className="px-4 py-3 text-sm" style={{ borderBottom: "1px solid var(--border)", opacity: n.read ? 0.6 : 1 }}>
-                    <p className="font-medium mb-0.5 text-brand-600">{n.type.replace(/_/g, " ")}</p>
+                    <p className="font-medium mb-0.5 text-brand-600 capitalize">{n.type.replace(/_/g, " ")}</p>
                     <p className="text-xs" style={{ color: "var(--text-2)" }}>{n.message}</p>
                     <p className="text-xs mt-1" style={{ color: "var(--text-4)" }}>{new Date(n.createdAt).toLocaleString("id-ID")}</p>
                   </div>
@@ -114,7 +128,10 @@ export default function Topbar() {
       </div>
 
       {/* Avatar */}
-      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-600 to-tosca-500 flex items-center justify-center text-xs font-bold text-white">
+      <div
+        className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-600 to-tosca-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+        title={user?.name}
+      >
         {user?.name?.[0]?.toUpperCase() || "?"}
       </div>
     </header>

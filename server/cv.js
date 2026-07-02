@@ -30,8 +30,25 @@ export function extractProfile(text) {
   let education = "SMA"; // default
   for (const [code, re] of EDU) if (re.test(text)) { education = code; break; }
   const certifications = [...new Set(CERT_KEYWORDS.filter((c) => t.includes(c)))];
-  const years = [...text.matchAll(/(\d{1,2})\s*(tahun|thn|years?)/gi)].map((m) => +m[1]);
-  return { education, certifications, experienceYears: years.length ? Math.max(...years) : 0 };
+  const experienceYears = detectExperience(text);
+  return { education, certifications, experienceYears };
+}
+
+function detectExperience(text) {
+  // explicit "X tahun/years" wins
+  const explicit = [...text.matchAll(/(\d{1,2})\s*(tahun|thn|years?)/gi)].map((m) => +m[1]);
+  if (explicit.length) return Math.max(...explicit);
+
+  // date ranges: "2019 - 2024", "2019–2024", "2019 s/d 2024", "2019 sampai 2024"
+  const cur = new Date().getFullYear();
+  const re = /\b(19[7-9]\d|20[0-2]\d)\b\s*(?:[-–—]|s\/d|sampai|hingga|to)\s*(?:\w+\s+)?\b(19[7-9]\d|20[0-2]\d|sekarang|present|now)\b/gi;
+  const spans = [...text.matchAll(re)].map((m) => {
+    const s = +m[1];
+    const e = /sekarang|present|now/i.test(m[2]) ? cur : +m[2];
+    return e > s && e - s < 50 ? e - s : 0;
+  }).filter(Boolean);
+
+  return spans.length ? Math.max(...spans) : 0;
 }
 
 export async function pdfToText(buffer) {
@@ -49,6 +66,10 @@ function selfCheck() {
   console.assert(b.certifications.includes("editing"), "editing kw");
   const c = extractProfile("Magister Manajemen (S2), 10 tahun pengalaman.");
   console.assert(c.education === "S2" && c.experienceYears === 10, "S2/10y");
+  const d = extractProfile("S1 Komunikasi.\nPT Media Kreatif  2019 – 2024\nContent Producer");
+  console.assert(d.experienceYears === 5, "date range 2019-2024=5y, got " + d.experienceYears);
+  const e = extractProfile("S2 Manajemen.\nBekerja 2020 - sekarang sebagai HRD Manager.");
+  console.assert(e.experienceYears >= 4, "sekarang range, got " + e.experienceYears);
   console.log("cv selfCheck OK", JSON.stringify(a));
 }
 

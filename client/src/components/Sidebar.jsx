@@ -1,7 +1,8 @@
 import { NavLink, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard, Upload, ClipboardCheck, Target, BookOpen,
-  Users, Settings2, Mail, ScrollText, LogOut,
+  Users, Settings2, Mail, ScrollText, LogOut, X,
 } from "lucide-react";
 import useAuthStore from "../store/authStore.js";
 
@@ -28,9 +29,10 @@ const NAV = {
 
 const ROLE_LABEL = { user: "Pekerja", hrd: "HRD", admin: "Admin" };
 
-export default function Sidebar() {
+export default function Sidebar({ open, onClose }) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const role = user?.role || "user";
 
   const links = role === "admin"
@@ -40,9 +42,17 @@ export default function Sidebar() {
     : NAV.user;
 
   return (
-    <aside className="w-60 min-h-screen flex flex-col" style={{ backgroundColor: "var(--bg-surface)", borderRight: "1px solid var(--border)" }}>
-      {/* Logo */}
-      <div className="p-6" style={{ borderBottom: "1px solid var(--border)" }}>
+    <aside
+      className={[
+        "w-60 min-h-screen flex flex-col flex-shrink-0",
+        "fixed inset-y-0 left-0 z-40 lg:static lg:z-auto",
+        "transition-transform duration-300 ease-out",
+        open ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+      ].join(" ")}
+      style={{ backgroundColor: "var(--bg-surface)", borderRight: "1px solid var(--border)" }}
+    >
+      {/* Logo + close on mobile */}
+      <div className="p-5 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-600 to-tosca-500 flex items-center justify-center text-sm font-bold text-white">K</div>
           <div>
@@ -50,6 +60,13 @@ export default function Sidebar() {
             <p className="text-xs" style={{ color: "var(--text-4)" }}>Mapping System</p>
           </div>
         </div>
+        <button
+          onClick={onClose}
+          className="lg:hidden p-1.5 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors"
+          style={{ color: "var(--text-4)" }}
+        >
+          <X size={16} />
+        </button>
       </div>
 
       {/* User badge */}
@@ -62,7 +79,7 @@ export default function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
         {links.map(({ to, label, Icon }) => (
           <NavLink
             key={to}
@@ -90,7 +107,7 @@ export default function Sidebar() {
       {/* Logout */}
       <div className="p-4" style={{ borderTop: "1px solid var(--border)" }}>
         <button
-          onClick={() => { logout(); navigate("/login"); }}
+          onClick={() => { queryClient.clear(); logout(); navigate("/login"); }}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-red-50 hover:text-red-500 transition-all duration-200"
           style={{ color: "var(--text-3)" }}
         >

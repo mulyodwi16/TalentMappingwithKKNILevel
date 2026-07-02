@@ -23,28 +23,36 @@ export default function Register() {
   const upd = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-tosca-500/10 rounded-full blur-3xl" />
+    <div className="min-h-screen flex items-center justify-center p-4 py-12"
+      style={{ background: "linear-gradient(135deg, #eef2ff 0%, #f5f7ff 55%, #ede9fe 100%)" }}>
+
+      {/* decorative blobs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-32 -right-32 w-96 h-96 bg-violet-200/40 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 -left-16 w-80 h-80 bg-indigo-200/30 rounded-full blur-3xl" />
       </div>
 
       <div className="w-full max-w-md relative">
+        {/* logo + heading */}
         <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-600 to-tosca-500 flex items-center justify-center text-xl font-black mx-auto mb-4">K</div>
-          <h1 className="text-2xl font-bold text-white">Buat Akun Baru</h1>
-          <p className="text-slate-400 mt-1 text-sm">Mulai pemetaan KKNI Anda hari ini</p>
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-600 to-tosca-500 flex items-center justify-center text-xl font-black text-white mx-auto mb-4">K</div>
+          <h1 className="text-2xl font-bold" style={{ color: "var(--text-base)" }}>Buat Akun Baru</h1>
+          <p className="mt-1 text-sm" style={{ color: "var(--text-3)" }}>Mulai pemetaan KKNI Anda hari ini</p>
         </div>
 
-        <form onSubmit={(e) => { e.preventDefault(); register.mutate(form); }} className="card p-8 space-y-4">
+        <form
+          onSubmit={(e) => { e.preventDefault(); register.mutate(form); }}
+          className="card p-6 sm:p-8 space-y-4"
+        >
           {[
-            { key: "name",       label: "Nama Lengkap",  type: "text",     ph: "Nama Anda" },
-            { key: "email",      label: "Email",          type: "email",    ph: "email@contoh.com" },
-            { key: "password",   label: "Password",       type: "password", ph: "Min. 6 karakter" },
-            { key: "department", label: "Departemen",     type: "text",     ph: "Produksi, Marketing…" },
-            { key: "position",   label: "Jabatan",        type: "text",     ph: "Video Editor, Desainer…" },
+            { key: "name",       label: "Nama Lengkap", type: "text",     ph: "Nama Anda" },
+            { key: "email",      label: "Email",         type: "email",    ph: "email@contoh.com" },
+            { key: "password",   label: "Password",      type: "password", ph: "Min. 6 karakter" },
+            { key: "department", label: "Departemen",    type: "text",     ph: "Produksi, Marketing…" },
+            { key: "position",   label: "Jabatan",       type: "text",     ph: "Video Editor, Desainer…" },
           ].map(({ key, label, type, ph }) => (
             <div key={key}>
-              <label className="text-sm font-medium text-slate-300 mb-1.5 block">{label}</label>
+              <label className="text-sm font-medium mb-1.5 block" style={{ color: "var(--text-2)" }}>{label}</label>
               <input
                 className="input"
                 type={type}
@@ -60,14 +68,16 @@ export default function Register() {
             {register.isPending ? "Mendaftarkan…" : "Daftar Sekarang →"}
           </button>
 
-          <p className="text-center text-sm text-slate-500">
+          <p className="text-center text-sm" style={{ color: "var(--text-4)" }}>
             Sudah punya akun?{" "}
-            <Link to="/login" className="text-brand-400 hover:text-brand-300">Masuk</Link>
+            <Link to="/login" className="text-brand-600 hover:text-brand-700 font-medium">Masuk</Link>
           </p>
         </form>
 
         <p className="text-center mt-4">
-          <Link to="/" className="text-sm text-slate-600 hover:text-slate-400">← Kembali ke Beranda</Link>
+          <Link to="/" className="text-sm hover:text-brand-600 transition-colors" style={{ color: "var(--text-4)" }}>
+            ← Kembali ke Beranda
+          </Link>
         </p>
       </div>
     </div>

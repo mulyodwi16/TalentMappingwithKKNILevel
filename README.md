@@ -2,9 +2,9 @@
 
 Sistem pemetaan kompetensi pekerja berbasis standar KKNI (Kerangka Kualifikasi Nasional Indonesia).
 
-**Flow utama:** Upload CV → Auto-prediksi level KKNI → Ujian kompetensi → Skill gap radar → Learning path AI
+**Flow utama:** Upload CV → Auto-prediksi level KKNI → Ujian kompetensi → Skill gap analyzer → Learning path + kursus AvatarEdu
 
-**Stack:** Express 5 · SQLite + Prisma ORM · React 18 + Vite · Tailwind CSS · Recharts · Three.js
+**Stack:** Express 5 · SQLite + Prisma ORM · React 18 + Vite · Tailwind CSS · Recharts · OpenRouter (DeepSeek) · AvatarEdu.ai
 
 ---
 
@@ -40,10 +40,10 @@ Script ini otomatis:
 ```bash
 # 1. Backend
 cd server
-npm install              # otomatis jalankan prisma generate + db push
-npx prisma db push       # buat tabel di SQLite (wajib sebelum server start)
-node seed/seed.js        # isi data demo
-node server.js           # start server
+npm install
+npx prisma db push
+node --env-file=../.env seed/seed.js
+node --env-file=../.env server.js
 
 # 2. Frontend (terminal baru)
 cd client
@@ -61,9 +61,12 @@ Password semua akun: **`demo123`**
 
 | Email | Role | Akses |
 |---|---|---|
-| `user@demo.id` | Pekerja | Dashboard, CV upload, ujian, skill gap, learning path |
-| `hrd@demo.id` | HRD | Dashboard analitik, daftar pekerja, ekspor Excel |
+| `user@demo.id` | Pekerja (Budi Editor) | Dashboard, CV upload, ujian, skill gap, learning path |
+| `hrd@demo.id` | HRD (Siti HRD) | Dashboard analitik, daftar & filter pekerja, ekspor Excel |
 | `admin@demo.id` | Admin | Semua fitur + manajemen user, rules, soal, audit log |
+| `andi@demo.id` | Pekerja (Andi Sinema) | Demo pekerja SMK, Level 3 |
+| `dewi@demo.id` | Pekerja (Dewi Kreatif) | Demo pekerja D3, Level 5 |
+| `reza@demo.id` | Pekerja (Reza Sutradara) | Demo pekerja S1, Level 6, Readiness 90% |
 
 ---
 
@@ -71,14 +74,17 @@ Password semua akun: **`demo123`**
 
 | Fitur | Deskripsi |
 |---|---|
-| **CV Auto-Mapping** | Upload PDF → ekstrak pendidikan & sertifikasi → prediksi level KKNI otomatis |
-| **Ujian Kompetensi** | Bank soal terstandar SKKNI, timer, penilaian otomatis per kompetensi |
-| **Skill Gap Radar** | Radar chart kompetensi aktual vs target level, urutan prioritas gap |
-| **Learning Path** | Rekomendasi belajar berbasis gap, opsional analisis AI via OpenRouter |
-| **Dashboard HRD** | Distribusi level KKNI, readiness score, filter departemen, ekspor Excel |
-| **Panel Admin** | CRUD user/rules/soal, inbox request dari HRD, audit log semua aksi |
-| **Notifikasi** | Real-time bell notification untuk hasil ujian dan update request |
-| **Light/Dark Mode** | Toggle di pojok kanan atas topbar (ikon ☀️/🌙), default light mode |
+| **CV Auto-Mapping** | Upload PDF → ekstrak pendidikan, sertifikasi, pengalaman (termasuk deteksi range tahun `2019–2024`) → prediksi level KKNI |
+| **Ujian Kompetensi** | Bank soal terstandar SKKNI, timer, penilaian otomatis per kompetensi, riwayat percobaan |
+| **Skill Gap Analyzer** | Radar chart kompetensi aktual vs target level, urutan prioritas gap |
+| **Learning Path** | Rekomendasi internal berbasis gap + **kursus AvatarEdu.ai** yang otomatis dicarikan sesuai gap |
+| **AI Analysis** | Analisis gap via OpenRouter (DeepSeek) — aktif otomatis setelah ujian jika profesi terdeteksi (video editing, dll.) |
+| **Dashboard HRD** | Distribusi level KKNI, readiness score agregat, filter departemen/status/level, ekspor Excel |
+| **Panel Admin** | CRUD user/rules/soal/resource, inbox request dari HRD, audit log semua aksi |
+| **Notifikasi** | Bell notification untuk hasil ujian & update request, auto-refresh 30 detik |
+| **Light/Dark Mode** | Toggle di topbar, persisten via localStorage |
+| **Responsive** | Sidebar slide-in dengan burger menu di mobile, layout adaptif |
+| **Page Transitions** | Animasi fade+slide antar halaman, smooth scroll-to-top tiap navigasi |
 
 ---
 
@@ -86,51 +92,50 @@ Password semua akun: **`demo123`**
 
 ```
 KKNITalentMapping/
+├── .env                     # API keys (tidak di-commit)
 ├── run-all.bat              # start semua service (Windows)
-├── .env.example             # template env variable
 │
 ├── server/
 │   ├── server.js            # Express app entry point
 │   ├── prisma.js            # Prisma client singleton
-│   ├── cv.js                # PDF parsing & profile extraction
+│   ├── cv.js                # PDF parsing, profile extraction, date-range experience detection
 │   ├── env.js               # dotenv loader
 │   ├── prisma/
 │   │   └── schema.prisma    # 12 model: User, ExamAttempt, SkillAssessment, dll
 │   ├── routes/
 │   │   ├── auth.js          # POST /login, /register
 │   │   ├── user.js          # profile, CV parse, exam, skill gap, recommendations
-│   │   ├── hrd.js           # workers list, analytics, Excel export, requests
-│   │   └── admin.js         # CRUD users/rules/questions/resources, audit log
+│   │   ├── hrd.js           # workers list, analytics, Excel export
+│   │   ├── admin.js         # CRUD + audit log
+│   │   └── avataredu.js     # proxy ke AvatarEdu.ai API (key di server-side)
 │   ├── middleware/
 │   │   └── auth.js          # JWT verify, role guard
 │   └── seed/
-│       └── seed.js          # data demo (user, KKNI levels, competencies, soal)
+│       └── seed.js          # 9 KKNI levels, 6 competencies, 22 soal, 6 demo users
 │
 ├── client/
 │   ├── src/
-│   │   ├── App.jsx          # routing (react-router-dom)
-│   │   ├── index.css        # CSS vars light/dark theme + Tailwind
+│   │   ├── App.jsx          # routing dengan DashboardGate (redirect per role)
+│   │   ├── index.css        # CSS vars light/dark + page-enter animation
 │   │   ├── api/client.js    # axios wrapper
-│   │   ├── store/authStore.js  # Zustand auth state
+│   │   ├── store/authStore.js
 │   │   ├── components/
-│   │   │   ├── Layout.jsx   # sidebar + topbar wrapper
-│   │   │   ├── Sidebar.jsx  # nav per role (user/hrd/admin)
-│   │   │   ├── Topbar.jsx   # title, notif, theme toggle, avatar
+│   │   │   ├── Layout.jsx   # sidebar + topbar, smooth scroll, page transition
+│   │   │   ├── Sidebar.jsx  # nav per role, mobile slide-in, burger close
+│   │   │   ├── Topbar.jsx   # title, burger, notif, theme toggle, avatar
 │   │   │   └── ProtectedRoute.jsx
-│   │   ├── pages/
-│   │   │   ├── Landing.jsx  # halaman utama (Three.js)
-│   │   │   ├── Login.jsx
-│   │   │   ├── Register.jsx
-│   │   │   ├── user/        # Dashboard, CVUpload, Exam, SkillGap, LearningPath
-│   │   │   ├── hrd/         # HrdDashboard
-│   │   │   └── admin/       # AdminDashboard, UserManagement, RuleManagement,
-│   │   │                    #   QuestionBank, RequestInbox, AuditLogPage
-│   │   └── three/
-│   │       └── HeroCanvas.jsx  # Three.js particle background
+│   │   └── pages/
+│   │       ├── Landing.jsx
+│   │       ├── Login.jsx    # light indigo theme, role-based redirect, cache clear
+│   │       ├── Register.jsx # light indigo theme, responsive
+│   │       ├── user/        # Dashboard, CVUpload, Exam, SkillGap, LearningPath
+│   │       ├── hrd/         # HrdDashboard (worker table, charts, export)
+│   │       └── admin/       # AdminDashboard, UserManagement, RuleManagement,
+│   │                        #   QuestionBank, RequestInbox, AuditLogPage
 │   └── vite.config.js       # proxy /api → localhost:5000
 │
 └── kkni/
-    ├── analyze.js           # OpenRouter LLM integration
+    ├── analyze.js           # OpenRouter LLM + profesi detection dari position/department
     ├── extract-skkni.py     # ekstrak PDF SKKNI ke JSON
     └── video-editing/
         ├── skkni.json       # data kompetensi Video Editing (SKKNI 2014-118)
@@ -141,77 +146,92 @@ KKNITalentMapping/
 
 ## Environment Variables
 
-Buat file `.env` di folder `server/` (copy dari `server/.env.example` atau buat manual):
+Buat file `.env` di root project (sejajar `server/` dan `client/`):
 
 ```env
 PORT=5000
 JWT_SECRET=ganti-dengan-secret-panjang-acak
 NODE_ENV=development
+CLIENT_URL=http://localhost:5173
 
-# Opsional — untuk fitur AI learning path
+# AI learning path (opsional)
 OPENROUTER_API_KEY=sk-or-xxxx
+OPENROUTER_MODEL=deepseek/deepseek-v4-flash
+
+# Kursus AvatarEdu (opsional)
+AVATAREDU_API_KEY=av_xxxx
 ```
 
-> **Catatan:** File `.env` sudah ada di `.gitignore` — jangan di-commit.
+> **Catatan:** File `.env` ada di `.gitignore` — jangan di-commit.
 
 ---
 
-## Fitur LLM (Opsional)
+## Integrasi AvatarEdu.ai
 
-Learning path AI menggunakan [OpenRouter](https://openrouter.ai) (gratis tier tersedia).
+Kursus dari [AvatarEdu.ai](https://avataredu.ai) otomatis muncul di Learning Path berdasarkan gap kompetensi user.
 
+**Setup:**
+1. Dapatkan API key dari superadmin AvatarEdu
+2. Tambahkan ke `.env`: `AVATAREDU_API_KEY=av_xxxx`
+3. Restart server — bagian "Kursus di AvatarEdu" langsung aktif di Learning Path
+
+**Cara kerja:**
+- Backend proxy di `/api/avataredu/courses` (key tidak pernah ke browser)
+- Otomatis search berdasarkan nama gap competency user
+- Preview kursus via iframe embed (key di-inject server-side)
+- Enroll → redirect ke avataredu.ai
+
+Untuk profesi baru (selain Video Editing), tambahkan folder `kkni/<profesi>/skkni.json` dan daftarkan di `PROFESI_MAP` di `kkni/analyze.js`.
+
+---
+
+## Integrasi OpenRouter (AI Analysis)
+
+Analisis gap kompetensi menggunakan LLM via [OpenRouter](https://openrouter.ai).
+
+**Setup:**
 1. Daftar di openrouter.ai → buat API key
-2. Tambahkan ke `server/.env`:
-   ```
-   OPENROUTER_API_KEY=sk-or-xxxx
-   ```
-3. Restart server — AI analysis otomatis aktif setelah ujian dengan gap
+2. Tambahkan ke `.env`: `OPENROUTER_API_KEY=sk-or-xxxx`
+3. AI analysis otomatis aktif setelah ujian — muncul di Learning Path
 
-Untuk profesi baru (selain Video Editing):
-```bash
-python kkni/extract-skkni.py "kkni/<profesi>/file.pdf" "kkni/<profesi>/skkni.json"
-```
+AI aktif hanya jika:
+- Ada gap kompetensi dari hasil ujian
+- Profesi user terdeteksi dari field `position`/`department` (saat ini: video/editing/media/sinema)
 
 ---
 
 ## Troubleshooting
 
-### Error: `The table main.User does not exist`
-
-Database belum punya tabel. Jalankan di folder `server/`:
+### `The table main.User does not exist`
 
 ```bash
+cd server
 npx prisma db push
-node seed/seed.js
+node --env-file=../.env seed/seed.js
 ```
 
-Lalu restart server. Ini terjadi kalau server dijalankan manual tanpa `npm install` lebih dulu, atau setelah fresh clone.
+### `EPERM: operation not permitted` saat prisma generate
 
-### Error: `EPERM: operation not permitted` saat prisma generate
-
-Server sedang berjalan dan mengunci file `.dll`. Ini **normal** — tabel sudah terbuat (`db push` sukses). Cukup restart server:
-
-```bash
-# Ctrl+C untuk stop, lalu:
-node server.js
-```
+Normal — server sedang berjalan. Tabel sudah terbuat. Cukup restart server.
 
 ### Port sudah dipakai
 
 ```bash
-# Windows — cari dan kill proses di port 5000
+# Windows
 netstat -ano | findstr :5000
 taskkill /F /PID <pid>
 ```
 
 ### Login gagal (401) padahal password benar
 
-Seed belum dijalankan. Jalankan:
-
+Seed belum dijalankan:
 ```bash
-cd server
-node seed/seed.js
+node --env-file=../.env seed/seed.js
 ```
+
+### HRD melihat data user lain
+
+Bersihkan cache browser atau klik logout lalu login ulang. (Cache TanStack Query di-reset otomatis saat login/logout.)
 
 ---
 
@@ -219,26 +239,23 @@ node seed/seed.js
 
 ```bash
 # Backend dengan auto-reload
-cd server && npm run dev     # node --watch server.js
+cd server && npm run dev
 
 # Frontend dengan HMR
-cd client && npm run dev     # vite dev server
+cd client && npm run dev
 
-# Push perubahan schema Prisma
+# Push perubahan schema
 cd server && npx prisma db push
 
 # Lihat isi database
 cd server && npx prisma studio
+
+# Test CV extraction
+cd server && node --env-file=../.env cv.js
+
+# Test AI analysis (butuh OPENROUTER_API_KEY)
+node kkni/analyze.js "profil pekerja..." "query opsional"
 ```
-
----
-
-## Kontribusi
-
-1. Fork repo ini
-2. Buat branch: `git checkout -b feature/nama-fitur`
-3. Commit perubahan
-4. Push dan buat Pull Request
 
 ---
 

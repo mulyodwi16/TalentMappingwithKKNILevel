@@ -158,10 +158,14 @@ router.post("/exam/submit", async (req, res) => {
     let aiAnalysis = null;
     if (gaps.length && process.env.OPENROUTER_API_KEY) {
       try {
-        const { analyze } = await import("../../kkni/analyze.js");
-        const query = gaps.map((g) => g.name).join(", ");
-        const r = await analyze({ profile: user.education || query, query });
-        aiAnalysis = r.analysis;
+        const { analyze, detectProfesi } = await import("../../kkni/analyze.js");
+        const profesi = detectProfesi(user.position || "", user.department || "");
+        if (profesi) {
+          const query = gaps.map((g) => g.name).join(", ");
+          const profile = [user.name, user.position, user.education, `${user.experienceYears || 0} tahun pengalaman`].filter(Boolean).join(", ");
+          const r = await analyze({ profile, query, profesi });
+          aiAnalysis = r.analysis;
+        }
       } catch (e) {
         console.error("AI rec:", e.message);
       }

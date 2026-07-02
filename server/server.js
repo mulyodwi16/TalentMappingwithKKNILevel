@@ -10,6 +10,7 @@ import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/user.js";
 import hrdRoutes from "./routes/hrd.js";
 import adminRoutes from "./routes/admin.js";
+import avatareduRoutes from "./routes/avataredu.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -26,7 +27,8 @@ app.use(express.json({ limit: "12mb" }));
 app.use("/api/auth",  authRoutes);
 app.use("/api/user",  userRoutes);
 app.use("/api/hrd",   hrdRoutes);
-app.use("/api/admin", adminRoutes);
+app.use("/api/admin",     adminRoutes);
+app.use("/api/avataredu", avatareduRoutes);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 

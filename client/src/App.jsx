@@ -5,6 +5,7 @@ import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import Layout from "./components/Layout.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import useAuthStore from "./store/authStore.js";
 import UserDashboard from "./pages/user/UserDashboard.jsx";
 import CVUpload from "./pages/user/CVUpload.jsx";
 import Exam from "./pages/user/Exam.jsx";
@@ -17,6 +18,13 @@ import RuleManagement from "./pages/admin/RuleManagement.jsx";
 import QuestionBank from "./pages/admin/QuestionBank.jsx";
 import RequestInbox from "./pages/admin/RequestInbox.jsx";
 import AuditLogPage from "./pages/admin/AuditLogPage.jsx";
+
+function DashboardGate() {
+  const { user } = useAuthStore();
+  if (user?.role === "hrd") return <Navigate to="/app/hrd" replace />;
+  if (user?.role === "admin") return <Navigate to="/app/admin" replace />;
+  return <UserDashboard />;
+}
 
 export default function App() {
   return (
@@ -43,7 +51,7 @@ export default function App() {
         >
           <Route index element={<Navigate to="dashboard" replace />} />
           {/* User */}
-          <Route path="dashboard" element={<UserDashboard />} />
+          <Route path="dashboard" element={<DashboardGate />} />
           <Route path="cv-upload" element={<CVUpload />} />
           <Route path="exam" element={<Exam />} />
           <Route path="skill-gap" element={<SkillGap />} />
