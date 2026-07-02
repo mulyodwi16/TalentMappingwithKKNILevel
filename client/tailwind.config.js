@@ -5,8 +5,8 @@ export default {
   theme: {
     extend: {
       colors: {
-        brand: { DEFAULT: "#2563eb", 50: "#eff6ff", 100: "#dbeafe", 500: "#3b82f6", 600: "#2563eb", 700: "#1d4ed8" },
-        tosca: { DEFAULT: "#0ea5e9", 500: "#0ea5e9", 600: "#0284c7" },
+        brand: { DEFAULT: "#6366f1", 50: "#eef2ff", 100: "#e0e7ff", 200: "#c7d2fe", 400: "#818cf8", 500: "#6366f1", 600: "#4f46e5", 700: "#4338ca" },
+        tosca: { DEFAULT: "#8b5cf6", 500: "#8b5cf6", 600: "#7c3aed" },
       },
       fontFamily: { sans: ["Inter", "Plus Jakarta Sans", "sans-serif"] },
       boxShadow: { soft: "0 2px 15px -3px rgba(0,0,0,0.07), 0 10px 20px -2px rgba(0,0,0,0.04)" },
