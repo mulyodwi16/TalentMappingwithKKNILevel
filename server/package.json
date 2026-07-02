@@ -1,0 +1,27 @@
+{
+  "name": "kkni-server",
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js",
+    "seed": "node seed/seed.js",
+    "db:push": "prisma db push",
+    "postinstall": "prisma generate && prisma db push"
+  },
+  "devDependencies": {
+    "prisma": "^5.0.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^16.0.0",
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "@prisma/client": "^5.0.0",
+    "pdf-parse": "^2.4.5",
+    "xlsx": "^0.18.5"
+  }
+}

@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Talent Mapping KKNI</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+tailwind.config = { theme: { extend: {
+  colors: { brand: { 50:"#eff6ff",500:"#2563eb",600:"#1d4ed8",700:"#1e40af" }, tosca:"#0ea5e9" },
+  boxShadow: { soft: "0 10px 30px -12px rgba(2,132,199,.25)" },
+  fontFamily: { sans: ["Inter","Segoe UI","sans-serif"] } } } };
+</script>
+<style>
+body{font-family:Inter,'Segoe UI',sans-serif}
+.ring{transition:stroke-dashoffset .6s ease}
+#bg{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
+.reveal.in{opacity:1;transform:none}
+.card-h{transition:transform .25s ease,box-shadow .25s ease}
+.card-h:hover{transform:translateY(-6px);box-shadow:0 20px 40px -18px rgba(2,132,199,.35)}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+.floaty{animation:float 6s ease-in-out infinite}
+@keyframes blob{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(20px,-15px) scale(1.1)}66%{transform:translate(-15px,10px) scale(.95)}}
+.blob{animation:blob 14s ease-in-out infinite}
+.grad-text{background:linear-gradient(90deg,#2563eb,#0ea5e9);-webkit-background-clip:text;background-clip:text;color:transparent}
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+<!-- ============ LANDING (public) ============ -->
+<div id="landing">
+ <div class="relative overflow-hidden bg-gradient-to-b from-brand-50/60 to-slate-50">
+  <canvas id="bg"></canvas>
+  <div class="absolute -top-24 -left-24 w-80 h-80 bg-brand-500/20 rounded-full blur-3xl blob" style="z-index:0"></div>
+  <div class="absolute top-40 -right-20 w-72 h-72 bg-tosca/20 rounded-full blur-3xl blob" style="z-index:0;animation-delay:-5s"></div>
+  <nav class="relative z-10 max-w-6xl mx-auto flex items-center justify-between p-5">
+    <div class="flex items-center gap-2 font-bold text-lg">
+      <div class="h-9 w-9 rounded-xl bg-brand-500 text-white grid place-items-center">K</div> TalentMap KKNI
+    </div>
+    <button onclick="go('auth')" class="rounded-full bg-brand-500 text-white px-5 py-2 text-sm hover:bg-brand-600 shadow-soft">Masuk</button>
+  </nav>
+
+  <header class="relative z-10 max-w-6xl mx-auto px-5 pt-10 pb-16 grid md:grid-cols-2 gap-10 items-center">
+    <div>
+      <span class="inline-block rounded-full bg-brand-50 text-brand-600 text-xs font-medium px-3 py-1 mb-4">Berbasis Perpres No. 8 Tahun 2012 · 9 Jenjang KKNI</span>
+      <h1 class="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight">Petakan talenta ke <span class="text-brand-500">Level KKNI</span> secara otomatis.</h1>
+      <p class="mt-4 text-slate-500 text-lg">Upload CV, sistem menebak jenjang KKNI, memverifikasi lewat ujian kompetensi, lalu menunjukkan skill gap & rekomendasi belajar personal.</p>
+      <div class="mt-6 flex gap-3">
+        <button onclick="go('auth')" class="rounded-full bg-brand-500 text-white px-6 py-3 font-medium hover:bg-brand-600 shadow-soft">Mulai Sekarang</button>
+        <a href="#fitur" class="rounded-full border border-slate-300 px-6 py-3 font-medium hover:bg-white">Lihat Fitur</a>
+      </div>
+    </div>
+    <div class="relative">
+      <div class="absolute -inset-6 bg-gradient-to-tr from-brand-500/20 to-tosca/20 blur-2xl rounded-full"></div>
+      <div class="relative bg-white rounded-3xl shadow-soft p-6 space-y-3 floaty">
+        <div class="flex items-center justify-between"><span class="font-semibold">Budi Santoso</span><span class="text-xs rounded-full bg-green-100 text-green-700 px-2 py-1">Siap Naik</span></div>
+        <div class="flex items-center gap-4">
+          <svg width="90" height="90" viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="none" stroke="#e2e8f0" stroke-width="10"/><circle cx="50" cy="50" r="42" fill="none" stroke="#2563eb" stroke-width="10" stroke-linecap="round" stroke-dasharray="264" stroke-dashoffset="66" transform="rotate(-90 50 50)"/></svg>
+          <div><div class="text-3xl font-bold">75%</div><div class="text-sm text-slate-500">Readiness · KKNI 6</div></div>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-center text-xs">
+          <div class="rounded-xl bg-green-50 text-green-700 py-2">Editing OK</div>
+          <div class="rounded-xl bg-amber-50 text-amber-700 py-2">Export 60%</div>
+          <div class="rounded-xl bg-red-50 text-red-600 py-2">Color Gap</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+ </div><!-- /hero wrapper -->
+
+  <section class="relative z-10 max-w-6xl mx-auto px-5 -mt-8 mb-16 grid grid-cols-3 gap-4">
+    <div class="reveal bg-white rounded-2xl shadow-soft p-5 text-center card-h"><div class="text-3xl font-extrabold grad-text" data-count="9">0</div><div class="text-sm text-slate-500">Jenjang KKNI</div></div>
+    <div class="reveal bg-white rounded-2xl shadow-soft p-5 text-center card-h"><div class="text-3xl font-extrabold grad-text" data-count="11">0</div><div class="text-sm text-slate-500">Unit SKKNI</div></div>
+    <div class="reveal bg-white rounded-2xl shadow-soft p-5 text-center card-h"><div class="text-3xl font-extrabold grad-text" data-count="100">0</div><div class="text-sm text-slate-500">% Otomatis</div></div>
+  </section>
+
+  <section id="fitur" class="max-w-6xl mx-auto px-5 pb-16 grid md:grid-cols-3 gap-5">
+    <div class="reveal card-h bg-white rounded-2xl shadow p-6"><div class="text-3xl mb-2 floaty">📄</div><h3 class="font-semibold">Upload CV → Auto-Klasifikasi</h3><p class="text-sm text-slate-500 mt-1">CV di-parse otomatis: pendidikan, sertifikasi, pengalaman → prediksi jenjang KKNI.</p></div>
+    <div class="reveal card-h bg-white rounded-2xl shadow p-6"><div class="text-3xl mb-2 floaty" style="animation-delay:-2s">🎯</div><h3 class="font-semibold">Ujian & Skill Gap</h3><p class="text-sm text-slate-500 mt-1">Verifikasi kompetensi lewat ujian, lihat gap per unit SKKNI resmi.</p></div>
+    <div class="reveal card-h bg-white rounded-2xl shadow p-6"><div class="text-3xl mb-2 floaty" style="animation-delay:-4s">📊</div><h3 class="font-semibold">Dashboard HRD</h3><p class="text-sm text-slate-500 mt-1">Pantau kesiapan promosi seluruh pekerja secara otomatis.</p></div>
+  </section>
+
+  <section class="max-w-6xl mx-auto px-5 pb-16">
+    <h2 class="text-center font-bold text-2xl mb-2">Cara Kerja</h2>
+    <p class="text-center text-slate-500 mb-8">Empat langkah dari CV ke keputusan promosi.</p>
+    <div class="grid md:grid-cols-4 gap-4">
+      <div class="reveal card-h bg-white rounded-2xl shadow p-5"><div class="h-10 w-10 rounded-xl bg-brand-500 text-white grid place-items-center font-bold mb-3">1</div><p class="text-sm text-slate-600">Upload CV (PDF)</p></div>
+      <div class="reveal card-h bg-white rounded-2xl shadow p-5"><div class="h-10 w-10 rounded-xl bg-brand-500 text-white grid place-items-center font-bold mb-3">2</div><p class="text-sm text-slate-600">Sistem membaca & menebak jenjang KKNI</p></div>
+      <div class="reveal card-h bg-white rounded-2xl shadow p-5"><div class="h-10 w-10 rounded-xl bg-brand-500 text-white grid place-items-center font-bold mb-3">3</div><p class="text-sm text-slate-600">Ikut ujian kompetensi</p></div>
+      <div class="reveal card-h bg-white rounded-2xl shadow p-5"><div class="h-10 w-10 rounded-xl bg-brand-500 text-white grid place-items-center font-bold mb-3">4</div><p class="text-sm text-slate-600">Lihat skill gap + rekomendasi belajar</p></div>
+    </div>
+  </section>
+
+  <section class="max-w-6xl mx-auto px-5 pb-20">
+    <h2 class="text-center font-bold text-2xl mb-6">9 Jenjang Kualifikasi KKNI</h2>
+    <div id="levelStrip" class="grid grid-cols-3 md:grid-cols-9 gap-2"></div>
+  </section>
+  <footer class="border-t py-6 text-center text-sm text-slate-400">TalentMap KKNI · demo · Bahasa Indonesia</footer>
+</div>
+
+<!-- ============ AUTH ============ -->
+<div id="auth" class="hidden max-w-sm mx-auto p-6 mt-16">
+  <div class="bg-white rounded-2xl shadow-soft p-6 space-y-4">
+    <button onclick="go('landing')" class="text-sm text-slate-400 hover:text-slate-600">← kembali</button>
+    <div class="flex items-center gap-3"><div class="h-10 w-10 rounded-2xl bg-brand-500 text-white grid place-items-center font-bold">K</div><h1 class="text-lg font-bold">Masuk</h1></div>
+    <input id="email" class="w-full rounded-xl border p-2.5" placeholder="email" value="user@demo.id" />
+    <input id="pass" type="password" class="w-full rounded-xl border p-2.5" placeholder="password" value="demo123" />
+    <button onclick="doLogin()" class="w-full rounded-full bg-brand-500 text-white py-2.5 hover:bg-brand-600">Masuk</button>
+    <p id="loginErr" class="text-sm text-red-500"></p>
+    <div class="text-xs text-slate-500 border-t pt-3 space-y-1">
+      <div>Akun demo (password <b>demo123</b>):</div>
+      <div class="flex gap-1 flex-wrap">
+        <button onclick="fill('user@demo.id')" class="rounded-full bg-slate-100 px-2 py-1 hover:bg-slate-200">user</button>
+        <button onclick="fill('hrd@demo.id')" class="rounded-full bg-slate-100 px-2 py-1 hover:bg-slate-200">hrd</button>
+        <button onclick="fill('admin@demo.id')" class="rounded-full bg-slate-100 px-2 py-1 hover:bg-slate-200">admin</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP SHELL ============ -->
+<div id="app" class="hidden min-h-screen flex">
+  <aside class="w-60 bg-white border-r p-4 hidden md:flex flex-col gap-1">
+    <div class="flex items-center gap-2 font-bold px-2 py-3"><div class="h-8 w-8 rounded-xl bg-brand-500 text-white grid place-items-center">K</div> TalentMap</div>
+    <nav id="nav" class="mt-2 space-y-1 text-sm"></nav>
+    <div class="mt-auto text-xs text-slate-400 px-2">KKNI · demo</div>
+  </aside>
+  <div class="flex-1 flex flex-col">
+    <header class="bg-white border-b px-6 py-3 flex items-center justify-between">
+      <div id="pageTitle" class="font-semibold"></div>
+      <div class="flex items-center gap-3">
+        <div class="text-right"><div id="who" class="text-sm font-medium"></div><div id="whoRole" class="text-xs text-slate-400"></div></div>
+        <div id="avatar" class="h-9 w-9 rounded-full bg-brand-100 text-brand-600 grid place-items-center font-bold"></div>
+        <button onclick="logout()" class="rounded-full border px-3 py-1.5 text-sm hover:bg-slate-50">Keluar</button>
+      </div>
+    </header>
+    <main id="main" class="p-6 space-y-6 max-w-4xl w-full mx-auto"></main>
+  </div>
+</div>
+
+<script>
+let token="", me=null, profileText="", lastLevel=null;
+const $=(id)=>document.getElementById(id);
+const api=(p,o={})=>fetch(p,{...o,headers:{"Content-Type":"application/json",...(token?{Authorization:"Bearer "+token}:{}),...(o.headers||{})}}).then(async r=>({ok:r.ok,status:r.status,body:await r.json().catch(()=>({}))}));
+function go(v){["landing","auth","app"].forEach(x=>$(x).classList.toggle("hidden",x!==v));}
+function fill(e){$("email").value=e;}
+
+// KKNI level strip on landing
+const LEVELS=[["1","SD"],["2","SMP"],["3","SMA/SMK"],["4","D1"],["5","D2/D3"],["6","D4/S1"],["7","Profesi"],["8","S2"],["9","S3"]];
+$("levelStrip").innerHTML=LEVELS.map(([n,e])=>`<div class="reveal card-h rounded-2xl bg-white shadow p-3 text-center"><div class="text-2xl font-extrabold grad-text">${n}</div><div class="text-xs text-slate-500">${e}</div></div>`).join("");
+
+// ---- Three.js particle network (landing hero bg) ----
+function initThree(){
+  if(!window.THREE) return;
+  const cv=$("bg"), host=cv.parentElement;
+  const scene=new THREE.Scene();
+  const cam=new THREE.PerspectiveCamera(70,host.clientWidth/host.clientHeight,1,1000); cam.position.z=320;
+  const renderer=new THREE.WebGLRenderer({canvas:cv,alpha:true,antialias:true});
+  renderer.setSize(host.clientWidth,host.clientHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const N=700, pos=new Float32Array(N*3);
+  for(let i=0;i<N;i++){const r=180+Math.random()*90,t=Math.random()*Math.PI*2,p=Math.acos(2*Math.random()-1);
+    pos[i*3]=r*Math.sin(p)*Math.cos(t); pos[i*3+1]=r*Math.sin(p)*Math.sin(t); pos[i*3+2]=r*Math.cos(p);}
+  const g=new THREE.BufferGeometry(); g.setAttribute("position",new THREE.BufferAttribute(pos,3));
+  const pts=new THREE.Points(g,new THREE.PointsMaterial({color:0x2563eb,size:2.4,transparent:true,opacity:.8}));
+  const pts2=new THREE.Points(g.clone(),new THREE.PointsMaterial({color:0x0ea5e9,size:1.4,transparent:true,opacity:.5}));
+  scene.add(pts,pts2);
+  let mx=0,my=0; host.addEventListener("mousemove",e=>{const r=host.getBoundingClientRect();mx=(e.clientX-r.left)/r.width-.5;my=(e.clientY-r.top)/r.height-.5;});
+  (function loop(){requestAnimationFrame(loop);pts.rotation.y+=.0015;pts.rotation.x+=.0006;pts2.rotation.y-=.001;
+    cam.position.x+=(mx*80-cam.position.x)*.04; cam.position.y+=(-my*80-cam.position.y)*.04; cam.lookAt(scene.position);
+    renderer.render(scene,cam);})();
+  addEventListener("resize",()=>{renderer.setSize(host.clientWidth,host.clientHeight);cam.aspect=host.clientWidth/host.clientHeight;cam.updateProjectionMatrix();});
+}
+// ---- scroll reveal + count-up ----
+function initReveal(){
+  const io=new IntersectionObserver((es)=>es.forEach(en=>{if(en.isIntersecting){en.target.classList.add("in");
+    if(en.target.dataset.count){let n=0,to=+en.target.dataset.count;const t=setInterval(()=>{n+=Math.ceil(to/30);if(n>=to){n=to;clearInterval(t);}en.target.textContent=n;},30);} io.unobserve(en.target);}}),{threshold:.15});
+  document.querySelectorAll(".reveal,[data-count]").forEach(el=>io.observe(el));
+}
+addEventListener("load",()=>{initThree();initReveal();});
+
+async function doLogin(){
+  const email=$("email").value,password=$("pass").value;
+  const r=await api("/api/login",{method:"POST",body:JSON.stringify({email,password})});
+  if(!r.ok){$("loginErr").textContent=r.body.error||"gagal login";return;}
+  token=r.body.token; me=r.body.user;
+  $("who").textContent=me.name; $("whoRole").textContent="role: "+me.role;
+  $("avatar").textContent=me.name[0];
+  buildNav(); go("app");
+  route(me.role==="user"?"beranda":me.role==="hrd"?"hrd":"admin");
+}
+function logout(){token="";me=null;go("landing");}
+
+const NAV={
+  user:[["beranda","Beranda"],["ujian","Ujian & Gap"]],
+  hrd:[["hrd","Dashboard HRD"]],
+  admin:[["admin","Panel Admin"],["hrd","Overview HRD"]],
+};
+let current="";
+function buildNav(){
+  $("nav").innerHTML=NAV[me.role].map(([k,l])=>`<a onclick="route('${k}')" id="nav-${k}" class="block rounded-xl px-3 py-2 cursor-pointer hover:bg-slate-100">${l}</a>`).join("");
+}
+function route(k){
+  current=k;
+  document.querySelectorAll('#nav a').forEach(a=>a.classList.remove("bg-brand-50","text-brand-600","font-medium"));
+  const n=$("nav-"+k); if(n)n.classList.add("bg-brand-50","text-brand-600","font-medium");
+  ({beranda:viewBeranda,ujian:viewUjian,hrd:viewHrd,admin:viewAdmin}[k])();
+}
+
+// ---------- readiness ring ----------
+function ring(pct,label="readiness"){
+  const off=264*(1-pct/100), col=pct>=80?"#16a34a":pct>=50?"#f59e0b":"#ef4444";
+  return `<div class="flex items-center gap-4"><svg width="96" height="96" viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="42" fill="none" stroke="#e2e8f0" stroke-width="10"/>
+    <circle class="ring" cx="50" cy="50" r="42" fill="none" stroke="${col}" stroke-width="10" stroke-linecap="round" stroke-dasharray="264" stroke-dashoffset="${off}" transform="rotate(-90 50 50)"/></svg>
+    <div><div class="text-3xl font-bold">${pct}%</div><div class="text-sm text-slate-500">${label}</div></div></div>`;
+}
+
+// ================= USER: BERANDA (CV upload + profil) =================
+function viewBeranda(){
+  $("pageTitle").textContent="Beranda";
+  $("main").innerHTML=`
+   <section class="bg-white rounded-2xl shadow-soft p-6">
+     <h2 class="font-semibold mb-1">Klasifikasi KKNI dari CV</h2>
+     <p class="text-sm text-slate-500 mb-4">Upload CV (PDF) — sistem membaca pendidikan, sertifikasi & pengalaman lalu menebak jenjang KKNI Anda.</p>
+     <label id="drop" class="block border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center cursor-pointer hover:border-brand-500 hover:bg-brand-50/40">
+       <input id="cvFile" type="file" accept="application/pdf" class="hidden" onchange="uploadCV(this)"/>
+       <div class="text-4xl">📄</div>
+       <div class="mt-2 font-medium">Klik untuk pilih CV (PDF)</div>
+       <div class="text-xs text-slate-400">atau isi manual di bawah</div>
+     </label>
+     <div id="cvOut" class="mt-4"></div>
+   </section>
+   <section class="bg-white rounded-2xl shadow p-6 space-y-3">
+     <h3 class="font-semibold">Isi / Koreksi Manual</h3>
+     <div class="grid grid-cols-2 gap-3">
+       <select id="edu" class="rounded-xl border p-2.5"><option>SD</option><option>SMP</option><option>SMA</option><option>SMK</option><option>D1</option><option>D2</option><option>D3</option><option>D4</option><option selected>S1</option><option>S2</option><option>S3</option></select>
+       <input id="cert" class="rounded-xl border p-2.5" placeholder="sertifikasi (koma pisah)" value="editing" />
+     </div>
+     <button onclick="doMap()" class="rounded-full bg-brand-500 text-white px-5 py-2.5 hover:bg-brand-600">Prediksi Level KKNI</button>
+     <div id="mapOut"></div>
+   </section>`;
+}
+async function uploadCV(input){
+  const f=input.files[0]; if(!f)return;
+  $("cvOut").innerHTML='<div class="text-sm text-slate-500">Membaca CV…</div>';
+  const b64=await new Promise(res=>{const rd=new FileReader();rd.onload=()=>res(rd.result);rd.readAsDataURL(f);});
+  const r=await api("/api/cv/parse",{method:"POST",body:JSON.stringify({pdfBase64:b64})});
+  if(!r.ok){$("cvOut").innerHTML=`<div class="text-sm text-red-500">${r.body.error||"gagal"}</div>`;return;}
+  const p=r.body.profile;
+  $("edu").value=p.education; $("cert").value=p.certifications.join(", ");
+  lastLevel=r.body.predictedLevel;
+  profileText=`Pendidikan ${p.education}, sertifikasi: ${p.certifications.join(", ")||"-"}, ${p.experienceYears} tahun pengalaman`;
+  $("cvOut").innerHTML=`
+    <div class="rounded-2xl bg-brand-50 p-4">
+      <div class="flex items-center justify-between mb-2"><span class="font-medium">Hasil klasifikasi</span><span class="rounded-full bg-brand-500 text-white text-xs px-3 py-1">KKNI ${r.body.predictedLevel} · ${r.body.levelInfo.title}</span></div>
+      <div class="grid grid-cols-3 gap-2 text-sm">
+        <div class="rounded-xl bg-white p-2"><div class="text-xs text-slate-400">Pendidikan</div><b>${p.education}</b></div>
+        <div class="rounded-xl bg-white p-2"><div class="text-xs text-slate-400">Pengalaman</div><b>${p.experienceYears} th</b></div>
+        <div class="rounded-xl bg-white p-2"><div class="text-xs text-slate-400">Sertifikasi</div><b>${p.certifications.length}</b></div>
+      </div>
+      <div class="mt-2 text-xs text-slate-500">${p.certifications.map(c=>`<span class="inline-block bg-white rounded-full px-2 py-0.5 mr-1 mb-1">${c}</span>`).join("")}</div>
+      <button onclick="route('ujian')" class="mt-3 rounded-full bg-brand-500 text-white px-4 py-2 text-sm hover:bg-brand-600">Lanjut ke Ujian →</button>
+    </div>`;
+}
+async function doMap(){
+  const education=$("edu").value;
+  const certifications=($("cert").value||"").split(",").map(s=>s.trim()).filter(Boolean);
+  profileText=`Pendidikan ${education}, sertifikasi: ${certifications.join(", ")||"-"}`;
+  const r=await api("/api/map",{method:"POST",body:JSON.stringify({education,certifications})});
+  lastLevel=r.body.predictedLevel;
+  $("mapOut").innerHTML=`<div class="mt-2 rounded-xl bg-brand-50 p-3 flex items-center justify-between"><span>Prediksi: <b>Jenjang KKNI ${r.body.predictedLevel}</b> — ${r.body.levelInfo?.title}</span><button onclick="route('ujian')" class="rounded-full bg-brand-500 text-white px-4 py-1.5 text-sm">Ujian →</button></div>`;
+}
+
+// ================= USER: UJIAN & GAP =================
+async function viewUjian(){
+  $("pageTitle").textContent="Ujian & Skill Gap";
+  $("main").innerHTML=`
+    <section class="bg-white rounded-2xl shadow-soft p-6">
+      <div class="flex items-center justify-between mb-3"><h2 class="font-semibold">Ujian Kompetensi ${lastLevel?`(target KKNI ${lastLevel})`:""}</h2></div>
+      <div id="questions" class="space-y-3"></div>
+      <button onclick="submit()" class="mt-4 rounded-full bg-brand-500 text-white px-6 py-2.5 hover:bg-brand-600">Kumpulkan & Analisis Gap</button>
+    </section>
+    <section id="resSec" class="hidden bg-white rounded-2xl shadow-soft p-6"><h2 class="font-semibold mb-3">Hasil & Skill Gap</h2><div id="resOut"></div></section>`;
+  const r=await api("/api/exam");
+  $("questions").innerHTML=r.body.questions.map((q,i)=>`
+    <div class="rounded-xl border p-4"><p class="font-medium">${i+1}. ${q.q}</p>
+      <div class="mt-2 grid gap-1">${q.options.map((o,oi)=>`<label class="flex gap-2 items-center text-sm rounded-lg px-2 py-1 hover:bg-slate-50 cursor-pointer"><input type="radio" name="q${q.id}" value="${oi}"> ${o}</label>`).join("")}</div></div>`).join("");
+}
+async function submit(){
+  const answers={};
+  document.querySelectorAll('input[type=radio]:checked').forEach(el=>answers[el.name.slice(1)]=Number(el.value));
+  const r=await api("/api/submit",{method:"POST",body:JSON.stringify({answers,profile:profileText})});
+  const d=r.body;
+  const badge={ready:"bg-green-100 text-green-700",in_progress:"bg-amber-100 text-amber-700",not_ready:"bg-red-100 text-red-600"}[d.status];
+  $("resOut").innerHTML=`
+    <div class="flex items-center justify-between flex-wrap gap-4">
+      ${ring(d.readiness)}
+      <span class="rounded-full px-4 py-1.5 ${badge}">${{ready:"Siap Naik",in_progress:"Dalam Proses",not_ready:"Belum Siap"}[d.status]}</span>
+    </div>
+    <div class="grid md:grid-cols-2 gap-2 mt-4">${d.results.map(c=>`
+      <div class="rounded-xl border p-3 ${c.gap?'border-red-200 bg-red-50/50':'border-green-200 bg-green-50/50'}">
+        <div class="flex justify-between"><span class="font-medium">${c.name}</span><span class="text-sm ${c.gap?'text-red-600':'text-green-600'}">${c.score}%</span></div>
+        <div class="text-xs text-slate-400 mt-0.5">${c.skkni} · ${c.gap?'perlu ditingkatkan':'kompeten'}</div>
+        <div class="h-1.5 bg-slate-200 rounded-full mt-2"><div class="h-1.5 rounded-full ${c.gap?'bg-red-400':'bg-green-500'}" style="width:${c.score}%"></div></div>
+      </div>`).join("")}</div>
+    ${d.recommendation?recBlock(d.recommendation):(d.gaps.length?'<p class="text-sm text-slate-500 mt-4">💡 Rekomendasi LLM nonaktif — set OPENROUTER_API_KEY untuk saran belajar personal.</p>':'<p class="text-sm text-green-600 mt-4">Semua kompetensi terpenuhi! 🎉</p>')}`;
+  $("resSec").classList.remove("hidden"); $("resSec").scrollIntoView({behavior:"smooth"});
+}
+function recBlock(rec){
+  if(rec.error)return `<p class="text-sm text-red-500 mt-4">LLM error: ${rec.error}</p>`;
+  return `<div class="mt-4 rounded-2xl bg-brand-50 p-4 text-sm whitespace-pre-wrap"><div class="font-semibold mb-1">💡 Rekomendasi (${rec.model}) · unit ${rec.used_units.join(", ")}</div>${rec.text}</div>`;
+}
+
+// ================= HRD =================
+async function viewHrd(){
+  $("pageTitle").textContent="Dashboard HRD";
+  const r=await api("/api/hrd/overview");
+  if(!r.ok){$("main").innerHTML=`<div class="text-red-500">Akses ditolak (${r.status})</div>`;return;}
+  const w=r.body.workers;
+  const avg=w.filter(x=>x.readiness!=null); const avgR=avg.length?Math.round(avg.reduce((a,x)=>a+x.readiness,0)/avg.length):0;
+  const ready=w.filter(x=>x.status==="ready").length;
+  const tile=(n,l,c)=>`<div class="bg-white rounded-2xl shadow p-5"><div class="text-3xl font-bold ${c}">${n}</div><div class="text-sm text-slate-500">${l}</div></div>`;
+  const sBadge=s=>({ready:["Siap Naik","bg-green-100 text-green-700"],in_progress:["Dalam Proses","bg-amber-100 text-amber-700"],not_ready:["Belum Siap","bg-red-100 text-red-600"]}[s]||["Belum Ujian","bg-slate-100 text-slate-500"]);
+  $("main").innerHTML=`
+    <div class="grid grid-cols-3 gap-4">${tile(w.length,"Total Pekerja","text-brand-500")}${tile(avgR+"%","Rata-rata Readiness","text-tosca")}${tile(ready,"Siap Promosi","text-green-600")}</div>
+    <section class="bg-white rounded-2xl shadow-soft p-6">
+      <div class="flex items-center justify-between mb-3"><h2 class="font-semibold">Kesiapan Pekerja</h2>
+        <select id="fStatus" onchange="viewHrd()" class="rounded-xl border text-sm p-2"><option value="">semua status</option><option value="ready">Siap Naik</option><option value="in_progress">Dalam Proses</option><option value="not_ready">Belum Siap</option></select></div>
+      ${w.length?`<table class="w-full text-sm"><thead><tr class="text-left text-slate-400 border-b"><th class="py-2">Nama</th><th>Level</th><th>Readiness</th><th>Status</th></tr></thead><tbody>
+        ${w.map(x=>{const[t,c]=sBadge(x.status);return `<tr class="border-b last:border-0"><td class="py-2 font-medium">${x.name||x.email}</td><td>KKNI ${x.level??'-'}</td><td>${x.readiness??'-'}%</td><td><span class="rounded-full px-2.5 py-0.5 text-xs ${c}">${t}</span></td></tr>`;}).join("")}
+      </tbody></table>`:'<p class="text-sm text-slate-500">Belum ada pekerja menyelesaikan ujian. Login sebagai user, selesaikan ujian, lalu refresh.</p>'}
+    </section>`;
+  // client-side filter
+  const fs=$("fStatus"); if(fs){fs.onchange=()=>{[...document.querySelectorAll('tbody tr')].forEach(tr=>{const ok=!fs.value||tr.innerText.includes(sBadge(fs.value)[0]);tr.style.display=ok?'':'none';});};}
+}
+
+// ================= ADMIN =================
+async function viewAdmin(){
+  $("pageTitle").textContent="Panel Admin";
+  const r=await api("/api/admin/rules");
+  if(!r.ok){$("main").innerHTML=`<div class="text-red-500">Akses ditolak</div>`;return;}
+  $("main").innerHTML=`
+    <section class="bg-white rounded-2xl shadow-soft p-6">
+      <h2 class="font-semibold mb-3">Aturan Auto-Mapping (pendidikan → KKNI)</h2>
+      <div class="grid md:grid-cols-2 gap-2">${r.body.mappingRules.map(rule=>`<div class="rounded-xl bg-slate-50 px-4 py-2.5 flex items-center justify-between"><span class="text-sm">${rule.if.education}${rule.if.cert?` + "${rule.if.cert}"`:''}</span><span class="rounded-full bg-brand-500 text-white text-xs px-2.5 py-0.5">KKNI ${rule.level}</span></div>`).join("")}</div>
+    </section>
+    <section class="bg-white rounded-2xl shadow-soft p-6">
+      <h2 class="font-semibold mb-3">9 Jenjang KKNI</h2>
+      <div class="grid grid-cols-3 md:grid-cols-9 gap-2">${r.body.kkniLevels.map(l=>`<div class="rounded-xl bg-slate-50 p-2 text-center"><div class="font-bold text-brand-500">${l.level}</div><div class="text-[10px] text-slate-500">${l.jobGroup}</div></div>`).join("")}</div>
+    </section>`;
+}
+</script>
+</body>
+</html>

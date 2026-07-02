@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:../dev.db"
+}
+
+model User {
+  id               String   @id @default(cuid())
+  name             String
+  email            String   @unique
+  passwordHash     String
+  role             String   @default("user")
+  department       String?
+  position         String?
+  education        String?
+  certifications   String   @default("[]")
+  experienceYears  Int      @default(0)
+  currentKkniLevel Int?
+  targetKkniLevel  Int?
+  readinessScore   Int      @default(0)
+  status           String   @default("not_ready")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  attempts        ExamAttempt[]
+  assessments     SkillAssessment[]
+  recommendations Recommendation[]
+  notifications   Notification[]
+  requests        Request[]
+  auditLogs       AuditLog[]
+}
+
+model KkniLevel {
+  id               String @id @default(cuid())
+  level            Int    @unique
+  title            String
+  educationMapping String
+  jobGroup         String
+  descriptors      String
+}
+
+model Competency {
+  id                String @id @default(cuid())
+  code              String @unique
+  name              String
+  category          String?
+  description       String?
+  skkni             String?
+  requiredForLevels String @default("[]")
+  targetLevel       Int?
+}
+
+model MappingRule {
+  id             String @id @default(cuid())
+  order          Int    @unique
+  conditions     String
+  predictedLevel Int
+  weight         Int    @default(1)
+}
+
+model ExamQuestion {
+  id             String @id @default(cuid())
+  competencyCode String
+  kkniLevel      Int
+  type           String @default("multiple_choice")
+  question       String
+  options        String
+  answerKey      Int
+  points         Int    @default(1)
+}
+
+model ExamAttempt {
+  id                 String   @id @default(cuid())
+  userId             String
+  kkniLevel          Int
+  answers            String   @default("{}")
+  scorePerCompetency String   @default("{}")
+  results            String   @default("[]")
+  readinessScore     Int      @default(0)
+  status             String   @default("not_ready")
+  passed             Boolean  @default(false)
+  gaps               String   @default("[]")
+  createdAt          DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model SkillAssessment {
+  id             String   @id @default(cuid())
+  userId         String
+  competencyCode String
+  competencyName String?
+  currentScore   Int      @default(0)
+  requiredScore  Int      @default(100)
+  gap            Int      @default(0)
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, competencyCode])
+}
+
+model LearningResource {
+  id             String  @id @default(cuid())
+  title          String
+  type           String
+  url            String?
+  competencyCode String
+  level          Int?
+  provider       String?
+  description    String?
+  duration       String?
+}
+
+model Recommendation {
+  id         String   @id @default(cuid())
+  userId     String
+  resources  String   @default("[]")
+  reason     String?
+  aiAnalysis String?
+  progress   String   @default("todo")
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Request {
+  id               String   @id @default(cuid())
+  fromId           String
+  fromName         String
+  fromEmail        String
+  type             String
+  payload          String   @default("{}")
+  status           String   @default("pending")
+  handledByAdminId String?
+  notes            String?
+  createdAt        DateTime @default(now())
+
+  from User @relation(fields: [fromId], references: [id])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  actorEmail String
+  action     String
+  target     String?
+  meta       String?
+  createdAt  DateTime @default(now())
+
+  actor User @relation(fields: [actorId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}

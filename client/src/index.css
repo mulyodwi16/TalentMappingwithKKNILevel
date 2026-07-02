@@ -1,0 +1,144 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── CSS Variables ─────────────────────────────────────────────────────────── */
+:root {
+  --bg-page:    #f1f5f9;
+  --bg-surface: #ffffff;
+  --bg-raised:  #f8fafc;
+  --bg-muted:   #e2e8f0;
+  --text-base:  #0f172a;
+  --text-2:     #334155;
+  --text-3:     #64748b;
+  --text-4:     #94a3b8;
+  --border:     #e2e8f0;
+  --border-2:   #cbd5e1;
+  --shadow:     0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+}
+
+html.dark {
+  --bg-page:    #020617;
+  --bg-surface: #1e293b;
+  --bg-raised:  #0f172a;
+  --bg-muted:   #1e293b;
+  --text-base:  #f8fafc;
+  --text-2:     #cbd5e1;
+  --text-3:     #94a3b8;
+  --text-4:     #64748b;
+  --border:     rgba(51,65,85,0.5);
+  --border-2:   #334155;
+  --shadow:     0 2px 15px rgba(0,0,0,0.3), 0 10px 20px rgba(0,0,0,0.2);
+}
+
+/* ── Base ──────────────────────────────────────────────────────────────────── */
+@layer base {
+  * { box-sizing: border-box; }
+
+  html { background-color: var(--bg-page); transition: background-color 0.2s; }
+  body {
+    font-family: "Inter", "Plus Jakarta Sans", sans-serif;
+    background-color: var(--bg-page);
+    color: var(--text-base);
+    transition: background-color 0.2s, color 0.2s;
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
+}
+
+/* ── Components ────────────────────────────────────────────────────────────── */
+@layer components {
+  .card {
+    @apply rounded-2xl;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+
+  .btn-primary {
+    @apply bg-brand-600 hover:bg-brand-700 text-white font-semibold px-5 py-2.5 rounded-xl
+           transition-all duration-200 hover:shadow-lg hover:shadow-brand-600/25 active:scale-95;
+  }
+
+  .btn-outline {
+    @apply font-medium px-5 py-2.5 rounded-xl transition-all duration-200 active:scale-95;
+    border: 1px solid var(--border-2);
+    color: var(--text-2);
+  }
+  .btn-outline:hover {
+    border-color: #94a3b8;
+    color: var(--text-base);
+  }
+
+  .input {
+    @apply rounded-xl px-4 py-2.5 w-full
+           focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500
+           transition-colors;
+    background-color: var(--bg-raised);
+    border: 1px solid var(--border-2);
+    color: var(--text-base);
+  }
+  .input::placeholder { color: var(--text-4); }
+
+  .badge-ready       { @apply bg-emerald-500/20 text-emerald-600 border border-emerald-500/30; }
+  .badge-in-progress { @apply bg-amber-500/20 text-amber-600 border border-amber-500/30; }
+  .badge-not-ready   { @apply bg-red-500/20 text-red-500 border border-red-500/30; }
+  .badge             { @apply text-xs font-semibold px-2.5 py-1 rounded-full; }
+
+  html.dark .badge-ready       { @apply text-emerald-400; }
+  html.dark .badge-in-progress { @apply text-amber-400; }
+  html.dark .badge-not-ready   { @apply text-red-400; }
+}
+
+/* ── Utilities ─────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .gradient-text {
+    @apply bg-gradient-to-r from-brand-500 to-tosca-500 bg-clip-text text-transparent;
+  }
+  .glass {
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+  }
+  html.dark .glass {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.1);
+  }
+}
+
+/* ── Scoped light-mode overrides (only inside .app-root, NOT on Landing/Login) */
+/* bg overrides */
+html:not(.dark) .app-root .bg-slate-950 { background-color: var(--bg-page) !important; }
+html:not(.dark) .app-root .bg-slate-900 { background-color: var(--bg-raised) !important; }
+html:not(.dark) .app-root .bg-slate-800 { background-color: var(--bg-muted) !important; }
+html:not(.dark) .app-root .bg-slate-700 { background-color: var(--bg-muted) !important; }
+
+/* text overrides */
+html:not(.dark) .app-root .text-white     { color: var(--text-base) !important; }
+html:not(.dark) .app-root .text-slate-300 { color: var(--text-2) !important; }
+html:not(.dark) .app-root .text-slate-400 { color: var(--text-3) !important; }
+html:not(.dark) .app-root .text-slate-500 { color: var(--text-4) !important; }
+html:not(.dark) .app-root .text-slate-600 { color: var(--text-4) !important; }
+
+/* border overrides */
+html:not(.dark) .app-root .border-slate-800 { border-color: var(--border) !important; }
+html:not(.dark) .app-root .border-slate-700 { border-color: var(--border-2) !important; }
+
+/* divide overrides */
+html:not(.dark) .app-root .divide-slate-700\/50 > * + * { border-color: var(--border) !important; }
+html:not(.dark) .app-root .divide-slate-800\/60 > * + * { border-color: var(--border) !important; }
+
+/* specific bg with opacity */
+html:not(.dark) .app-root .bg-slate-900\/50,
+html:not(.dark) .app-root .bg-slate-900\/60 { background-color: rgba(248,250,252,0.8) !important; }
+html:not(.dark) .app-root .bg-slate-700\/60 { background-color: rgba(226,232,240,0.6) !important; }
+
+/* hover states */
+html:not(.dark) .app-root .hover\:bg-slate-800\/30:hover { background-color: rgba(226,232,240,0.5) !important; }
+html:not(.dark) .app-root .hover\:bg-slate-800\/20:hover { background-color: rgba(226,232,240,0.3) !important; }
+html:not(.dark) .app-root .hover\:bg-slate-600:hover     { background-color: var(--bg-muted) !important; }
+html:not(.dark) .app-root .hover\:bg-slate-500:hover     { background-color: var(--border-2) !important; }
+html:not(.dark) .app-root .hover\:text-white:hover       { color: var(--text-base) !important; }
+
