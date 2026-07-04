@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard, Upload, ClipboardCheck, Target, BookOpen,
-  Users, Settings2, Mail, ScrollText, LogOut, X,
+  Users, Settings2, Mail, ScrollText, LogOut, X, Bot, ShoppingBag, Compass, GraduationCap,
 } from "lucide-react";
 import useAuthStore from "../store/authStore.js";
 
@@ -13,9 +13,13 @@ const NAV = {
     { to: "/app/exam",          label: "Ujian",          Icon: ClipboardCheck },
     { to: "/app/skill-gap",     label: "Skill Gap",      Icon: Target },
     { to: "/app/learning-path", label: "Learning Path",  Icon: BookOpen },
+    { to: "/app/mentor",        label: "AI Mentor",      Icon: Bot },
+    { to: "/app/jobs",          label: "Peta Posisi",    Icon: Compass },
+    { to: "/app/toko",          label: "Toko & Kelas",   Icon: ShoppingBag },
   ],
   hrd: [
     { to: "/app/hrd",           label: "Dashboard HRD",  Icon: LayoutDashboard },
+    { to: "/app/hrd/jobs",      label: "Peta Posisi",    Icon: Compass },
   ],
   admin: [
     { to: "/app/admin",          label: "Dashboard",     Icon: LayoutDashboard },
@@ -23,6 +27,7 @@ const NAV = {
     { to: "/app/admin/rules",    label: "Aturan Mapping",Icon: Settings2 },
     { to: "/app/admin/questions",label: "Bank Soal",     Icon: ClipboardCheck },
     { to: "/app/admin/requests", label: "Inbox Request", Icon: Mail },
+    { to: "/app/admin/avataredu",label: "Course AvatarEdu",Icon: GraduationCap },
     { to: "/app/admin/audit",    label: "Audit Log",     Icon: ScrollText },
   ],
 };
@@ -44,7 +49,7 @@ export default function Sidebar({ open, onClose }) {
   return (
     <aside
       className={[
-        "w-60 min-h-screen flex flex-col flex-shrink-0",
+        "w-60 h-screen flex flex-col flex-shrink-0",
         "fixed inset-y-0 left-0 z-40 lg:static lg:z-auto",
         "transition-transform duration-300 ease-out",
         open ? "translate-x-0" : "-translate-x-full lg:translate-x-0",

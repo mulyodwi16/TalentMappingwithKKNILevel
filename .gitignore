@@ -3,3 +3,9 @@ node_modules/
 *.db
 dist/
 .DS_Store
+
+# Skrip runner lokal (kepentingan lokal, tidak di-commit)
+*.bat
+
+# Catatan kerja lokal — jangan di-commit
+CLAUDE.md

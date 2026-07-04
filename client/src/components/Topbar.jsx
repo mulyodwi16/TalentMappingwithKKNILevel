@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Bell, Sun, Moon, Menu } from "lucide-react";
 import api from "../api/client.js";
 import useAuthStore from "../store/authStore.js";
+import CoinPill from "./CoinPill.jsx";
+import HelpButton from "./HelpButton.jsx";
 
 const TITLES = {
   "/app/dashboard":       "Dashboard",
@@ -11,6 +13,11 @@ const TITLES = {
   "/app/exam":            "Ujian Kompetensi",
   "/app/skill-gap":       "Skill Gap Analyzer",
   "/app/learning-path":   "Learning Path",
+  "/app/mentor":          "AI Mentor Karier KKNI",
+  "/app/toko":            "Toko & Kelas",
+  "/app/jobs":            "Peta Posisi & Kesiapan",
+  "/app/hrd/jobs":        "Peta Posisi & Talenta",
+  "/app/admin/avataredu": "Course AvatarEdu",
   "/app/hrd":             "Dashboard HRD",
   "/app/admin":           "Dashboard Admin",
   "/app/admin/users":     "Manajemen Pengguna",
@@ -73,6 +80,12 @@ export default function Topbar({ onBurger }) {
       <h1 className="flex-1 text-sm font-semibold truncate" style={{ color: "var(--text-base)" }}>
         {TITLES[pathname] || "KKNI Talent"}
       </h1>
+
+      {/* Koin (khusus User) */}
+      {user?.role === "user" && <CoinPill />}
+
+      {/* Bantuan / tur fitur (khusus User) */}
+      <HelpButton />
 
       {/* Theme toggle */}
       <button

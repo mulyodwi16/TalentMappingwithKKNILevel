@@ -31,6 +31,150 @@ model User {
   notifications   Notification[]
   requests        Request[]
   auditLogs       AuditLog[]
+  wallet          CoinWallet?
+  coinTx          CoinTransaction[]
+  redemptions     ShopRedemption[]
+  missions        DailyMission[]
+  quizLogs        DailyQuizLog[]
+  certificates    Certificate[]
+  jobs            Job[]
+  applications    JobApplication[]
+}
+
+// ── Misi harian (3 tugas → klaim koin) ───────────────────────────────────────
+model DailyMission {
+  id        String   @id @default(cuid())
+  userId    String
+  day       String                 // YYYY-MM-DD
+  tasks     String   @default("{}") // JSON { taskKey: true }
+  claimed   Boolean  @default(false)
+  claimedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, day])
+}
+
+// Log soal Course Harian — simpan agar soal hari berikutnya tidak berulang (±5 hari).
+model DailyQuizLog {
+  id             String   @id @default(cuid())
+  userId         String
+  day            String                 // YYYY-MM-DD
+  competencyCode String?
+  questions      String   @default("[]") // JSON [{q, options[], answerKey}]
+  score          Int?
+  total          Int?
+  completed      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, day])
+  @@index([userId])
+}
+
+// Sertifikat kompetensi — terbit saat lulus ujian/tes course.
+model Certificate {
+  id             String   @id @default(cuid())
+  userId         String
+  competencyCode String
+  name           String
+  kkniLevel      Int?
+  score          Int      @default(0)
+  source         String   @default("exam") // exam | course
+  issuedAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, competencyCode, source])
+  @@index([userId])
+}
+
+// ── Job Board (lowongan pemetaan talenta) ────────────────────────────────────
+model Job {
+  id             String   @id @default(cuid())
+  postedById     String
+  postedByName   String
+  company        String?
+  title          String
+  description    String?
+  department     String?
+  location       String?
+  kkniLevel      Int      @default(1)
+  skills         String   @default("[]") // JSON array of skill names
+  minExperience  Int      @default(0)
+  certifications String   @default("[]") // JSON array of cert/competency names
+  modules        String   @default("[]") // JSON array {title, url} — modul belajar untuk memenuhi posisi
+  status         String   @default("open") // open | closed
+  createdAt      DateTime @default(now())
+
+  postedBy     User             @relation(fields: [postedById], references: [id])
+  applications JobApplication[]
+}
+
+model JobApplication {
+  id         String   @id @default(cuid())
+  jobId      String
+  userId     String
+  matchScore Int      @default(0)
+  status     String   @default("applied") // applied | reviewed | rejected | accepted
+  createdAt  DateTime @default(now())
+
+  job  Job  @relation(fields: [jobId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([jobId, userId])
+}
+
+// Konfigurasi sederhana key→value (mis. pengaturan AvatarEdu oleh admin).
+model AppSetting {
+  key       String   @id
+  value     String   @default("")
+  updatedAt DateTime @updatedAt
+}
+
+// ── Gamifikasi: dompet Koin Talenta ──────────────────────────────────────────
+model CoinWallet {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  balance   Int      @default(0)
+  streak    Int      @default(0)  // hari berturut klaim login harian
+  lastClaim String?               // tanggal klaim login terakhir (YYYY-MM-DD)
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// Buku besar transaksi koin. refType+refId dipakai untuk reward sekali-bayar (idempoten).
+model CoinTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Int                   // + earn / - spend
+  reason    String
+  refType   String?
+  refId     String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, refType, refId])
+  @@index([userId])
+}
+
+// Penukaran/unlock kelas premium di Toko dengan koin.
+model ShopRedemption {
+  id        String   @id @default(cuid())
+  userId    String
+  itemId    String
+  itemName  String
+  cost      Int
+  code      String
+  status    String   @default("aktif")
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
 
 model KkniLevel {

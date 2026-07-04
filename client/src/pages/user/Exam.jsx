@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../../api/client.js";
+import DailyQuiz from "../../components/DailyQuiz.jsx";
 
 function Timer({ seconds, onDone }) {
   const [left, setLeft] = useState(seconds);
@@ -58,7 +59,8 @@ export default function Exam() {
 
   if (!started) {
     return (
-      <div className="max-w-xl mx-auto">
+      <div className="max-w-xl mx-auto space-y-5">
+        <DailyQuiz />
         <div className="card p-8 text-center">
           <div className="text-5xl mb-4">✎</div>
           <h2 className="text-2xl font-bold text-white mb-2">Ujian Kompetensi</h2>

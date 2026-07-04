@@ -11,7 +11,12 @@ import CVUpload from "./pages/user/CVUpload.jsx";
 import Exam from "./pages/user/Exam.jsx";
 import SkillGap from "./pages/user/SkillGap.jsx";
 import LearningPath from "./pages/user/LearningPath.jsx";
+import Mentor from "./pages/user/Mentor.jsx";
+import Toko from "./pages/user/Toko.jsx";
+import Jobs from "./pages/user/Jobs.jsx";
 import HrdDashboard from "./pages/hrd/HrdDashboard.jsx";
+import JobBoard from "./pages/hrd/JobBoard.jsx";
+import AvatarEduSettings from "./pages/admin/AvatarEduSettings.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import UserManagement from "./pages/admin/UserManagement.jsx";
 import RuleManagement from "./pages/admin/RuleManagement.jsx";
@@ -56,12 +61,23 @@ export default function App() {
           <Route path="exam" element={<Exam />} />
           <Route path="skill-gap" element={<SkillGap />} />
           <Route path="learning-path" element={<LearningPath />} />
+          <Route path="mentor" element={<Mentor />} />
+          <Route path="toko" element={<Toko />} />
+          <Route path="jobs" element={<Jobs />} />
           {/* HRD */}
           <Route
             path="hrd"
             element={
               <ProtectedRoute roles={["hrd", "admin"]}>
                 <HrdDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="hrd/jobs"
+            element={
+              <ProtectedRoute roles={["hrd", "admin"]}>
+                <JobBoard />
               </ProtectedRoute>
             }
           />
@@ -111,6 +127,14 @@ export default function App() {
             element={
               <ProtectedRoute roles={["admin"]}>
                 <AuditLogPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="admin/avataredu"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <AvatarEduSettings />
               </ProtectedRoute>
             }
           />

@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from "recharts";
 import { Link } from "react-router-dom";
 import api from "../../api/client.js";
+import { markMission } from "../../lib/missions.js";
 
 const CustomTooltip = ({ active, payload }) => {
   if (!active || !payload?.length) return null;
@@ -17,6 +19,7 @@ const CustomTooltip = ({ active, payload }) => {
 };
 
 export default function SkillGap() {
+  useEffect(() => { markMission("open_skillgap"); }, []);
   const { data: assessments = [], isLoading } = useQuery({
     queryKey: ["assessments"],
     queryFn: () => api.get("/user/skill-assessments"),

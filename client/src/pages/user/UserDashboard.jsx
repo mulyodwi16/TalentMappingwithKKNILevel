@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import api from "../../api/client.js";
 import useAuthStore from "../../store/authStore.js";
+import DailyLoginCard from "../../components/DailyLoginCard.jsx";
+import DailyMissions from "../../components/DailyMissions.jsx";
 
 const STATUS_CONFIG = {
   ready:       { label: "Siap Naik",    cls: "badge-ready",      ring: "#10b981" },
@@ -47,6 +49,12 @@ export default function UserDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Gamifikasi: bonus login harian + misi harian */}
+      <div className="grid lg:grid-cols-2 gap-4 items-start">
+        <DailyLoginCard />
+        <DailyMissions />
+      </div>
+
       {/* Header card */}
       <div className="card p-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-brand-600/10 to-transparent rounded-bl-full" />

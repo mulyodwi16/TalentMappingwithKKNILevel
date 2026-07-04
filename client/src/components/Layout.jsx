@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar.jsx";
 import Topbar from "./Topbar.jsx";
+import FloatingMentor from "./FloatingMentor.jsx";
 
 export default function Layout() {
   const { pathname } = useLocation();
@@ -14,7 +15,7 @@ export default function Layout() {
   }, [pathname]);
 
   return (
-    <div className="app-root flex min-h-screen" style={{ backgroundColor: "var(--bg-page)" }}>
+    <div className="app-root flex h-screen overflow-hidden" style={{ backgroundColor: "var(--bg-page)" }}>
       {/* mobile backdrop */}
       {sidebarOpen && (
         <div
@@ -33,6 +34,8 @@ export default function Layout() {
           </div>
         </main>
       </div>
+
+      <FloatingMentor />
     </div>
   );
 }

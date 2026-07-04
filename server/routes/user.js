@@ -2,6 +2,7 @@ import express from "express";
 import { prisma } from "../prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { extractProfile, pdfToText } from "../cv.js";
+import { awardOnce, COIN } from "../gamification.js";
 
 const router = express.Router();
 router.use(requireAuth);
@@ -41,6 +42,7 @@ router.post("/cv-parse", async (req, res) => {
       },
     });
     const levelInfo = await prisma.kkniLevel.findUnique({ where: { level } });
+    try { await awardOnce(req.user.id, COIN.cvMap, "Memetakan CV ke jenjang KKNI", { type: "cvmap", id: req.user.id }); } catch { /* non-fatal */ }
     res.json({ profile, predictedLevel: level, levelInfo: levelInfo ? { ...levelInfo, descriptors: JSON.parse(levelInfo.descriptors) } : null, textChars: text.length });
   } catch (e) {
     res.status(400).json({ error: "gagal membaca CV: " + e.message });
@@ -189,7 +191,25 @@ router.post("/exam/submit", async (req, res) => {
       },
     });
 
-    res.json({ results, readiness, status, gaps, attemptId: attempt.id, resources: resources.slice(0, 4) });
+    // Reward gamifikasi: koin per ujian yang diselesaikan (idempoten per attempt).
+    let coin = null;
+    try { coin = await awardOnce(req.user.id, COIN.exam, "Menyelesaikan ujian kompetensi", { type: "exam", id: attempt.id }); } catch { /* non-fatal */ }
+
+    // Terbitkan sertifikat kompetensi untuk tiap kompetensi yang LULUS (idempoten per kompetensi).
+    let newCerts = [];
+    try {
+      const passed = results.filter((r) => r.passed);
+      for (const r of passed) {
+        const cert = await prisma.certificate.upsert({
+          where: { userId_competencyCode_source: { userId: req.user.id, competencyCode: r.competencyCode, source: "exam" } },
+          update: { score: r.score, kkniLevel: effectiveLevel },
+          create: { userId: req.user.id, competencyCode: r.competencyCode, name: r.name, kkniLevel: effectiveLevel, score: r.score, source: "exam" },
+        });
+        newCerts.push(cert.name);
+      }
+    } catch (e) { console.error("cert issue:", e.message); }
+
+    res.json({ results, readiness, status, gaps, attemptId: attempt.id, resources: resources.slice(0, 4), coin, certificates: newCerts });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -229,6 +249,12 @@ router.put("/recommendations/:id", async (req, res) => {
     data: { progress: req.body.progress },
   });
   res.json(rec);
+});
+
+// ── Certificates ──────────────────────────────────────────────────────────────
+router.get("/certificates", async (req, res) => {
+  const certs = await prisma.certificate.findMany({ where: { userId: req.user.id }, orderBy: { issuedAt: "desc" } });
+  res.json(certs);
 });
 
 // ── Notifications ─────────────────────────────────────────────────────────────

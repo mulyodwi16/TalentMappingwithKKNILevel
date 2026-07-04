@@ -239,6 +239,32 @@ router.post("/notifications", async (req, res) => {
   res.status(201).json(n);
 });
 
+// ── Pengaturan AvatarEdu (kurasi course yang tampil ke pekerja) ────────────────
+const AVATAREDU_DEFAULT = { enabled: true, featuredQuery: "kompetensi kerja", featuredSlugs: [] };
+
+router.get("/avataredu", async (req, res) => {
+  const row = await prisma.appSetting.findUnique({ where: { key: "avataredu" } });
+  let cfg = AVATAREDU_DEFAULT;
+  if (row) { try { cfg = { ...AVATAREDU_DEFAULT, ...JSON.parse(row.value) }; } catch { /* default */ } }
+  res.json(cfg);
+});
+
+router.put("/avataredu", async (req, res) => {
+  const b = req.body || {};
+  const cfg = {
+    enabled: b.enabled !== false,
+    featuredQuery: String(b.featuredQuery ?? AVATAREDU_DEFAULT.featuredQuery).slice(0, 120),
+    featuredSlugs: Array.isArray(b.featuredSlugs) ? b.featuredSlugs.map((s) => String(s).trim()).filter(Boolean).slice(0, 20) : [],
+  };
+  await prisma.appSetting.upsert({
+    where: { key: "avataredu" },
+    update: { value: JSON.stringify(cfg) },
+    create: { key: "avataredu", value: JSON.stringify(cfg) },
+  });
+  await audit(req, "update_avataredu_settings", "avataredu", JSON.stringify(cfg));
+  res.json(cfg);
+});
+
 function safeUser(u) {
   const { passwordHash: _, certifications, ...rest } = u;
   return { ...rest, certifications: JSON.parse(certifications) };

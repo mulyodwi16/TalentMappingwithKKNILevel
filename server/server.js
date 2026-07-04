@@ -11,6 +11,10 @@ import userRoutes from "./routes/user.js";
 import hrdRoutes from "./routes/hrd.js";
 import adminRoutes from "./routes/admin.js";
 import avatareduRoutes from "./routes/avataredu.js";
+import mentorRoutes from "./routes/mentor.js";
+import gamificationRoutes from "./routes/gamification.js";
+import missionRoutes from "./routes/missions.js";
+import jobRoutes from "./routes/jobs.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -29,8 +33,14 @@ app.use("/api/user",  userRoutes);
 app.use("/api/hrd",   hrdRoutes);
 app.use("/api/admin",     adminRoutes);
 app.use("/api/avataredu", avatareduRoutes);
+app.use("/api/mentor",    mentorRoutes);
+app.use("/api/missions",  missionRoutes);
+app.use("/api/jobs",      jobRoutes);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
+
+// Gamifikasi mounted di "/api" (requireAuth global) — HARUS setelah rute publik seperti /api/health.
+app.use("/api",           gamificationRoutes);
 
 if (process.env.NODE_ENV === "production") {
   const dist = join(HERE, "../client/dist");

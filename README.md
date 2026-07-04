@@ -2,9 +2,11 @@
 
 Sistem pemetaan kompetensi pekerja berbasis standar KKNI (Kerangka Kualifikasi Nasional Indonesia).
 
-**Flow utama:** Upload CV → Auto-prediksi level KKNI → Ujian kompetensi → Skill gap analyzer → Learning path + kursus AvatarEdu
+**Flow utama:** Upload CV → Auto-prediksi level KKNI → Ujian kompetensi → Skill gap analyzer → Learning path + kursus AvatarEdu → Sertifikat kompetensi → Job Board (pencocokan talenta)
 
-**Stack:** Express 5 · SQLite + Prisma ORM · React 18 + Vite · Tailwind CSS · Recharts · OpenRouter (DeepSeek) · AvatarEdu.ai
+**Stack:** Express 5 · SQLite + Prisma ORM · React 18 + Vite · Tailwind CSS · Recharts · LLM OpenAI-compatible (OpenAI / OpenRouter / MiniMax) · AvatarEdu.ai
+
+> **Fitur tambahan (update):** AI Mentor Karier, gamifikasi Koin Talenta (login harian + misi harian + Course Harian AI), Toko & Kelas, Job Board ala JobStreet dengan skor kecocokan skill, dan sertifikat kompetensi. Lihat bagian [Fitur Tambahan](#fitur-tambahan-update).
 
 ---
 
@@ -85,6 +87,15 @@ Password semua akun: **`demo123`**
 | **Light/Dark Mode** | Toggle di topbar, persisten via localStorage |
 | **Responsive** | Sidebar slide-in dengan burger menu di mobile, layout adaptif |
 | **Page Transitions** | Animasi fade+slide antar halaman, smooth scroll-to-top tiap navigasi |
+| **AI Mentor Karier** | Chat konsultasi (halaman penuh + widget mengambang) yang *grounded* ke data KKNI user; riwayat persisten + auto-summarization |
+| **Gamifikasi Koin** | Koin Talenta dari CV, ujian, kursus; pill saldo di topbar, sink di Toko |
+| **Login Harian** | Klaim bonus koin sekali/hari dengan **streak** beruntun |
+| **Misi Harian** | 3 misi (Course Harian, cek Job Board, cek Skill Gap) → klaim bonus koin |
+| **Course Harian** | Kuis harian; soal **digenerate AI** dari kompetensi, beda tiap hari (anti-ulang ±5 hari), fallback ke bank soal |
+| **Toko & Kelas** | Tukar koin dengan kelas premium + katalog kursus AvatarEdu yang bisa langsung diikuti |
+| **Job Board** | HRD posting lowongan berkriteria; pekerja lihat **skor kecocokan** & gap yang perlu dikejar; admin lihat semua |
+| **Sertifikat Kompetensi** | Terbit otomatis saat lulus ujian; memperkuat pencocokan Job Board |
+| **Tombol Bantuan** | Tur fitur (auto-muncul saat pertama login) menjelaskan seluruh fitur |
 
 ---
 
@@ -154,13 +165,27 @@ JWT_SECRET=ganti-dengan-secret-panjang-acak
 NODE_ENV=development
 CLIENT_URL=http://localhost:5173
 
-# AI learning path (opsional)
-OPENROUTER_API_KEY=sk-or-xxxx
-OPENROUTER_MODEL=deepseek/deepseek-v4-flash
+# ── LLM untuk AI Mentor, analisis gap, & Course Harian ──
+# Provider dipilih OTOMATIS dengan prioritas: OpenAI → OpenRouter → MiniMax.
+# Cukup isi salah satu blok.
+OPENAI_API_KEY=sk-proj-xxxx
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_MODEL=gpt-4o
+
+# Alternatif hemat (dipakai bila OPENAI_API_KEY kosong)
+OPENROUTER_API_KEY=
+OPENROUTER_MODEL=deepseek/deepseek-chat
+
+# Cadangan (dipakai bila dua di atas kosong)
+MINIMAX_API_KEY=
+MINIMAX_BASE_URL=https://api.minimax.io/v1
+MINIMAX_MODEL=MiniMax-M2
 
 # Kursus AvatarEdu (opsional)
 AVATAREDU_API_KEY=av_xxxx
 ```
+
+> Tanpa API key LLM, fitur AI tetap **degradasi mulus**: AI Mentor menampilkan pesan "belum aktif", dan Course Harian jatuh ke bank soal (bukan generate AI).
 
 > **Catatan:** File `.env` ada di `.gitignore` — jangan di-commit.
 
@@ -197,6 +222,32 @@ Analisis gap kompetensi menggunakan LLM via [OpenRouter](https://openrouter.ai).
 AI aktif hanya jika:
 - Ada gap kompetensi dari hasil ujian
 - Profesi user terdeteksi dari field `position`/`department` (saat ini: video/editing/media/sinema)
+
+---
+
+## Fitur Tambahan (Update)
+
+### AI Mentor Karier KKNI (role: User)
+Chat konsultasi yang paham data pemetaan user (jenjang, target, gap, status). Tersedia sebagai halaman penuh (`/app/mentor`) & widget mengambang di semua halaman User. Riwayat persisten di `localStorage` + auto-summarization saat percakapan panjang. Backend: `server/routes/mentor.js` + `server/llm.js`.
+
+### Gamifikasi — Koin Talenta (role: User)
+- **Login harian** (`/api/coins/daily-claim`): bonus sekali/hari + streak beruntun.
+- **Misi harian** (`/api/missions/daily`): 3 tugas → klaim bonus. Salah satunya **Course Harian** (`/api/missions/quiz`): soal digenerate AI dari kompetensi, anti-ulang ±5 hari (log di `DailyQuizLog`).
+- **Koin** didapat dari: memetakan CV, menyelesaikan ujian, mengikuti kursus. **Toko & Kelas** (`/app/toko`) = sink koin (kelas premium) + katalog kursus AvatarEdu.
+
+### Job Board (roles: User / HRD / Admin)
+- **HRD** (`/app/hrd/jobs`): posting lowongan berkriteria (level KKNI, keahlian, pengalaman, sertifikasi), lihat pelamar terurut kecocokan.
+- **User** (`/app/jobs`): telusuri lowongan + **skor kecocokan** (engine `server/jobmatch.js`, bobot level 30 / pengalaman 15 / skill 40 / sertifikasi 15) + daftar skill yang perlu dikejar; melamar.
+- **Admin**: melihat semua lowongan. Skill user dihimpun dari CV + kompetensi lulus + **sertifikat kompetensi** (terbit otomatis saat lulus ujian, model `Certificate`).
+
+### Course AvatarEdu diatur Admin (role: Admin)
+`/app/admin/avataredu` — atur course yang tampil ke pekerja: kata kunci pencarian / daftar slug unggulan / aktif-nonaktif, dengan uji pratinjau. Backend: `admin.js` (`/api/admin/avataredu`) + `avataredu.js` (`/api/avataredu/featured`).
+
+### Model data baru (Prisma)
+`CoinWallet`, `CoinTransaction`, `ShopRedemption`, `DailyMission`, `DailyQuizLog`, `Certificate`, `Job`, `JobApplication`, `AppSetting`. Setelah pull, jalankan `npx prisma db push` di `server/`.
+
+### Provider LLM fleksibel
+`server/llm.js` memilih provider OpenAI-compatible otomatis: **OpenAI → OpenRouter → MiniMax** (lihat [Environment Variables](#environment-variables)).
 
 ---
 
