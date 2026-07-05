@@ -2,7 +2,7 @@ import express from "express";
 import { prisma } from "../prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { isLlmConfigured } from "../llm.js";
-import { unitStates, ensureUnitCourse } from "../skkni.js";
+import { unitStates, ensureUnitCourse, ensureUnitLessons } from "../skkni.js";
 import { award, awardOnce, getBalance, COIN } from "../gamification.js";
 
 // Fitur "Kelas": materi belajar per unit kompetensi (sumber SKKNI, di-generate AI) sebagai
@@ -56,6 +56,28 @@ router.get("/unit/:code", async (req, res) => {
   let content = {};
   try { content = JSON.parse(course.content); } catch { /* corrupt */ }
   res.json({ chosen, unit: { code: unit.code, title: unit.title }, content, state });
+});
+
+// Pelajaran MENDALAM bertahap (course player). Digenerate SEKALI per unit lalu
+// di-cache permanen (UnitCourse.content.lessons) — request berikutnya instan.
+router.get("/unit/:code/lessons", async (req, res) => {
+  const code = req.params.code;
+  const chosen = await chosenDoc(req.user.id);
+  if (!chosen) return res.status(400).json({ error: "Belum memilih kompetensi SKKNI." });
+  const unit = await prisma.skkniUnit.findFirst({ where: { documentId: chosen.id, code } });
+  if (!unit) return res.status(404).json({ error: "Unit tidak ditemukan." });
+
+  const states = await unitStates(req.user.id, chosen.id);
+  const st = states.find((s) => s.code === code);
+  if (st && st.state === "locked") return res.status(403).json({ error: "Unit masih terkunci. Selesaikan unit sebelumnya atau buka dengan Koin.", state: st });
+
+  if (!isLlmConfigured()) return res.status(503).json({ error: "Materi kelas butuh AI aktif. Hubungi admin." });
+  try {
+    const lessons = await ensureUnitLessons(chosen.id, { code: unit.code, title: unit.title });
+    res.json({ unit: { code: unit.code, title: unit.title }, lessons, state: st || null });
+  } catch (e) {
+    res.status(502).json({ error: "Gagal menyusun pelajaran: " + e.message });
+  }
 });
 
 // Tandai kelas unit SELESAI dipelajari → membuka ujian unit + beri Koin (sekali/unit).

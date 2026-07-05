@@ -9,30 +9,12 @@ import api from "../../api/client.js";
 import useAuthStore from "../../store/authStore.js";
 import RankBadge from "../../components/RankBadge.jsx";
 import RankHero from "../../components/RankHero.jsx";
+import RankIdentityCard from "../../components/RankIdentityCard.jsx";
 import CertificateModal from "../../components/CertificateModal.jsx";
+import AvatarCropModal from "../../components/AvatarCropModal.jsx";
 import { RANKS, rankName, rankOf } from "../../lib/rank.js";
 
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "—");
-
-// Resize gambar ke maks `size` px (kotak, cover) → data URI JPEG kecil untuk foto profil.
-function resizeToDataUrl(file, size = 256, quality = 0.82) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      const canvas = document.createElement("canvas");
-      canvas.width = size; canvas.height = size;
-      const ctx = canvas.getContext("2d");
-      const scale = Math.max(size / img.width, size / img.height);
-      const w = img.width * scale, h = img.height * scale;
-      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
-      resolve(canvas.toDataURL("image/jpeg", quality));
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Gagal memuat gambar")); };
-    img.src = url;
-  });
-}
 
 export default function Profile() {
   const { user } = useAuthStore();
@@ -44,17 +26,22 @@ export default function Profile() {
   const [viewCert, setViewCert] = useState(null);
   const fileRef = useRef(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [cropFile, setCropFile] = useState(null); // File → buka editor posisi/zoom (#2)
 
-  async function onAvatarPick(e) {
+  function onAvatarPick(e) {
     const file = e.target.files?.[0];
     e.target.value = ""; // izinkan pilih file sama lagi
     if (!file) return;
     if (!/^image\//.test(file.type)) { toast.error("File harus berupa gambar"); return; }
+    setCropFile(file); // JANGAN langsung unggah — user atur posisi & ukuran dulu.
+  }
+
+  async function saveCroppedAvatar(dataUrl) {
     setUploadingAvatar(true);
     try {
-      const dataUrl = await resizeToDataUrl(file, 256);
       await api.put("/user/avatar", { avatarUrl: dataUrl });
       toast.success("Foto profil diperbarui");
+      setCropFile(null);
       await load();
     } catch (err) {
       toast.error(typeof err === "string" ? err : "Gagal mengunggah foto");
@@ -106,39 +93,39 @@ export default function Profile() {
   const hasCv = cv.parsedAt || cv.education;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="space-y-6">
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onAvatarPick} />
+      {cropFile && (
+        <AvatarCropModal file={cropFile} saving={uploadingAvatar}
+          onSave={saveCroppedAvatar} onClose={() => !uploadingAvatar && setCropFile(null)} />
+      )}
 
-      {/* Rank sebagai komponen utama (terbesar, di tengah) + foto profil */}
-      <RankHero
-        rank={ov.rank}
-        rankInfo={ov.rankInfo}
-        readiness={ov.readiness?.total ?? p.readinessScore ?? 0}
-        competency={ov.chosenSkkni?.title}
-        avatar={{ name: p.name, url: p.avatarUrl }}
-        onAvatarClick={() => !uploadingAvatar && fileRef.current?.click()}
-        footer={
-          <div className="mt-5 flex flex-col items-center gap-1">
-            <h1 className="text-lg font-bold text-white">{p.name}</h1>
-            <p className="text-xs text-slate-400">{p.email}</p>
-            <div className="mt-1 flex items-center gap-2 flex-wrap justify-center">
-              {p.targetKkniLevel ? (
-                <span className="text-xs flex items-center gap-1 text-slate-400">
-                  <Target className="w-3 h-3" /> Target: {rankName(p.targetKkniLevel)}
-                </span>
-              ) : null}
-              <button onClick={() => !uploadingAvatar && fileRef.current?.click()}
-                className="text-xs font-semibold text-brand-400 hover:underline disabled:opacity-60" disabled={uploadingAvatar}>
-                {uploadingAvatar ? "Mengunggah…" : p.avatarUrl ? "Ganti foto" : "Upload foto"}
-              </button>
-              {p.avatarUrl && !uploadingAvatar && (
-                <button onClick={async () => { await api.put("/user/avatar", { avatarUrl: "" }); toast.success("Foto dihapus"); load(); }}
-                  className="text-xs text-slate-500 hover:text-red-400">Hapus foto</button>
-              )}
-            </div>
-          </div>
-        }
-      />
+      {/* Baris atas: frame rank (kiri) + kartu identitas & Data Diri DI LUAR frame (kanan) */}
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-4 items-start">
+        <RankHero
+          rank={ov.rank}
+          rankInfo={ov.rankInfo}
+          readiness={ov.readiness?.total ?? p.readinessScore ?? 0}
+          competency={ov.chosenSkkni?.title}
+        />
+        <div className="space-y-4">
+          <RankIdentityCard
+            level={ov.rank?.effective ?? p.currentKkniLevel}
+            identity={{
+              name: p.name,
+              email: p.email,
+              subtitle: [p.position, p.department].filter(Boolean).join(" · ") || p.academicStatus || "Talenta",
+              targetLabel: p.targetKkniLevel ? `Target: ${rankName(p.targetKkniLevel)}` : null,
+              photoUrl: p.avatarUrl,
+              uploading: uploadingAvatar,
+              onPhotoClick: () => fileRef.current?.click(),
+              onPhotoRemove: async () => { await api.put("/user/avatar", { avatarUrl: "" }); toast.success("Foto dihapus"); load(); },
+            }}
+          />
+          {/* Data Diri di bawah foto (pindah dari bawah halaman) */}
+          <EditableIdentity profile={p} onSaved={load} compact />
+        </div>
+      </div>
 
       {/* Rincian Skor Kesiapan + penjelasan Rank */}
       <ReadinessCard readiness={ov.readiness} rankInfo={ov.rankInfo} rank={ov.rank} level={ov.rank?.effective ?? p.currentKkniLevel} />
@@ -229,9 +216,6 @@ export default function Profile() {
           )}
         </div>
       </div>
-
-      {/* Data diri (editable) */}
-      <EditableIdentity profile={p} onSaved={load} />
 
       {viewCert && <CertificateModal cert={viewCert} holder={p.name} onClose={() => setViewCert(null)} />}
     </div>
@@ -399,7 +383,7 @@ function SkkniSection({ chosen, doc, onChanged, autoOpen = false }) {
           ) : (
             <p className="text-xs" style={{ color: "var(--text-4)" }}>Dokumen ini belum memiliki daftar unit terdigitasi di Kemnaker.</p>
           )}
-          <p className="text-[11px]" style={{ color: "var(--text-4)" }}>Sumber: API resmi SKKNI Kemnaker (data di-cache lokal).</p>
+          <p className="text-[11px]" style={{ color: "var(--text-4)" }}>Sumber: API resmi SKKNI Kemnaker (data tersimpan lokal).</p>
         </div>
       )}
 
@@ -544,7 +528,8 @@ function SkkniPicker({ onClose, onChosen }) {
 }
 
 // ── Data diri editable ───────────────────────────────────────────────────────
-function EditableIdentity({ profile, onSaved }) {
+// `compact` = tampilan 1 kolom untuk kolom sempit (di bawah kartu identitas, kanan frame rank).
+function EditableIdentity({ profile, onSaved, compact = false }) {
   const [edit, setEdit] = useState(false);
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
@@ -600,17 +585,17 @@ function EditableIdentity({ profile, onSaved }) {
       </div>
 
       {!edit ? (
-        <div className="grid sm:grid-cols-2 gap-2">
+        <div className={`grid gap-2 ${compact ? "" : "sm:grid-cols-2"}`}>
           {rows.map((r) => (
             <div key={r.label} className="flex items-center gap-2 text-sm py-1.5">
               <r.icon className="w-4 h-4 shrink-0" style={{ color: "var(--text-4)" }} />
               <span style={{ color: "var(--text-4)" }}>{r.label}:</span>
-              <span className="font-medium" style={{ color: "var(--text-base)" }}>{r.value}</span>
+              <span className="font-medium truncate" style={{ color: "var(--text-base)" }}>{r.value}</span>
             </div>
           ))}
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 gap-3">
+        <div className={`grid gap-3 ${compact ? "" : "sm:grid-cols-2"}`}>
           <Field label="Nama"><input className="input text-sm" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
           <Field label="Departemen"><input className="input text-sm" value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} /></Field>
           <Field label="Posisi"><input className="input text-sm" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} /></Field>

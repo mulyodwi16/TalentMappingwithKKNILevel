@@ -43,11 +43,11 @@ export default function Register() {
         </div>
 
         <form
-          onSubmit={(e) => { e.preventDefault(); if (!form.academicStatus) return toast.error("Pilih status kamu dulu"); register.mutate(form); }}
+          onSubmit={(e) => { e.preventDefault(); if (!form.academicStatus) return toast.error("Pilih status akademikmu terlebih dahulu"); register.mutate(form); }}
           className="card p-6 sm:p-8 space-y-4"
         >
           {[
-            { key: "name",     label: "Nama Lengkap", type: "text",     ph: "Nama kamu" },
+            { key: "name",     label: "Nama Lengkap", type: "text",     ph: "Nama lengkapmu" },
             { key: "email",    label: "Email",         type: "email",    ph: "email@contoh.com" },
             { key: "password", label: "Password",      type: "password", ph: "Min. 6 karakter" },
           ].map(({ key, label, type, ph }) => (

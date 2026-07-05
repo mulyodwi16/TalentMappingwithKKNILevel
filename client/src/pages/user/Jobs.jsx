@@ -290,7 +290,7 @@ export default function Jobs() {
           <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>HRD belum memetakan posisi target. Cek lagi nanti.</p>
         </div>
       ) : (
-        <div className="grid lg:grid-cols-2 gap-4">
+        <div className="grid lg:grid-cols-2 gap-4 items-start">
           {jobs.map((job) => (
             <PositionCard key={job.id} job={job} onTarget={toggleTarget} targeting={targeting === job.id} />
           ))}

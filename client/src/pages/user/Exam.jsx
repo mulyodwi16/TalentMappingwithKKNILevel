@@ -4,6 +4,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   CheckCircle2, Lock, BookOpen, PlayCircle, RotateCcw, GraduationCap, Award, ArrowLeft, Sparkles,
+  History, XCircle, X, Loader2,
 } from "lucide-react";
 import api from "../../api/client.js";
 
@@ -45,6 +46,136 @@ const QTYPE = {
 // Soal terjawab: MC bila dipilih; isian/urutan bila teks tak kosong.
 const isAnswered = (q, a) => ((q.type === "mc" || !q.type) ? a !== undefined : typeof a === "string" && a.trim().length > 0);
 
+const fmtDT = (d) => new Date(d).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
+// ── Review per soal ala Quizizz (#3): jawaban user vs jawaban benar terlihat ──
+function ReviewBreakdown({ breakdown }) {
+  return (
+    <div className="space-y-3">
+      {breakdown.map((b, i) => {
+        const ok = b.isCorrect ?? b.score >= 60;
+        const partial = !ok && b.score > 0;
+        return (
+          <div key={i} className="rounded-lg overflow-hidden" style={{ border: `1px solid ${ok ? "rgba(16,185,129,0.35)" : partial ? "rgba(245,158,11,0.35)" : "rgba(239,68,68,0.35)"}`, background: "var(--bg-raised)" }}>
+            {/* Header soal + skor */}
+            <div className="flex items-start justify-between gap-2 p-3 pb-2">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] font-bold" style={{ color: "var(--text-4)" }}>#{i + 1}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${QTYPE[b.type]?.cls || QTYPE.mc.cls}`}>{QTYPE[b.type]?.label || "Pilihan Ganda"}</span>
+                  {ok ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> : <XCircle className={`w-3.5 h-3.5 ${partial ? "text-amber-500" : "text-red-400"}`} />}
+                </div>
+                <p className="text-sm mt-1" style={{ color: "var(--text-base)" }}>{b.question}</p>
+              </div>
+              <span className={`text-sm font-bold shrink-0 ${b.score >= 60 ? "text-emerald-500" : b.score > 0 ? "text-amber-500" : "text-red-400"}`}>{b.score}%</span>
+            </div>
+
+            <div className="px-3 pb-3 space-y-1.5">
+              {b.type === "mc" && Array.isArray(b.options) ? (
+                // Quizizz-style: semua opsi; pilihan user & jawaban benar disorot.
+                b.options.map((opt, oi) => {
+                  const isUser = opt === b.userAnswer;
+                  const isKey = opt === b.correctAnswer;
+                  const style = isKey
+                    ? { background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.45)", color: "#10b981" }
+                    : isUser
+                      ? { background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.40)", color: "#f87171" }
+                      : { background: "var(--bg-muted)", border: "1px solid transparent", color: "var(--text-4)" };
+                  return (
+                    <div key={oi} className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs" style={style}>
+                      <span className="font-bold shrink-0">{String.fromCharCode(65 + oi)}.</span>
+                      <span className="flex-1">{opt}</span>
+                      {isKey && <span className="text-[10px] font-bold shrink-0">✓ Jawaban benar</span>}
+                      {isUser && !isKey && <span className="text-[10px] font-bold shrink-0">✗ Pilihanmu</span>}
+                      {isUser && isKey && <span className="text-[10px] font-bold shrink-0">Pilihanmu</span>}
+                    </div>
+                  );
+                })
+              ) : (
+                // Isian/urutan: jawaban user + umpan balik AI.
+                <>
+                  <div className="rounded-lg px-2.5 py-2 text-xs" style={{ background: "var(--bg-muted)", border: "1px solid var(--border)" }}>
+                    <p className="text-[10px] font-bold mb-0.5" style={{ color: "var(--text-4)" }}>JAWABANMU</p>
+                    <p style={{ color: "var(--text-2)", whiteSpace: "pre-wrap" }}>{b.userAnswer?.trim() ? b.userAnswer : <i style={{ color: "var(--text-4)" }}>(tidak dijawab)</i>}</p>
+                  </div>
+                </>
+              )}
+              {b.feedback && (
+                <p className="text-xs flex gap-1.5 rounded-lg px-2.5 py-2" style={{ color: "var(--text-3)", background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)" }}>
+                  <Sparkles className="w-3.5 h-3.5 text-brand-500 shrink-0 mt-0.5" /> <span><b className="text-brand-500">AI:</b> {b.feedback}</span>
+                </p>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Modal review riwayat ujian — buka kembali soal + jawaban untuk dipelajari.
+function HistoryReviewModal({ id, onClose }) {
+  const { data, isLoading } = useQuery({ queryKey: ["exam-review", id], queryFn: () => api.get(`/skkni/exam-history/${id}`), enabled: !!id });
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col" style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", maxHeight: "90vh" }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between gap-3 px-4 py-3 shrink-0" style={{ borderBottom: "1px solid var(--border)" }}>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold truncate" style={{ color: "var(--text-base)" }}>{data?.unitTitle || "Review Ujian"}</p>
+            {data && <p className="text-[11px]" style={{ color: "var(--text-4)" }}>{fmtDT(data.createdAt)} · skor <b className={data.passed ? "text-emerald-500" : "text-red-400"}>{data.score}%</b> · {data.passed ? "Lulus" : "Belum lulus"}</p>}
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-red-500/10 hover:text-red-400 shrink-0" style={{ color: "var(--text-4)" }} aria-label="Tutup"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="p-4 overflow-y-auto">
+          {isLoading ? (
+            <p className="text-sm text-center py-8 flex items-center justify-center gap-2" style={{ color: "var(--text-4)" }}><Loader2 className="w-4 h-4 animate-spin" /> Memuat review…</p>
+          ) : data?.breakdown ? (
+            <ReviewBreakdown breakdown={data.breakdown} />
+          ) : (
+            <p className="text-sm text-center py-8" style={{ color: "var(--text-4)" }}>Review tidak ditemukan.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Riwayat ujian unit — daftar hasil untuk dibuka kembali (fitur belajar dari kesalahan).
+function ExamHistory() {
+  const [viewId, setViewId] = useState(null);
+  const { data } = useQuery({ queryKey: ["exam-history"], queryFn: () => api.get("/skkni/exam-history") });
+  const items = data?.items || [];
+  if (items.length === 0) return null;
+  return (
+    <div className="card p-5">
+      <h3 className="text-sm font-bold flex items-center gap-2 mb-3" style={{ color: "var(--text-base)" }}>
+        <History className="w-4 h-4 text-brand-500" /> Riwayat Ujian Unit
+        <span className="text-[11px] font-normal" style={{ color: "var(--text-4)" }}>klik untuk review soal & jawabanmu</span>
+      </h3>
+      <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+        {items.map((it) => (
+          <button key={it.id} onClick={() => setViewId(it.id)}
+            className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-[var(--bg-muted)]"
+            style={{ border: "1px solid var(--border)" }}>
+            <span className={`w-9 h-9 rounded-lg grid place-items-center text-xs font-black shrink-0 ${it.passed ? "bg-emerald-500/15 text-emerald-500" : "bg-red-500/10 text-red-400"}`}>{it.score}%</span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs font-medium truncate" style={{ color: "var(--text-base)" }}>{it.unitTitle}</span>
+              <span className="block text-[11px]" style={{ color: "var(--text-4)" }}>{fmtDT(it.createdAt)} · {it.passed ? "Lulus" : "Belum lulus"}</span>
+            </span>
+            <span className="text-[11px] text-brand-500 shrink-0">Review →</span>
+          </button>
+        ))}
+      </div>
+      {viewId && <HistoryReviewModal id={viewId} onClose={() => setViewId(null)} />}
+    </div>
+  );
+}
+
 // ── Pemilih unit: ujian kini PER UNIT kompetensi ──────────────────────────────
 function UnitPicker({ chosen, onPick }) {
   const { data, isLoading } = useQuery({ queryKey: ["kelas-units"], queryFn: () => api.get("/kelas/units") });
@@ -53,7 +184,7 @@ function UnitPicker({ chosen, onPick }) {
   const s = data?.summary;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-4">
+    <div className="space-y-4">
       <div className="card p-5">
         <div className="flex items-center gap-2 mb-1">
           <GraduationCap className="w-5 h-5 text-brand-500" />
@@ -110,6 +241,9 @@ function UnitPicker({ chosen, onPick }) {
           Belum ada unit. <Link to="/app/profile" className="text-brand-500 hover:underline">Pilih kompetensi SKKNI</Link> dulu.
         </div>
       )}
+
+      {/* Riwayat ujian (#3) — review kembali soal & jawaban untuk dipelajari */}
+      <ExamHistory />
     </div>
   );
 }
@@ -144,7 +278,7 @@ export default function Exam() {
     mutationFn: () => api.post(submitUrl, { answers }),
     onSuccess: (data) => {
       setResult(data);
-      ["attempts", "assessments", "profile", "overview", "notifications", "skkni-chosen", "kelas-units", "learning-path", "coins"].forEach((k) => qc.invalidateQueries([k]));
+      ["attempts", "assessments", "profile", "overview", "notifications", "skkni-chosen", "kelas-units", "learning-path", "coins", "exam-history"].forEach((k) => qc.invalidateQueries([k]));
     },
     onError: (err) => toast.error(err || "Gagal submit"),
   });
@@ -222,24 +356,12 @@ export default function Exam() {
           </div>
         )}
 
-        {/* Rincian penilaian per soal (MC otomatis, isian/urutan dinilai AI) */}
+        {/* Review per soal ala Quizizz: jawabanmu vs jawaban benar + feedback AI */}
         {isUnit && result.breakdown?.length > 0 && (
           <div className="card p-6">
-            <h3 className="font-semibold mb-4" style={{ color: "var(--text-base)" }}>Penilaian per Soal</h3>
-            <div className="space-y-3">
-              {result.breakdown.map((b, i) => (
-                <div key={i} className="rounded-lg p-3" style={{ background: "var(--bg-raised)", border: "1px solid var(--border)" }}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${QTYPE[b.type]?.cls || QTYPE.mc.cls}`}>{QTYPE[b.type]?.label || "Pilihan Ganda"}</span>
-                      <p className="text-sm mt-1" style={{ color: "var(--text-2)" }}>{b.question}</p>
-                    </div>
-                    <span className={`text-sm font-bold shrink-0 ${b.score >= 60 ? "text-emerald-500" : b.score > 0 ? "text-amber-500" : "text-red-400"}`}>{b.score}%</span>
-                  </div>
-                  {b.feedback && <p className="text-xs mt-1.5 flex gap-1" style={{ color: "var(--text-4)" }}><Sparkles className="w-3 h-3 text-brand-500 shrink-0 mt-0.5" /> {b.feedback}</p>}
-                </div>
-              ))}
-            </div>
+            <h3 className="font-semibold mb-1" style={{ color: "var(--text-base)" }}>Review per Soal</h3>
+            <p className="text-xs mb-4" style={{ color: "var(--text-4)" }}>Jawabanmu & jawaban benar ditampilkan agar tahu persis apa yang salah. Review ini tersimpan di <b>Riwayat Ujian</b>.</p>
+            <ReviewBreakdown breakdown={result.breakdown} />
           </div>
         )}
 

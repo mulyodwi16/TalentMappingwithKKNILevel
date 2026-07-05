@@ -8,6 +8,7 @@ import DailyLoginCard from "../../components/DailyLoginCard.jsx";
 import DailyMissions from "../../components/DailyMissions.jsx";
 import DailyQuiz from "../../components/DailyQuiz.jsx";
 import RankHero from "../../components/RankHero.jsx";
+import RankIdentityCard from "../../components/RankIdentityCard.jsx";
 import RankUpOverlay from "../../components/RankUpOverlay.jsx";
 import { rankName } from "../../lib/rank.js";
 
@@ -57,34 +58,51 @@ export default function UserDashboard() {
     <div className="space-y-6">
       {rankUp && <RankUpOverlay from={rankUp.from} to={rankUp.to} onClose={() => setRankUp(null)} />}
 
-      {/* ── Panggung Rank (hero, ala main-menu ranked) ── */}
+      {/* ── Panggung Rank (hero) + kartu identitas DI LUAR frame (kanan) ── */}
       {rank ? (
-        <RankHero
-          rank={rank}
-          rankInfo={overview?.rankInfo}
-          readiness={overview?.readiness?.total ?? p?.readinessScore ?? 0}
-          competency={overview?.chosenSkkni?.title}
-          avatar={{ name: p?.name, url: p?.avatarUrl }}
-          footer={
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-              <span className={`badge ${sc.cls}`}>{sc.label}</span>
-              <span className="text-xs text-slate-400">{p?.name} · {p?.position || p?.academicStatus || "Talenta"}</span>
-              {!overview?.chosenSkkni && (
-                <Link to="/app/profile" className="text-xs font-semibold text-brand-400 hover:underline">Pilih kompetensi target →</Link>
-              )}
-            </div>
-          }
-        />
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-4 items-start">
+          <RankHero
+            rank={rank}
+            rankInfo={overview?.rankInfo}
+            readiness={overview?.readiness?.total ?? p?.readinessScore ?? 0}
+            competency={overview?.chosenSkkni?.title}
+            footer={
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                <span className={`badge ${sc.cls}`}>{sc.label}</span>
+                {!overview?.chosenSkkni && (
+                  <Link to="/app/profile" className="text-xs font-semibold text-brand-400 hover:underline">Pilih kompetensi target →</Link>
+                )}
+              </div>
+            }
+          />
+          <div className="space-y-4">
+            <RankIdentityCard
+              level={rank.effective}
+              identity={{
+                name: p?.name,
+                email: p?.email,
+                subtitle: p?.position || p?.academicStatus || "Talenta",
+                targetLabel: p?.targetKkniLevel ? `Target: ${rankName(p.targetKkniLevel)}` : null,
+                photoUrl: p?.avatarUrl,
+              }}
+            />
+            <Link to="/app/profile" className="card p-3 block text-center text-xs font-semibold text-brand-500 hover:underline">
+              Kelola profil & foto →
+            </Link>
+          </div>
+        </div>
       ) : (
         <div className="card p-8 text-center text-sm" style={{ color: "var(--text-4)" }}>Memuat rank…</div>
       )}
 
-      {/* Gamifikasi harian */}
+      {/* Gamifikasi harian — Course Harian di bawah bonus login (mengisi ruang kosong) */}
       <div className="grid lg:grid-cols-2 gap-4 items-start">
-        <DailyLoginCard />
+        <div className="space-y-4">
+          <DailyLoginCard />
+          <DailyQuiz />
+        </div>
         <DailyMissions />
       </div>
-      <DailyQuiz />
 
       {/* Aksi cepat */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -12,6 +12,8 @@ model User {
   name             String
   email            String   @unique
   passwordHash     String
+  // Login Google (OAuth): sub dari ID token. Akun email/password tetap berdampingan.
+  googleId         String?  @unique
   role             String   @default("user")
   department       String?
   position         String?
@@ -81,6 +83,22 @@ model ExternalEvidence {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+}
+
+// ── Riwayat ujian unit (review ala Quizizz) ──────────────────────────────────
+// Tersimpan SETELAH submit: soal + jawaban user + jawaban benar (MC) + feedback AI,
+// agar user bisa mempelajari kembali kesalahannya kapan saja.
+model UnitExamReview {
+  id        String   @id @default(cuid())
+  userId    String
+  unitCode  String
+  unitTitle String
+  score     Int
+  passed    Boolean  @default(false)
+  breakdown String   // JSON: [{question,type,options,userAnswer,correctAnswer,isCorrect,score,feedback}]
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 // ── Klaim skill dari CV/Portofolio (Peta Posisi #5) ──────────────────────────

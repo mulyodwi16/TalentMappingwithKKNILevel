@@ -296,7 +296,24 @@ router.post("/exam/:code/submit", async (req, res) => {
     }
     const score = questions.length ? Math.round(Object.values(perQ).reduce((a, b) => a + (b.score || 0), 0) / questions.length) : 0;
     const passed = score >= 60;
-    const breakdown = questions.map((q, i) => ({ question: q.q, type: q.type || "mc", score: perQ[i]?.score ?? 0, feedback: perQ[i]?.feedback || null }));
+    // Review ala Quizizz (#3): sertakan jawaban USER + jawaban BENAR (MC) agar user tahu
+    // persis apa yang salah & bisa dipelajari ulang. Untuk isian/urutan: jawaban user +
+    // feedback AI (rubrik keyPoints/idealSteps tetap privat — menjaga keabsahan tes ulang).
+    const breakdown = questions.map((q, i) => {
+      const type = q.type || "mc";
+      const base = { question: q.q, type, score: perQ[i]?.score ?? 0, feedback: perQ[i]?.feedback || null };
+      if (type === "mc") {
+        const chosen = Number(answers[i]);
+        return {
+          ...base,
+          options: q.options,
+          userAnswer: Number.isInteger(chosen) && q.options?.[chosen] != null ? q.options[chosen] : null,
+          correctAnswer: q.options?.[q.answerKey] ?? null,
+          isCorrect: chosen === q.answerKey,
+        };
+      }
+      return { ...base, userAnswer: typeof answers[i] === "string" ? answers[i] : "", isCorrect: (perQ[i]?.score ?? 0) >= 60 };
+    });
 
     // SkillAssessment unit → dibaca Skill Gap / rank / readiness.
     await prisma.skillAssessment.upsert({
@@ -338,14 +355,40 @@ router.post("/exam/:code/submit", async (req, res) => {
     await prisma.unitExamInstance.delete({ where: { id: inst.id } }).catch(() => {});
     const states = await unitStates(userId, u.chosenSkkniId);
 
+    // Simpan review ke riwayat (#3) — bisa dibuka kembali untuk dipelajari.
+    let reviewId = null;
+    try {
+      const rev = await prisma.unitExamReview.create({
+        data: { userId, unitCode: code, unitTitle: inst.unitTitle, score, passed, breakdown: JSON.stringify(breakdown) },
+      });
+      reviewId = rev.id;
+    } catch (e) { console.error("save review:", e.message); }
+
     res.json({
       source: "skkni-unit", unitCode: code, unitTitle: inst.unitTitle,
       score, passed, total: questions.length, breakdown, certificate, coin,
-      rank, overallReadiness: overall?.total, attemptId: attempt.id, units: states, retake: true,
+      rank, overallReadiness: overall?.total, attemptId: attempt.id, reviewId, units: states, retake: true,
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// ── Riwayat ujian unit (#3) — daftar + detail review untuk dipelajari kembali ──
+router.get("/exam-history", async (req, res) => {
+  const rows = await prisma.unitExamReview.findMany({
+    where: { userId: req.user.id },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+    select: { id: true, unitCode: true, unitTitle: true, score: true, passed: true, createdAt: true },
+  });
+  res.json({ items: rows });
+});
+
+router.get("/exam-history/:id", async (req, res) => {
+  const row = await prisma.unitExamReview.findUnique({ where: { id: req.params.id } });
+  if (!row || row.userId !== req.user.id) return res.status(404).json({ error: "Riwayat tidak ditemukan." });
+  res.json({ ...row, breakdown: JSON.parse(row.breakdown) });
 });
 
 // Trigger manual sinkron katalog (mis. dari admin) — jalan di latar belakang.

@@ -421,6 +421,125 @@ export async function ensureUnitCourse(docId, unit) {
   });
 }
 
+// ── Materi MENDALAM bertahap (course player ala ujian) ───────────────────────
+// 4-6 "pelajaran" per unit, tiap pelajaran = materi spesifik (bukan ringkasan) +
+// contoh + rujukan sumber tepercaya + kueri video YouTube. Digenerate SEKALI per
+// unit lalu di-cache selamanya di UnitCourse.content.lessons → biaya one-time.
+async function generateDeepLessons(compTitle, unit, base) {
+  const prompt =
+    `Anda instruktur vokasi senior berbasis SKKNI Indonesia. Kompetensi/profesi: "${compTitle}". ` +
+    `Susun COURSE BERTAHAP yang MENGAJARKAN unit kompetensi: "${unit.title}" (kode ${unit.code}).\n` +
+    (base?.keyPoints?.length ? `Cakup poin-poin kunci ini: ${base.keyPoints.join("; ")}.\n` : "") +
+    `Buat 4-6 PELAJARAN berurutan (fondasi → praktik). Tiap pelajaran MENGAJAR dengan SPESIFIK: ` +
+    `jelaskan konsep, istilah, angka/standar, cara melakukan — BUKAN ringkasan 2 kalimat. ` +
+    `Balas HANYA JSON valid:\n` +
+    `{"lessons":[{"title":"judul pelajaran singkat",` +
+    `"body":"3-5 paragraf materi mendalam & spesifik (pisahkan paragraf dengan \\n\\n); gaya mengajar, konkret, praktis",` +
+    `"points":["3-5 takeaway penting pelajaran ini"],` +
+    `"example":"1 contoh penerapan nyata di pekerjaan (konkret, bercerita)",` +
+    `"sources":[{"label":"nama sumber","url":"https://..."}],` +
+    `"ytQuery":"kueri pencarian YouTube 3-6 kata (Indonesia/Inggris) untuk video pembelajaran topik ini"}]}\n` +
+    `ATURAN SUMBER (penting): maksimal 2 per pelajaran; HANYA situs tepercaya & stabil — Wikipedia, ` +
+    `dokumentasi/halaman dukungan resmi vendor (mis. support.google.com, helpx.adobe.com, developer.mozilla.org), ` +
+    `situs lembaga (kemnaker.go.id, bnsp.go.id, ilo.org). Gunakan URL tingkat halaman utama/topik yang PASTI ada — ` +
+    `JANGAN mengarang deep-link artikel spesifik. Bila ragu, cukup 1 sumber Wikipedia. Bahasa Indonesia.`;
+  const r = await chatComplete([{ role: "user", content: prompt }], { temperature: 0.5, maxTokens: 3600 });
+  const m = (r.content || "").match(/\{[\s\S]*\}/);
+  const o = JSON.parse(m ? m[0] : r.content);
+  const lessons = (Array.isArray(o.lessons) ? o.lessons : []).slice(0, 6).map((l) => ({
+    title: String(l.title || "Pelajaran").slice(0, 140),
+    body: String(l.body || "").slice(0, 4000),
+    points: Array.isArray(l.points) ? l.points.slice(0, 5).map((x) => String(x).slice(0, 220)) : [],
+    example: String(l.example || "").slice(0, 900),
+    sources: (Array.isArray(l.sources) ? l.sources : [])
+      .filter((s) => /^https:\/\/[a-z0-9.-]+\.[a-z]{2,}/i.test(String(s?.url || "")))
+      .slice(0, 2)
+      .map((s) => ({ label: String(s.label || "Sumber").slice(0, 90), url: String(s.url).slice(0, 300) })),
+    ytQuery: String(l.ytQuery || `${unit.title} tutorial`).slice(0, 90),
+  })).filter((l) => l.body.length > 100);
+  if (!lessons.length) throw new Error("AI tidak menghasilkan pelajaran yang valid.");
+  // Validasi URL sumber (sekali, saat generate): buang link mati agar user tak
+  // pernah melihat 404. AI kadang mengarang judul artikel yang tidak ada.
+  await validateLessonSources(lessons);
+  return lessons;
+}
+
+// ── Video YouTube per pelajaran (embed) ───────────────────────────────────────
+// Resolve via YouTube Data API v3 SEKALI per pelajaran → videoId di-cache di lesson
+// (hemat kuota: 100 unit/pencarian, gratis 10rb/hari; setelah cache = 0 panggilan).
+async function resolveYtVideo(query) {
+  const key = process.env.YOUTUBE_API_KEY;
+  if (!key || !query) return null;
+  const url = "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=1" +
+    "&videoEmbeddable=true&safeSearch=strict&relevanceLanguage=id" +
+    `&q=${encodeURIComponent(query)}&key=${key}`;
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) { console.warn("[yt] search", r.status, (await r.text()).slice(0, 120)); return null; }
+    const j = await r.json();
+    const it = j.items?.[0];
+    if (!it?.id?.videoId) return null;
+    return { id: it.id.videoId, title: String(it.snippet?.title || "").slice(0, 160), channel: String(it.snippet?.channelTitle || "").slice(0, 80) };
+  } catch (e) {
+    console.warn("[yt] resolve:", e.message);
+    return null;
+  }
+}
+
+// Lampirkan videoId ke tiap pelajaran yang belum punya (serial — hormati kuota).
+async function attachYtVideos(lessons) {
+  let changed = false;
+  for (const l of lessons) {
+    if (!l.ytQuery || l.ytVideoId) continue;
+    const v = await resolveYtVideo(l.ytQuery);
+    if (v) { l.ytVideoId = v.id; l.ytTitle = v.title; l.ytChannel = v.channel; changed = true; }
+  }
+  return changed;
+}
+
+// Cek semua URL sumber secara paralel; pertahankan hanya yang hidup (2xx/3xx).
+async function validateLessonSources(lessons) {
+  const checks = [];
+  for (const l of lessons) {
+    for (const s of l.sources) {
+      checks.push(
+        fetch(s.url, { method: "HEAD", redirect: "follow", signal: AbortSignal.timeout(6000) })
+          .then((r) => { s._ok = r.ok; })
+          .catch(() => { s._ok = false; })
+      );
+    }
+  }
+  await Promise.allSettled(checks);
+  for (const l of lessons) {
+    l.sources = l.sources.filter((s) => s._ok).map(({ _ok, ...rest }) => rest);
+  }
+}
+
+// Ambil/generate pelajaran mendalam (lazy, merge ke UnitCourse.content.lessons).
+export async function ensureUnitLessons(docId, unit) {
+  const row = await ensureUnitCourse(docId, unit);
+  let content = {};
+  try { content = JSON.parse(row.content); } catch { /* rusak → regenerasi lessons saja */ }
+
+  const save = () => prisma.unitCourse.update({
+    where: { docId_unitCode: { docId, unitCode: unit.code } },
+    data: { content: JSON.stringify(content) },
+  });
+
+  if (Array.isArray(content.lessons) && content.lessons.length) {
+    // Backfill video embed untuk pelajaran lama yang belum punya videoId (sekali).
+    if (await attachYtVideos(content.lessons)) await save();
+    return content.lessons;
+  }
+
+  const doc = await prisma.skkniDocument.findUnique({ where: { id: docId }, select: { title: true } });
+  const lessons = await generateDeepLessons(doc?.title || "Kompetensi", unit, content);
+  await attachYtVideos(lessons);
+  content.lessons = lessons;
+  await save();
+  return lessons;
+}
+
 // Paket soal 1 unit — 3 TIPE (validasi mendalam, bukan sekadar keberuntungan #6):
 //  • "mc"          pilihan ganda (pengetahuan)
 //  • "situational" studi kasus situasional (AI menilai penalaran vs keyPoints)

@@ -22,10 +22,11 @@ export async function buildSkillProfile(userId) {
   assessments.filter((a) => a.currentScore >= 60).forEach((a) => a.competencyName && validated.add(a.competencyName));
   certs.forEach((c) => validated.add(c.name));
 
-  // DIKLAIM (belum tervalidasi): sertifikasi/keahlian dari CV + klaim portofolio terdeteksi AI.
+  // DIKLAIM (belum tervalidasi): sertifikasi/keahlian dari CV + sertifikat tambahan + klaim portofolio.
   const claimed = new Set();
   cvCerts.forEach((c) => typeof c === "string" && claimed.add(c));
   (cvMeta.skills || []).forEach((s) => typeof s === "string" && claimed.add(s));
+  (cvMeta.extraCertifications || []).forEach((c) => c?.name && claimed.add(c.name));
   claims.forEach((c) => c.skill && claimed.add(c.skill));
 
   return {
@@ -112,9 +113,14 @@ function heuristicDetect(skill, cvText, detail) {
 
 export async function detectSkillEvidence({ skill, cvMeta, detail }) {
   const cv = cvMeta || {};
+  const links = cv.links || {};
+  const linkText = [links.linkedin && `LinkedIn: ${links.linkedin}`, links.instagram && `Instagram: ${links.instagram}`,
+    links.portfolio && `Portofolio: ${links.portfolio}`, links.other && `Lain: ${links.other}`].filter(Boolean).join(" · ");
   const cvText = [
     cv.education, `pengalaman ${cv.experienceYears || 0} tahun`,
     ...(cv.skills || []), ...(cv.certifications || []),
+    ...((cv.extraCertifications || []).map((c) => `${c.name}${c.issuer ? ` (${c.issuer})` : ""}`)),
+    linkText,
   ].filter(Boolean).join(", ");
 
   if (!isLlmConfigured()) return heuristicDetect(skill, cvText, detail);

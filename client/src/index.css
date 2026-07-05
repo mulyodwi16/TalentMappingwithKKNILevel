@@ -138,9 +138,13 @@ html.dark {
 }
 
 /* ── Page transitions ──────────────────────────────────────────────────────── */
+/* PENTING: keyframe akhir HARUS `transform: none` (bukan translateY(0)).
+   Nilai transform yang menempel (fill both) menjadikan .page-enter "containing block"
+   bagi position:fixed → semua modal (sertifikat, kursus, dll) ikut posisi halaman,
+   bukan viewport — modal tampak "tidak di tengah kamera" saat halaman di-scroll. */
 @keyframes page-in {
   from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: none; }
 }
 .page-enter {
   animation: page-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;

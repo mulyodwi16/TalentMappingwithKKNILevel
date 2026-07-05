@@ -81,6 +81,8 @@ router.post("/cv-parse", async (req, res) => {
     const buf = Buffer.from(pdfBase64.replace(/^data:.*;base64,/, ""), "base64");
     const text = await pdfToText(buf);
     const profile = extractProfile(text);
+    // Pertahankan data pendukung validasi (link/portofolio/sertifikat tambahan) yang diisi manual.
+    const prev = safeJson((await prisma.user.findUnique({ where: { id: req.user.id }, select: { cvMeta: true } }))?.cvMeta, {});
     // CV mengisi data pendidikan/keahlian (bahan pembanding SKKNI). Rank TIDAK diset dari CV —
     // pendidikan hanya jadi seed; rank efektif dihitung dari kompetensi (refreshRank).
     const cvMeta = {
@@ -90,6 +92,8 @@ router.post("/cv-parse", async (req, res) => {
       experienceYears: profile.experienceYears,
       textChars: text.length,
       fileName: fileName || null,
+      links: prev.links || {},
+      extraCertifications: prev.extraCertifications || [],
       parsedAt: new Date().toISOString(),
     };
     await prisma.user.update({
@@ -111,6 +115,39 @@ router.post("/cv-parse", async (req, res) => {
   } catch (e) {
     res.status(400).json({ error: "gagal membaca CV: " + e.message });
   }
+});
+
+// ── Data pendukung validasi CV (#2): portofolio, medsos, sertifikat tambahan ──
+// Data ini memperkaya deteksi klaim skill AI (Peta Posisi) & bukti kompetensi.
+// TIDAK mengubah rank/kesiapan langsung — validasi kompetensi tetap dari lulus ujian.
+router.put("/cv-links", async (req, res) => {
+  const b = req.body || {};
+  const u = await prisma.user.findUnique({ where: { id: req.user.id }, select: { cvMeta: true } });
+  const cvMeta = safeJson(u?.cvMeta, {});
+  const clean = (s, max = 300) => (typeof s === "string" ? s.trim().slice(0, max) : "");
+  const links = {
+    linkedin: clean(b.linkedin),
+    instagram: clean(b.instagram),
+    portfolio: clean(b.portfolio),
+    other: clean(b.other),
+  };
+  const extraCertifications = Array.isArray(b.certifications)
+    ? b.certifications
+        .map((c) => ({ name: clean(c?.name, 160), issuer: clean(c?.issuer, 120), url: clean(c?.url) }))
+        .filter((c) => c.name)
+        .slice(0, 30)
+    : (cvMeta.extraCertifications || []);
+  const merged = { ...cvMeta, links, extraCertifications, linksUpdatedAt: new Date().toISOString() };
+  await prisma.user.update({ where: { id: req.user.id }, data: { cvMeta: JSON.stringify(merged) } });
+  try { await refreshReadiness(req.user.id); } catch { /* non-fatal */ }
+  res.json({ links, extraCertifications });
+});
+
+// Ambil data pendukung validasi tersimpan (untuk mengisi form).
+router.get("/cv-links", async (req, res) => {
+  const u = await prisma.user.findUnique({ where: { id: req.user.id }, select: { cvMeta: true } });
+  const cvMeta = safeJson(u?.cvMeta, {});
+  res.json({ links: cvMeta.links || {}, extraCertifications: cvMeta.extraCertifications || [] });
 });
 
 // ── Manual map ────────────────────────────────────────────────────────────────

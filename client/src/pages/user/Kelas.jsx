@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   GraduationCap, BookOpen, Lock, CheckCircle2, PlayCircle, RotateCcw, ChevronDown,
-  Coins, Sparkles, Star, Lightbulb, Briefcase, ListChecks, Clock, Loader2, X,
+  Coins, Sparkles, Star, Lightbulb, Briefcase, Clock, Loader2, X, ArrowLeft, ArrowRight,
+  ExternalLink, Youtube, ListChecks, Trophy,
 } from "lucide-react";
 import api from "../../api/client.js";
 import { useCoins } from "../../hooks/useCoins.js";
@@ -12,10 +13,10 @@ import { useCoins } from "../../hooks/useCoins.js";
 const UNLOCK_COST = 60;
 
 const STATE_UI = {
-  passed:   { label: "Lulus",      Icon: CheckCircle2, badge: "bg-emerald-500/15 text-emerald-500" },
-  ready:    { label: "Siap Ujian", Icon: PlayCircle,   badge: "bg-brand-500/15 text-brand-500" },
-  learning: { label: "Belajar",    Icon: BookOpen,     badge: "bg-amber-500/15 text-amber-500" },
-  locked:   { label: "Terkunci",   Icon: Lock,         badge: "bg-[var(--bg-muted)] text-[var(--text-4)]" },
+  passed:   { label: "Lulus",      Icon: CheckCircle2, badge: "bg-emerald-500/15 text-emerald-500", accent: "#10b981" },
+  ready:    { label: "Siap Ujian", Icon: PlayCircle,   badge: "bg-brand-500/15 text-brand-500",     accent: "rgb(var(--brand-500))" },
+  learning: { label: "Belajar",    Icon: BookOpen,     badge: "bg-amber-500/15 text-amber-500",     accent: "#f59e0b" },
+  locked:   { label: "Terkunci",   Icon: Lock,         badge: "bg-[var(--bg-muted)] text-[var(--text-4)]", accent: "#64748b" },
 };
 
 const AV_LEVEL = {
@@ -24,7 +25,7 @@ const AV_LEVEL = {
   advanced:     { label: "Mahir",    cls: "bg-brand-500/20 text-brand-400" },
 };
 
-// Modal course AvatarEdu — embed dibuka di overlay (bisa ditutup, tak memanjangkan halaman).
+// ── Modal course AvatarEdu (embed di overlay) ─────────────────────────────────
 function CourseModal({ title, url, onClose }) {
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
@@ -48,12 +49,10 @@ function CourseModal({ title, url, onClose }) {
   );
 }
 
-// ── Kursus AvatarEdu terkait unit (sumber course ke-2) — bisa langsung diikuti ─
-// Kartu penuh + tombol "Ikuti Kelas": memberi Koin (sekali/kursus) & membuka course
-// (embed) di MODAL. Katalog AvatarEdu kecil/generik → tandai bila hasil fallback.
+// ── Kursus AvatarEdu terkait unit (pelengkap) ─────────────────────────────────
 function AvatarEduForUnit({ query }) {
   const { setBalance } = useCoins();
-  const [modal, setModal] = useState(null);   // { title, url }
+  const [modal, setModal] = useState(null);
   const [busy, setBusy] = useState(null);
 
   const { data, isLoading } = useQuery({
@@ -122,60 +121,8 @@ function AvatarEduForUnit({ query }) {
   );
 }
 
-// ── Materi kelas SKKNI (sumber course ke-1) — lazy saat unit dibuka ────────────
-function UnitCourseBody({ code }) {
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["kelas-course", code],
-    queryFn: () => api.get(`/kelas/unit/${encodeURIComponent(code)}`, { timeout: 60_000 }),
-    staleTime: 10 * 60 * 1000,
-  });
-  if (isLoading) return <p className="text-sm py-3" style={{ color: "var(--text-4)" }}>Menyiapkan materi (AI)…</p>;
-  if (isError) return <p className="text-sm py-3 text-red-400">{typeof error === "string" ? error : "Gagal memuat materi."}</p>;
-  const c = data?.content || {};
-  return (
-    <div className="space-y-4">
-      {/* Sumber 1: materi SKKNI */}
-      <div className="rounded-xl p-4 space-y-3" style={{ background: "var(--bg-surface)", border: "1px solid var(--border)" }}>
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-brand-500/15 text-brand-500">Materi SKKNI</span>
-          {c.estMinutes && <span className="text-[11px] flex items-center gap-1" style={{ color: "var(--text-4)" }}><Clock className="w-3 h-3" /> ± {c.estMinutes} menit</span>}
-        </div>
-        {c.overview && <p className="text-sm leading-relaxed" style={{ color: "var(--text-2)" }}>{c.overview}</p>}
-        {c.keyPoints?.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold flex items-center gap-1 mb-1.5" style={{ color: "var(--text-3)" }}><Lightbulb className="w-3.5 h-3.5 text-amber-500" /> Poin Kunci</p>
-            <ul className="space-y-1">
-              {c.keyPoints.map((k, i) => <li key={i} className="text-sm flex gap-2" style={{ color: "var(--text-2)" }}><span className="text-brand-500">•</span>{k}</li>)}
-            </ul>
-          </div>
-        )}
-        {c.caseExample && (
-          <div className="rounded-lg px-3 py-2 border-l-2 border-amber-500" style={{ background: "var(--bg-raised)" }}>
-            <p className="text-xs font-semibold flex items-center gap-1 mb-1 text-amber-500"><Briefcase className="w-3.5 h-3.5" /> Contoh Kasus Kerja</p>
-            <p className="text-sm" style={{ color: "var(--text-2)" }}>{c.caseExample}</p>
-          </div>
-        )}
-        {c.practiceSteps?.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold flex items-center gap-1 mb-1.5" style={{ color: "var(--text-3)" }}><ListChecks className="w-3.5 h-3.5 text-emerald-500" /> Langkah Praktik</p>
-            <ol className="space-y-1">
-              {c.practiceSteps.map((s, i) => (
-                <li key={i} className="text-sm flex gap-2" style={{ color: "var(--text-2)" }}>
-                  <span className="w-4 h-4 rounded-full bg-emerald-500/15 text-emerald-500 text-[10px] grid place-items-center shrink-0 mt-0.5 font-bold">{i + 1}</span>{s}
-                </li>
-              ))}
-            </ol>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// Sumber course ke-2: AvatarEdu — INDEPENDEN dari materi SKKNI, dan COLLAPSIBLE (tertutup
-// default) agar tak memenuhi tiap dropdown; katalog kecil sering menampilkan kursus yang sama.
-function AvatarEduSection({ title }) {
-  const [open, setOpen] = useState(false);
+function AvatarEduSection({ title, defaultOpen = false }) {
+  const [open, setOpen] = useState(defaultOpen);
   const query = (title || "").split(/\s+/).slice(0, 3).join(" ");
   return (
     <div>
@@ -189,89 +136,309 @@ function AvatarEduSection({ title }) {
   );
 }
 
-function UnitRow({ unit, onComplete, onUnlock, busy, balance, defaultOpen }) {
-  const [open, setOpen] = useState(!!defaultOpen);
+// ── Kartu unit (grid ala AvatarEdu: kotak-kotak, banner berwarna status) ──────
+function UnitCard({ unit, balance, busy, onOpen, onUnlock }) {
   const ui = STATE_UI[unit.state] || STATE_UI.locked;
+  const locked = unit.state === "locked";
   const canExam = unit.state === "ready" || unit.state === "passed";
-
   return (
-    <div className="card overflow-hidden">
-      <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center gap-3 p-3.5 text-left">
-        <div className={`w-8 h-8 rounded-full grid place-items-center shrink-0 text-xs font-black ${unit.state === "passed" ? "bg-emerald-500 text-white" : "bg-[var(--bg-muted)]"}`} style={unit.state === "passed" ? {} : { color: "var(--text-3)" }}>
-          {unit.state === "passed" ? "✓" : unit.order}
+    <div className="card overflow-hidden flex flex-col group">
+      {/* Banner dekoratif berwarna status */}
+      <div className="relative h-24 flex items-center justify-center overflow-hidden"
+        style={{ background: `linear-gradient(135deg, ${ui.accent}33, ${ui.accent}0d 60%, transparent)` }}>
+        <div className="absolute inset-0 opacity-[0.07]" aria-hidden
+          style={{ backgroundImage: `radial-gradient(circle at 20% 30%, ${ui.accent} 1.5px, transparent 1.5px), radial-gradient(circle at 70% 60%, ${ui.accent} 1.5px, transparent 1.5px)`, backgroundSize: "34px 34px, 46px 46px" }} />
+        <div className="w-14 h-14 rounded-2xl grid place-items-center text-xl font-black shadow-lg transition-transform group-hover:scale-110"
+          style={unit.state === "passed"
+            ? { background: "#10b981", color: "#fff" }
+            : { background: "var(--bg-surface)", color: ui.accent, border: `2px solid ${ui.accent}55` }}>
+          {unit.state === "passed" ? "✓" : locked ? <Lock className="w-6 h-6" /> : unit.order}
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium truncate" style={{ color: "var(--text-base)" }}>{unit.title}</p>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${ui.badge}`}>{ui.label}</span>
-            {unit.score != null && <span className="text-[11px]" style={{ color: "var(--text-4)" }}>skor {unit.score}%</span>}
-            {unit.hasCourse && <span className="text-[11px]" style={{ color: "var(--text-4)" }}>· materi siap</span>}
-          </div>
-        </div>
-        <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} style={{ color: "var(--text-4)" }} />
-      </button>
+        <span className={`absolute top-2.5 right-2.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${ui.badge}`}>{ui.label}</span>
+      </div>
 
-      {open && (
-        <div className="px-3.5 pb-3.5 space-y-4 border-t pt-3.5" style={{ borderColor: "var(--border)" }}>
-          {unit.state === "locked" ? (
-            <div className="rounded-lg p-4 text-center" style={{ background: "var(--bg-raised)" }}>
-              <Lock className="w-6 h-6 mx-auto mb-2" style={{ color: "var(--text-4)" }} />
-              <p className="text-sm mb-3" style={{ color: "var(--text-3)" }}>Selesaikan unit sebelumnya secara berurutan, atau buka unit ini sekarang dengan Koin untuk langsung ke ujian.</p>
+      <div className="p-4 flex flex-col flex-1 gap-2">
+        <p className="text-sm font-semibold leading-snug line-clamp-3 min-h-[3.4em]" style={{ color: "var(--text-base)" }} title={unit.title}>
+          {unit.title}
+        </p>
+        <div className="flex items-center gap-2 text-[11px] flex-wrap" style={{ color: "var(--text-4)" }}>
+          <span className="font-mono px-1.5 py-0.5 rounded" style={{ background: "var(--bg-muted)" }}>{unit.code}</span>
+          {unit.score != null && <span className={unit.score >= 60 ? "text-emerald-500" : "text-amber-500"}>skor {unit.score}%</span>}
+        </div>
+
+        <div className="mt-auto pt-2 space-y-1.5">
+          {locked ? (
+            <>
               <button onClick={() => onUnlock(unit.code)} disabled={busy || balance < UNLOCK_COST}
-                className="btn-primary text-sm inline-flex items-center gap-1.5 disabled:opacity-50">
-                <Coins className="w-4 h-4" /> Buka dengan {UNLOCK_COST} Koin
+                className="btn-primary text-xs py-2 w-full flex items-center justify-center gap-1.5 disabled:opacity-50">
+                <Coins className="w-3.5 h-3.5" /> Buka dengan {UNLOCK_COST} Koin
               </button>
-              {balance < UNLOCK_COST && <p className="text-[11px] mt-2 text-red-400">Koin kurang (saldo {balance}).</p>}
-            </div>
+              <p className="text-[10px] text-center" style={{ color: "var(--text-4)" }}>
+                {balance < UNLOCK_COST ? `Koin kurang (saldo ${balance})` : "atau selesaikan unit sebelumnya"}
+              </p>
+            </>
           ) : (
             <>
-              <UnitCourseBody code={unit.code} />
-              <AvatarEduSection title={unit.title} />
-              <div className="flex flex-wrap gap-2 items-center">
-                {unit.state === "learning" && (
-                  <button onClick={() => onComplete(unit.code)} disabled={busy}
-                    className="btn-primary text-sm inline-flex items-center gap-1.5 disabled:opacity-50">
-                    <CheckCircle2 className="w-4 h-4" /> Tandai Selesai Belajar (+15 Koin)
-                  </button>
-                )}
-                {canExam && (
-                  <Link to={`/app/exam?unit=${encodeURIComponent(unit.code)}`}
-                    className="btn-primary text-sm inline-flex items-center gap-1.5">
-                    {unit.state === "passed" ? <><RotateCcw className="w-4 h-4" /> Ujian Ulang</> : <><PlayCircle className="w-4 h-4" /> Mulai Ujian Unit</>}
-                  </Link>
-                )}
-                {unit.state === "learning" && <span className="text-[11px]" style={{ color: "var(--text-4)" }}>Ujian terbuka setelah kelas ditandai selesai.</span>}
-                {unit.state === "passed" && <span className="text-[11px] text-emerald-500">Sertifikat unit sudah terbit ✓</span>}
-              </div>
+              <button onClick={() => onOpen(unit.code)}
+                className="btn-primary text-xs py-2 w-full flex items-center justify-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5" /> {unit.state === "passed" ? "Buka Materi" : "Ikuti Kelas"}
+              </button>
+              {canExam && (
+                <Link to={`/app/exam?unit=${encodeURIComponent(unit.code)}`}
+                  className="btn-outline text-xs py-1.5 w-full flex items-center justify-center gap-1.5">
+                  {unit.state === "passed" ? <><RotateCcw className="w-3 h-3" /> Ujian Ulang</> : <><PlayCircle className="w-3 h-3" /> Mulai Ujian</>}
+                </Link>
+              )}
             </>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
+// ── COURSE PLAYER: belajar bertahap ala ujian (1 pelajaran per layar) ─────────
+function CoursePlayer({ code, onBack, onComplete, busyComplete }) {
+  const [step, setStep] = useState(0);
+
+  const { data: meta } = useQuery({
+    queryKey: ["kelas-course", code],
+    queryFn: () => api.get(`/kelas/unit/${encodeURIComponent(code)}`, { timeout: 90_000 }),
+    staleTime: 10 * 60 * 1000,
+  });
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["kelas-lessons", code],
+    queryFn: () => api.get(`/kelas/unit/${encodeURIComponent(code)}/lessons`, { timeout: 180_000 }),
+    staleTime: 30 * 60 * 1000,
+    retry: 1,
+  });
+
+  const unit = data?.unit || meta?.unit;
+  const state = data?.state || meta?.state;
+  const lessons = data?.lessons || [];
+  const total = lessons.length + 1; // + langkah penutup
+  const isFinal = step >= lessons.length;
+  const lesson = !isFinal ? lessons[step] : null;
+
+  useEffect(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, [step]);
+
+  if (isLoading) {
+    return (
+      <div className="max-w-2xl mx-auto card p-10 text-center space-y-3">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-500 mx-auto" />
+        <p className="font-semibold" style={{ color: "var(--text-base)" }}>Menyusun materi lengkap…</p>
+        <p className="text-xs" style={{ color: "var(--text-4)" }}>
+          Saat pertama kali dibuka, AI menyusun 4-6 pelajaran mendalam untuk unit ini (± 30-60 detik).
+          Setelah itu materi tersimpan permanen dan langsung terbuka.
+        </p>
+      </div>
+    );
+  }
+  if (isError) {
+    return (
+      <div className="max-w-2xl mx-auto card p-8 text-center space-y-3">
+        <p className="text-sm text-red-400">{typeof error === "string" ? error : "Gagal memuat pelajaran."}</p>
+        <button onClick={onBack} className="btn-outline text-sm">← Kembali ke daftar kelas</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-4">
+      <button onClick={onBack} className="text-xs flex items-center gap-1 hover:underline" style={{ color: "var(--text-4)" }}>
+        <ArrowLeft className="w-3.5 h-3.5" /> Kembali ke daftar kelas
+      </button>
+
+      {/* Header progres ala ujian */}
+      <div className="card p-4">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <p className="text-sm font-semibold truncate" style={{ color: "var(--text-base)" }}>{unit?.title}</p>
+          <span className="text-xs shrink-0 font-semibold" style={{ color: "var(--text-3)" }}>
+            {isFinal ? "Penutup" : `Materi ${step + 1}/${lessons.length}`}
+          </span>
+        </div>
+        <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-muted)" }}>
+          <div className="h-full bg-brand-600 rounded-full transition-all duration-500" style={{ width: `${((step + 1) / total) * 100}%` }} />
+        </div>
+      </div>
+
+      {/* Konten pelajaran */}
+      {!isFinal ? (
+        <div className="card p-6 space-y-4">
+          <div>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-brand-500/15 text-brand-500">Pelajaran {step + 1}</span>
+            <h2 className="text-lg font-bold mt-2" style={{ color: "var(--text-base)" }}>{lesson.title}</h2>
+          </div>
+
+          {/* Materi mendalam (paragraf) */}
+          <div className="space-y-3">
+            {String(lesson.body || "").split(/\n{2,}/).filter(Boolean).map((p, i) => (
+              <p key={i} className="text-sm leading-relaxed" style={{ color: "var(--text-2)" }}>{p}</p>
+            ))}
+          </div>
+
+          {lesson.points?.length > 0 && (
+            <div className="rounded-xl p-3.5" style={{ background: "var(--bg-raised)", border: "1px solid var(--border)" }}>
+              <p className="text-xs font-semibold flex items-center gap-1 mb-2" style={{ color: "var(--text-3)" }}>
+                <Lightbulb className="w-3.5 h-3.5 text-amber-500" /> Poin Penting
+              </p>
+              <ul className="space-y-1">
+                {lesson.points.map((k, i) => (
+                  <li key={i} className="text-sm flex gap-2" style={{ color: "var(--text-2)" }}><span className="text-brand-500">•</span>{k}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {lesson.example && (
+            <div className="rounded-lg px-3.5 py-3 border-l-2 border-amber-500" style={{ background: "var(--bg-raised)" }}>
+              <p className="text-xs font-semibold flex items-center gap-1 mb-1 text-amber-500"><Briefcase className="w-3.5 h-3.5" /> Contoh Penerapan Nyata</p>
+              <p className="text-sm" style={{ color: "var(--text-2)" }}>{lesson.example}</p>
+            </div>
+          )}
+
+          {/* Video pembelajaran ter-embed (di-resolve via YouTube Data API, cached) */}
+          {lesson.ytVideoId && (
+            <div>
+              <p className="text-xs font-semibold flex items-center gap-1.5 mb-2" style={{ color: "var(--text-3)" }}>
+                <Youtube className="w-3.5 h-3.5 text-red-500" /> Video Pembelajaran
+              </p>
+              <div className="rounded-xl overflow-hidden shadow-lg" style={{ aspectRatio: "16/9", background: "#000" }}>
+                <iframe
+                  width="100%" height="100%" style={{ border: 0, display: "block" }}
+                  src={`https://www.youtube-nocookie.com/embed/${lesson.ytVideoId}`}
+                  title={lesson.ytTitle || "Video pembelajaran"}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen loading="lazy" />
+              </div>
+              {(lesson.ytTitle || lesson.ytChannel) && (
+                <p className="text-[11px] mt-1.5" style={{ color: "var(--text-4)" }}>
+                  {lesson.ytTitle}{lesson.ytChannel ? <> · <b>{lesson.ytChannel}</b></> : null} · via YouTube
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Sumber tepercaya + cari video lain */}
+          {(lesson.sources?.length > 0 || lesson.ytQuery) && (
+            <div className="flex items-center gap-2 flex-wrap pt-1">
+              <span className="text-[11px] font-semibold" style={{ color: "var(--text-4)" }}>Pelajari lebih lanjut:</span>
+              {(lesson.sources || []).map((s, i) => (
+                <a key={i} href={s.url} target="_blank" rel="noopener noreferrer"
+                  className="text-[11px] inline-flex items-center gap-1 px-2 py-1 rounded-lg hover:border-brand-500/50 transition-colors"
+                  style={{ border: "1px solid var(--border)", color: "var(--text-3)" }}>
+                  <ExternalLink className="w-3 h-3 text-brand-500" /> {s.label}
+                </a>
+              ))}
+              {lesson.ytQuery && (
+                <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(lesson.ytQuery)}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className={`text-[11px] inline-flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${lesson.ytVideoId ? "hover:border-red-400/60" : "text-white bg-red-600 hover:bg-red-700"}`}
+                  style={lesson.ytVideoId ? { border: "1px solid var(--border)", color: "var(--text-3)" } : undefined}>
+                  <Youtube className="w-3.5 h-3.5 text-red-500" /> {lesson.ytVideoId ? "Cari video lain" : "Video terkait"}
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        /* ── Langkah penutup ── */
+        <div className="card p-6 space-y-4">
+          <div className="text-center">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 grid place-items-center mx-auto mb-3">
+              <Trophy className="w-7 h-7 text-emerald-500" />
+            </div>
+            <h2 className="text-lg font-bold" style={{ color: "var(--text-base)" }}>Materi Selesai Dipelajari 🎓</h2>
+            <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>
+              Kamu telah menyelesaikan {lessons.length} pelajaran unit <b>{unit?.title}</b>.
+            </p>
+          </div>
+
+          {/* Ringkasan takeaway */}
+          <div className="rounded-xl p-3.5" style={{ background: "var(--bg-raised)", border: "1px solid var(--border)" }}>
+            <p className="text-xs font-semibold flex items-center gap-1 mb-2" style={{ color: "var(--text-3)" }}>
+              <ListChecks className="w-3.5 h-3.5 text-emerald-500" /> Rangkuman Pelajaran
+            </p>
+            <ol className="space-y-1">
+              {lessons.map((l, i) => (
+                <li key={i} className="text-sm flex gap-2" style={{ color: "var(--text-2)" }}>
+                  <span className="w-4 h-4 rounded-full bg-emerald-500/15 text-emerald-500 text-[10px] grid place-items-center shrink-0 mt-0.5 font-bold">{i + 1}</span>
+                  {l.title}
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          <div className="flex flex-wrap gap-2 items-center justify-center">
+            {state?.state === "learning" && (
+              <button onClick={() => onComplete(code)} disabled={busyComplete}
+                className="btn-primary text-sm inline-flex items-center gap-1.5 disabled:opacity-50">
+                {busyComplete ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                Tandai Selesai Belajar (+15 Koin)
+              </button>
+            )}
+            {(state?.state === "ready" || state?.state === "passed") && (
+              <Link to={`/app/exam?unit=${encodeURIComponent(code)}`} className="btn-primary text-sm inline-flex items-center gap-1.5">
+                {state?.state === "passed" ? <><RotateCcw className="w-4 h-4" /> Ujian Ulang</> : <><PlayCircle className="w-4 h-4" /> Mulai Ujian Unit</>}
+              </Link>
+            )}
+            {state?.state === "learning" && <span className="text-[11px] w-full text-center" style={{ color: "var(--text-4)" }}>Ujian terbuka setelah kelas ditandai selesai.</span>}
+            {state?.state === "passed" && <span className="text-[11px] text-emerald-500 w-full text-center">Sertifikat unit sudah terbit ✓</span>}
+          </div>
+
+          <AvatarEduSection title={unit?.title} defaultOpen={false} />
+        </div>
+      )}
+
+      {/* Navigasi ala ujian */}
+      <div className="flex gap-3">
+        <button onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}
+          className="btn-outline flex-1 flex items-center justify-center gap-1 disabled:opacity-40">
+          <ArrowLeft className="w-4 h-4" /> Sebelumnya
+        </button>
+        {!isFinal && (
+          <button onClick={() => setStep((s) => Math.min(total - 1, s + 1))}
+            className="btn-primary flex-1 flex items-center justify-center gap-1">
+            Berikutnya <ArrowRight className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Titik langkah */}
+      <div className="flex items-center justify-center gap-1.5 flex-wrap">
+        {Array.from({ length: total }).map((_, i) => (
+          <button key={i} onClick={() => setStep(i)}
+            className="rounded-full transition-all"
+            style={{
+              width: i === step ? 22 : 8, height: 8,
+              background: i === step ? "rgb(var(--brand-600))" : i < step ? "rgb(var(--brand-600) / 0.5)" : "var(--border-2)",
+            }}
+            aria-label={i === total - 1 ? "Penutup" : `Materi ${i + 1}`} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Halaman Kelas ─────────────────────────────────────────────────────────────
 export default function Kelas() {
   const qc = useQueryClient();
   const { setBalance } = useCoins();
   const [busy, setBusy] = useState(false);
+  const [sp, setSp] = useSearchParams();
+  const unitParam = sp.get("unit");
 
   const { data, isLoading } = useQuery({ queryKey: ["kelas-units"], queryFn: () => api.get("/kelas/units") });
   const chosen = data?.chosen;
   const units = data?.units || [];
   const s = data?.summary;
   const balance = data?.balance ?? 0;
-  // Buka otomatis unit yang sedang dikerjakan (belajar/siap ujian) agar materi & kursus
-  // AvatarEdu langsung terlihat tanpa perlu klik. Jika semua lulus, buka unit pertama.
-  const focusCode =
-    units.find((u) => u.state === "learning" || u.state === "ready")?.code ||
-    units.find((u) => u.state !== "passed")?.code ||
-    units[0]?.code;
 
   const refresh = (payload) => {
     if (payload?.units) qc.setQueryData(["kelas-units"], (old) => ({ ...old, units: payload.units, summary: payload.summary }));
     if (typeof payload?.balance === "number") { setBalance(payload.balance); qc.setQueryData(["kelas-units"], (old) => ({ ...old, balance: payload.balance })); }
     qc.invalidateQueries(["coins"]);
+    if (unitParam) qc.invalidateQueries(["kelas-course", unitParam]);
   };
 
   const complete = useMutation({
@@ -303,12 +470,25 @@ export default function Kelas() {
     );
   }
 
+  // ── Mode player: ?unit=CODE ──
+  if (unitParam) {
+    return (
+      <CoursePlayer
+        code={unitParam}
+        onBack={() => setSp({})}
+        onComplete={(c) => complete.mutate(c)}
+        busyComplete={busy}
+      />
+    );
+  }
+
+  // ── Mode grid (ala AvatarEdu) ──
   return (
     <div className="space-y-5">
       <div className="rounded-2xl bg-gradient-to-br from-brand-600 via-brand-600/90 to-tosca-500 text-white p-6 shadow-lg">
         <div className="flex items-center gap-2 mb-1"><GraduationCap className="w-5 h-5" /><h1 className="text-xl font-bold text-white">Kelas Kompetensi</h1></div>
         <p className="text-sm text-white/80 max-w-2xl">
-          Belajar per unit dari <b>{chosen.title}</b> — materi SKKNI + kursus AvatarEdu. Selesaikan kelas untuk membuka ujian unit; lulus menerbitkan sertifikat. Koin bisa membuka unit lebih cepat.
+          Belajar per unit dari <b>{chosen.title}</b> — klik <b>Ikuti Kelas</b> untuk masuk course bertahap (materi mendalam + sumber tepercaya + video). Selesaikan kelas untuk membuka ujian unit; lulus menerbitkan sertifikat.
         </p>
         {s && (
           <div className="flex gap-2 mt-3 flex-wrap text-xs">
@@ -320,16 +500,18 @@ export default function Kelas() {
         )}
       </div>
 
-      <div className="space-y-2">
+      {/* Grid kartu unit ala AvatarEdu */}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start">
         {units.map((u) => (
-          <UnitRow key={u.code} unit={u} balance={balance} busy={busy} defaultOpen={u.code === focusCode}
-            onComplete={(c) => complete.mutate(c)} onUnlock={(c) => unlock.mutate(c)} />
+          <UnitCard key={u.code} unit={u} balance={balance} busy={busy}
+            onOpen={(code) => setSp({ unit: code })}
+            onUnlock={(code) => unlock.mutate(code)} />
         ))}
       </div>
 
       <p className="text-xs text-center" style={{ color: "var(--text-4)" }}>
-        Materi disusun AI selaras SKKNI. Kursus interaktif oleh{" "}
-        <a href="https://avataredu.ai" target="_blank" rel="noopener noreferrer" className="text-brand-500 hover:underline">AvatarEdu.ai</a>.
+        Materi disusun AI selaras SKKNI (disusun sekali, lalu tersimpan permanen) + rujukan sumber tepercaya & video.
+        Kursus interaktif oleh <a href="https://avataredu.ai" target="_blank" rel="noopener noreferrer" className="text-brand-500 hover:underline">AvatarEdu.ai</a>.
         {" "}Sertifikat hanya terbit dari <b>lulus ujian</b> — Koin hanya mempercepat akses.
       </p>
     </div>

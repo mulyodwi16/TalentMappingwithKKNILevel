@@ -1,6 +1,7 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import { randomUUID } from "node:crypto";
 import { prisma } from "../prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { statusInfo, educationSeed } from "../onboarding.js";
@@ -47,6 +48,59 @@ router.post("/register", async (req, res) => {
     res.status(201).json({ token: makeToken(u), user: { id: u.id, email: u.email, role: u.role, name: u.name } });
   } catch (e) {
     res.status(400).json({ error: e.message });
+  }
+});
+
+// ── Login Google (OAuth) ──────────────────────────────────────────────────────
+// Client ID BUKAN rahasia (dipakai FE untuk render tombol GIS) — aman diekspos.
+router.get("/google-config", (req, res) => {
+  res.json({ clientId: process.env.GOOGLE_CLIENT_ID || null });
+});
+
+// Terima ID token dari tombol Google (GIS), VERIFIKASI via endpoint tokeninfo Google
+// (tanda tangan dicek Google server-side; kita validasi audience + email terverifikasi),
+// lalu login / auto-daftar dan terbitkan JWT internal seperti biasa.
+router.post("/google", async (req, res) => {
+  try {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) return res.status(503).json({ error: "Login Google belum dikonfigurasi." });
+    const { credential } = req.body || {};
+    if (!credential) return res.status(400).json({ error: "credential (ID token) wajib dikirim." });
+
+    const r = await fetch("https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(credential), {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!r.ok) return res.status(401).json({ error: "Token Google tidak valid / kedaluwarsa." });
+    const p = await r.json();
+    if (p.aud !== clientId) return res.status(401).json({ error: "Token bukan untuk aplikasi ini." });
+    if (String(p.email_verified) !== "true" || !p.email) return res.status(401).json({ error: "Email Google belum terverifikasi." });
+
+    const email = String(p.email).toLowerCase();
+    let u = await prisma.user.findUnique({ where: { email } });
+    let isNew = false;
+    if (!u) {
+      // Auto-daftar sebagai Talenta. Password acak (login selanjutnya via Google).
+      isNew = true;
+      u = await prisma.user.create({
+        data: {
+          name: p.name || email.split("@")[0],
+          email,
+          passwordHash: await bcrypt.hash(randomUUID(), 10),
+          googleId: p.sub,
+          avatarUrl: p.picture || null, // foto Google sebagai foto profil awal
+        },
+      });
+    } else if (!u.googleId) {
+      // Tautkan akun lama (email sama) dengan Google.
+      u = await prisma.user.update({
+        where: { id: u.id },
+        data: { googleId: p.sub, avatarUrl: u.avatarUrl || p.picture || null },
+      });
+    }
+    res.json({ token: makeToken(u), user: { id: u.id, email: u.email, role: u.role, name: u.name }, isNew });
+  } catch (e) {
+    console.error("[google-auth]", e.message);
+    res.status(500).json({ error: "Login Google gagal: " + e.message });
   }
 });
 

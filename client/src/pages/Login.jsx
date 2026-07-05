@@ -1,27 +1,77 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import api from "../api/client.js";
 import useAuthStore from "../store/authStore.js";
 
+// Muat script Google Identity Services sekali (idempoten).
+function loadGis() {
+  return new Promise((resolve, reject) => {
+    if (window.google?.accounts?.id) return resolve();
+    const existing = document.getElementById("gis-script");
+    if (existing) { existing.addEventListener("load", resolve); return; }
+    const s = document.createElement("script");
+    s.id = "gis-script";
+    s.src = "https://accounts.google.com/gsi/client";
+    s.async = true; s.defer = true;
+    s.onload = resolve; s.onerror = () => reject(new Error("Gagal memuat Google Sign-In"));
+    document.head.appendChild(s);
+  });
+}
+
 export default function Login() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
   const queryClient = useQueryClient();
   const [form, setForm] = useState({ email: "", password: "" });
+  const gBtnRef = useRef(null);
+  const [gReady, setGReady] = useState(false);
+
+  const onLoggedIn = useCallback(({ token, user, isNew }) => {
+    queryClient.clear();
+    setAuth(token, user);
+    toast.success(`Selamat datang, ${user.name}!`);
+    // Akun Google baru → onboarding: pilih kompetensi target dulu.
+    if (isNew) return navigate("/app/profile?welcome=1");
+    const dest = user.role === "hrd" ? "/app/hrd" : user.role === "admin" ? "/app/admin" : "/app/dashboard";
+    navigate(dest);
+  }, [navigate, queryClient, setAuth]);
 
   const login = useMutation({
     mutationFn: (data) => api.post("/auth/login", data),
-    onSuccess: ({ token, user }) => {
-      queryClient.clear();
-      setAuth(token, user);
-      toast.success(`Selamat datang, ${user.name}!`);
-      const dest = user.role === "hrd" ? "/app/hrd" : user.role === "admin" ? "/app/admin" : "/app/dashboard";
-      navigate(dest);
-    },
+    onSuccess: onLoggedIn,
     onError: (err) => toast.error(err || "Login gagal"),
   });
+
+  // Tombol "Masuk dengan Google" (GIS): ambil client ID publik → render tombol resmi.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { clientId } = await api.get("/auth/google-config");
+        if (!clientId || cancelled) return;
+        await loadGis();
+        if (cancelled || !gBtnRef.current) return;
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: async (resp) => {
+            try {
+              const r = await api.post("/auth/google", { credential: resp.credential }, { timeout: 20_000 });
+              onLoggedIn(r);
+            } catch (e) {
+              toast.error(typeof e === "string" ? e : "Login Google gagal");
+            }
+          },
+        });
+        window.google.accounts.id.renderButton(gBtnRef.current, {
+          theme: "outline", size: "large", text: "signin_with", shape: "pill", locale: "id", width: 320,
+        });
+        setGReady(true);
+      } catch { /* Google login opsional — form biasa tetap jalan */ }
+    })();
+    return () => { cancelled = true; };
+  }, [onLoggedIn]);
 
   const submit = (e) => { e.preventDefault(); login.mutate(form); };
 
@@ -70,6 +120,19 @@ export default function Login() {
           <button type="submit" disabled={login.isPending} className="btn-primary w-full py-3">
             {login.isPending ? "Masuk…" : "Masuk →"}
           </button>
+
+          {/* Login Google (muncul bila dikonfigurasi). Kontainer ref selalu ter-mount
+              agar GIS bisa render ke dalamnya; pembatas "atau" baru tampil saat siap. */}
+          <div className="space-y-3">
+            {gReady && (
+              <div className="flex items-center gap-3">
+                <span className="h-px flex-1" style={{ background: "var(--border)" }} />
+                <span className="text-xs" style={{ color: "var(--text-4)" }}>atau</span>
+                <span className="h-px flex-1" style={{ background: "var(--border)" }} />
+              </div>
+            )}
+            <div ref={gBtnRef} className="flex justify-center" />
+          </div>
 
           <div className="text-center text-sm" style={{ color: "var(--text-4)" }}>
             Belum punya akun?{" "}
