@@ -3,6 +3,9 @@ import { prisma } from "../prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { extractProfile, pdfToText } from "../cv.js";
 import { awardOnce, COIN } from "../gamification.js";
+import { clampRank } from "../onboarding.js";
+import { computeReadiness, refreshReadiness } from "../readiness.js";
+import { refreshRank, computeRank } from "../rankcalc.js";
 
 const router = express.Router();
 router.use(requireAuth);
@@ -10,8 +13,42 @@ router.use(requireAuth);
 // ── Profile ───────────────────────────────────────────────────────────────────
 router.get("/profile", async (req, res) => {
   const u = await prisma.user.findUnique({ where: { id: req.user.id } });
-  const { passwordHash: _, certifications, ...rest } = u;
-  res.json({ ...rest, certifications: JSON.parse(certifications) });
+  const { passwordHash: _, certifications, cvMeta, ...rest } = u;
+  res.json({ ...rest, certifications: safeJson(certifications, []), cvMeta: safeJson(cvMeta, {}) });
+});
+
+// Ringkasan lengkap untuk halaman Profil: data diri, kompetensi SKKNI target,
+// ringkasan CV, kelas yang diikuti, dan sertifikat.
+router.get("/overview", async (req, res) => {
+  const userId = req.user.id;
+  const [u, certs, redemptions, courseTx] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId } }),
+    prisma.certificate.findMany({ where: { userId }, orderBy: { issuedAt: "desc" } }),
+    prisma.shopRedemption.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }).catch(() => []),
+    prisma.coinTransaction.findMany({ where: { userId, refType: "course" }, orderBy: { createdAt: "desc" } }).catch(() => []),
+  ]);
+  if (!u) return res.status(404).json({ error: "User tidak ditemukan." });
+
+  // Kelas yang diikuti = kelas premium yang ditebus (Toko) + kursus AvatarEdu yang dimulai.
+  const classes = [
+    ...redemptions.map((r) => ({ kind: "premium", name: r.itemName, ref: r.itemId, code: r.code, status: r.status, at: r.createdAt })),
+    ...courseTx.map((t) => ({ kind: "avataredu", name: (t.reason || "Kursus").replace(/^Mulai kursus:\s*/i, ""), ref: t.refId, status: "berjalan", at: t.createdAt })),
+  ];
+
+  const { passwordHash: _, certifications, cvMeta, ...rest } = u;
+  // Rincian skor kesiapan (CV / Ujian / Sertifikat) + info rank saat ini.
+  const [readiness, rank] = await Promise.all([computeReadiness(userId), computeRank(userId)]);
+  const levelInfo = rank.effective ? await prisma.kkniLevel.findUnique({ where: { level: rank.effective } }) : null;
+  res.json({
+    profile: { ...rest, certifications: safeJson(certifications, []) },
+    cv: safeJson(cvMeta, {}),
+    chosenSkkni: u.chosenSkkniId ? { id: u.chosenSkkniId, title: u.chosenSkkniTitle } : null,
+    classes,
+    certificates: certs,
+    readiness,
+    rank, // { seed, earned, effective, masteryScore, passedUnits, certs, courses, next }
+    rankInfo: levelInfo ? { level: levelInfo.level, title: levelInfo.title, educationMapping: levelInfo.educationMapping, jobGroup: levelInfo.jobGroup } : null,
+  });
 });
 
 router.put("/profile", async (req, res) => {
@@ -26,24 +63,38 @@ router.put("/profile", async (req, res) => {
 // ── CV Parse ──────────────────────────────────────────────────────────────────
 router.post("/cv-parse", async (req, res) => {
   try {
-    const { pdfBase64 } = req.body || {};
+    const { pdfBase64, fileName } = req.body || {};
     if (!pdfBase64) return res.status(400).json({ error: "pdfBase64 kosong" });
     const buf = Buffer.from(pdfBase64.replace(/^data:.*;base64,/, ""), "base64");
     const text = await pdfToText(buf);
     const profile = extractProfile(text);
-    const level = await applyRules(profile);
+    // CV mengisi data pendidikan/keahlian (bahan pembanding SKKNI). Rank TIDAK diset dari CV —
+    // pendidikan hanya jadi seed; rank efektif dihitung dari kompetensi (refreshRank).
+    const cvMeta = {
+      education: profile.education,
+      certifications: profile.certifications,
+      skills: profile.certifications,          // heuristik skill dari kata kunci CV
+      experienceYears: profile.experienceYears,
+      textChars: text.length,
+      fileName: fileName || null,
+      parsedAt: new Date().toISOString(),
+    };
     await prisma.user.update({
       where: { id: req.user.id },
       data: {
         education: profile.education,
         certifications: JSON.stringify(profile.certifications),
         experienceYears: profile.experienceYears,
-        currentKkniLevel: level,
+        cvMeta: JSON.stringify(cvMeta),
+        cvFileName: fileName || null,
+        cvUploadedAt: new Date(),
       },
     });
-    const levelInfo = await prisma.kkniLevel.findUnique({ where: { level } });
-    try { await awardOnce(req.user.id, COIN.cvMap, "Memetakan CV ke jenjang KKNI", { type: "cvmap", id: req.user.id }); } catch { /* non-fatal */ }
-    res.json({ profile, predictedLevel: level, levelInfo: levelInfo ? { ...levelInfo, descriptors: JSON.parse(levelInfo.descriptors) } : null, textChars: text.length });
+    const rank = await refreshRank(req.user.id);            // rank efektif (seed pendidikan + kompetensi)
+    try { await awardOnce(req.user.id, COIN.cvMap, "Memetakan CV ke Skill Rank", { type: "cvmap", id: req.user.id }); } catch { /* non-fatal */ }
+    try { await refreshReadiness(req.user.id); } catch { /* non-fatal */ } // CV menyumbang skor kesiapan
+    const levelInfo = await prisma.kkniLevel.findUnique({ where: { level: rank.effective } });
+    res.json({ profile, predictedLevel: rank.effective, rank, levelInfo: levelInfo ? { ...levelInfo, descriptors: JSON.parse(levelInfo.descriptors) } : null, textChars: text.length });
   } catch (e) {
     res.status(400).json({ error: "gagal membaca CV: " + e.message });
   }
@@ -52,18 +103,18 @@ router.post("/cv-parse", async (req, res) => {
 // ── Manual map ────────────────────────────────────────────────────────────────
 router.post("/map", async (req, res) => {
   const profile = req.body || {};
-  const level = await applyRules(profile);
   await prisma.user.update({
     where: { id: req.user.id },
     data: {
       education: profile.education,
       certifications: JSON.stringify(profile.certifications || []),
       experienceYears: profile.experienceYears || 0,
-      currentKkniLevel: level,
     },
   });
-  const levelInfo = await prisma.kkniLevel.findUnique({ where: { level } });
-  res.json({ predictedLevel: level, levelInfo: levelInfo ? { ...levelInfo, descriptors: JSON.parse(levelInfo.descriptors) } : null });
+  const rank = await refreshRank(req.user.id);
+  try { await refreshReadiness(req.user.id); } catch { /* non-fatal */ }
+  const levelInfo = await prisma.kkniLevel.findUnique({ where: { level: rank.effective } });
+  res.json({ predictedLevel: rank.effective, rank, levelInfo: levelInfo ? { ...levelInfo, descriptors: JSON.parse(levelInfo.descriptors) } : null });
 });
 
 // ── Exam ──────────────────────────────────────────────────────────────────────
@@ -209,7 +260,11 @@ router.post("/exam/submit", async (req, res) => {
       }
     } catch (e) { console.error("cert issue:", e.message); }
 
-    res.json({ results, readiness, status, gaps, attemptId: attempt.id, resources: resources.slice(0, 4), coin, certificates: newCerts });
+    // Kompetensi terbukti → perbarui rank efektif + skor kesiapan gabungan.
+    const rank = await refreshRank(req.user.id).catch(() => null);
+    const overall = await refreshReadiness(req.user.id).catch(() => null);
+
+    res.json({ results, readiness, status, gaps, attemptId: attempt.id, resources: resources.slice(0, 4), coin, certificates: newCerts, overallReadiness: overall?.total, rank });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -286,6 +341,10 @@ async function applyRules({ education, certifications = [] }) {
     return r.predictedLevel;
   }
   return 3;
+}
+
+function safeJson(str, fallback) {
+  try { return JSON.parse(str ?? ""); } catch { return fallback; }
 }
 
 export default router;

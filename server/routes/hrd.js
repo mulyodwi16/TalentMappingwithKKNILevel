@@ -2,6 +2,7 @@ import express from "express";
 import xlsx from "xlsx";
 import { prisma } from "../prisma.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { rankName } from "../rank.js";
 
 const router = express.Router();
 router.use(requireAuth, requireRole("hrd", "admin"));
@@ -62,7 +63,7 @@ router.get("/export/excel", async (req, res) => {
   const data = workers.map((w) => ({
     Nama: w.name, Email: w.email, Departemen: w.department || "-",
     Posisi: w.position || "-", Pendidikan: w.education || "-",
-    "Level KKNI": w.currentKkniLevel || "-", "Target Level": w.targetKkniLevel || "-",
+    "Rank": w.currentKkniLevel ? rankName(w.currentKkniLevel) : "-", "Target Rank": w.targetKkniLevel ? rankName(w.targetKkniLevel) : "-",
     "Readiness (%)": w.readinessScore || 0, Status: w.status || "not_ready",
   }));
   const wb = xlsx.utils.book_new();

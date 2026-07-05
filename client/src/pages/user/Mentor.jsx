@@ -7,16 +7,16 @@ import useAuthStore from "../../store/authStore.js";
 import { useMentorChat } from "../../hooks/useMentorChat.js";
 
 const CHIPS = [
-  "Apa langkah prioritas untuk naik jenjang KKNI saya?",
+  "Apa langkah prioritas untuk naik Skill Rank saya?",
   "Kompetensi apa saja yang masih jadi gap untuk saya?",
   "Bagaimana cara mempersiapkan ujian kompetensi?",
   "Susun rencana belajar 30 hari untuk menutup gap saya.",
-  "Jelaskan arti jenjang KKNI saya saat ini.",
+  "Jelaskan arti Skill Rank saya saat ini.",
 ];
 
 const GREETING =
-  "Halo! Saya **AI Mentor Karier KKNI** Anda. Saya memahami data pemetaan Anda — jenjang saat ini, target, " +
-  "hasil ujian, dan gap kompetensi. Saya bisa bantu menyusun langkah agar Anda **siap naik jenjang**. " +
+  "Halo! Saya **AI Mentor Karier** Anda. Saya memahami data pemetaan Anda — Skill Rank saat ini, target, " +
+  "hasil ujian, dan gap kompetensi. Saya bisa bantu menyusun langkah agar Anda **naik rank**. " +
   "Apa yang ingin Anda konsultasikan?";
 
 // Render minimal markdown: **bold** dan newline.
@@ -63,10 +63,10 @@ export default function Mentor() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Bot className="w-6 h-6 text-brand-600" /> AI Mentor Karier KKNI
+            <Bot className="w-6 h-6 text-brand-600" /> AI Mentor Karier
           </h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-3)" }}>
-            Konsultasi yang memahami data pemetaan KKNI-mu — fokus menutup gap kompetensi & naik jenjang.
+            Konsultasi yang memahami data pemetaan skill-mu — fokus menutup gap kompetensi & naik Skill Rank.
           </p>
         </div>
         {messages.length > 0 && (
@@ -151,7 +151,7 @@ export default function Mentor() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && submit(input)}
-            placeholder="Ketik pertanyaan tentang jenjang & kompetensimu…"
+            placeholder="Ketik pertanyaan tentang Skill Rank & kompetensimu…"
             disabled={busy}
             className="input flex-1"
           />
@@ -162,7 +162,7 @@ export default function Mentor() {
       </div>
 
       <p className="text-[11px] flex items-center gap-1" style={{ color: "var(--text-4)" }}>
-        <Sparkles className="w-3 h-3" /> Riwayat tersimpan otomatis di perangkat ini. Jawaban AI memakai data pemetaan KKNI-mu — verifikasi info penting ke sumber resmi (Perpres 8/2012, SKKNI Kemnaker).
+        <Sparkles className="w-3 h-3" /> Riwayat tersimpan otomatis di perangkat ini. Jawaban AI memakai data pemetaan skill-mu — verifikasi info penting ke sumber resmi (Perpres 8/2012, SKKNI Kemnaker).
       </p>
     </div>
   );

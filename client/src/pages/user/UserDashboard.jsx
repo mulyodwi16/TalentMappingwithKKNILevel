@@ -4,6 +4,8 @@ import api from "../../api/client.js";
 import useAuthStore from "../../store/authStore.js";
 import DailyLoginCard from "../../components/DailyLoginCard.jsx";
 import DailyMissions from "../../components/DailyMissions.jsx";
+import RankBadge from "../../components/RankBadge.jsx";
+import { rankName } from "../../lib/rank.js";
 
 const STATUS_CONFIG = {
   ready:       { label: "Siap Naik",    cls: "badge-ready",      ring: "#10b981" },
@@ -67,11 +69,7 @@ export default function UserDashboard() {
             <p className="text-slate-400 text-sm">{u?.position || "—"} · {u?.department || "—"}</p>
             <div className="flex flex-wrap gap-2 mt-2">
               <span className={`badge ${sc.cls}`}>{sc.label}</span>
-              {u?.currentKkniLevel && (
-                <span className="badge bg-brand-500/20 text-brand-400 border border-brand-500/30">
-                  KKNI Level {u.currentKkniLevel}
-                </span>
-              )}
+              {u?.currentKkniLevel && <RankBadge level={u.currentKkniLevel} />}
               {u?.education && (
                 <span className="badge bg-slate-700/60 text-slate-300 border border-slate-600/30">{u.education}</span>
               )}
@@ -84,7 +82,7 @@ export default function UserDashboard() {
       {/* Quick action cards */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { to: "/app/cv-upload",     icon: "↑", label: "Upload CV",     desc: "Auto-klasifikasi KKNI",  color: "from-brand-600 to-brand-700" },
+          { to: "/app/cv-upload",     icon: "↑", label: "Upload CV",     desc: "Auto-klasifikasi Rank",  color: "from-brand-600 to-brand-700" },
           { to: "/app/exam",          icon: "✎", label: "Ikut Ujian",    desc: `${attempts.length} percobaan`, color: "from-tosca-500 to-tosca-600" },
           { to: "/app/skill-gap",     icon: "◎", label: "Skill Gap",     desc: `${topGaps.length} gap terdeteksi`, color: "from-amber-500 to-orange-600" },
           { to: "/app/learning-path", icon: "→", label: "Learning Path", desc: "Rekomendasi personal",  color: "from-emerald-500 to-teal-600" },
@@ -115,7 +113,7 @@ export default function UserDashboard() {
                     a.status === "in_progress" ? "bg-amber-500/20 text-amber-400" : "bg-red-500/20 text-red-400"
                   }`}>{a.readinessScore}%</div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white">KKNI Level {a.kkniLevel}</p>
+                    <p className="text-sm font-medium text-white">Rank {rankName(a.kkniLevel)}</p>
                     <p className="text-xs text-slate-500">{new Date(a.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</p>
                   </div>
                   <span className={`badge ${STATUS_CONFIG[a.status]?.cls || "badge-not-ready"}`}>

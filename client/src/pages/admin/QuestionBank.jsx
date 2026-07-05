@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import api from "../../api/client.js";
+import { rankName } from "../../lib/rank.js";
 
 const EMPTY = { competencyCode: "", kkniLevel: 6, question: "", options: ["", "", "", ""], answerKey: 0, points: 1 };
 
@@ -101,9 +102,9 @@ export default function QuestionBank() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-slate-300 mb-1.5 block">Level KKNI</label>
+                  <label className="text-sm font-medium text-slate-300 mb-1.5 block">Rank (jenjang soal)</label>
                   <select className="input" value={form.kkniLevel} onChange={(e) => setForm((f) => ({ ...f, kkniLevel: e.target.value }))}>
-                    {[1,2,3,4,5,6,7,8,9].map((l) => <option key={l} value={l}>Level {l}</option>)}
+                    {[1,2,3,4,5,6,7,8,9].map((l) => <option key={l} value={l}>{rankName(l)} (Rank {l})</option>)}
                   </select>
                 </div>
               </div>

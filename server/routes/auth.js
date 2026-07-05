@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { prisma } from "../prisma.js";
 import { requireAuth } from "../middleware/auth.js";
+import { statusInfo, educationSeed } from "../onboarding.js";
 
 const router = express.Router();
 const SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
@@ -27,13 +28,21 @@ router.post("/login", async (req, res) => {
 
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password, department, position } = req.body || {};
+    const { name, email, password, academicStatus } = req.body || {};
     if (!name || !email || !password)
       return res.status(400).json({ error: "name, email, password wajib diisi" });
     const exists = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
     if (exists) return res.status(409).json({ error: "email sudah terdaftar" });
+    // Status akademik → isi pendidikan & rank AWAL (seed). Rank sebenarnya diraih dari kompetensi.
+    const info = statusInfo(academicStatus);
+    const seed = info ? educationSeed({ academicStatus, education: info.education }) : null;
     const u = await prisma.user.create({
-      data: { name, email: email.toLowerCase(), passwordHash: await bcrypt.hash(password, 10), department, position },
+      data: {
+        name, email: email.toLowerCase(), passwordHash: await bcrypt.hash(password, 10),
+        academicStatus: info ? academicStatus : null,
+        education: info?.education || null,
+        currentKkniLevel: seed,
+      },
     });
     res.status(201).json({ token: makeToken(u), user: { id: u.id, email: u.email, role: u.role, name: u.name } });
   } catch (e) {

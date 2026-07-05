@@ -13,7 +13,7 @@ const PAGE_LABELS = [
   { match: "/app/learning-path", label: "Learning Path" },
 ];
 function pageLabel(loc) {
-  return PAGE_LABELS.find((p) => loc.startsWith(p.match))?.label ?? "KKNI Talent Mapping";
+  return PAGE_LABELS.find((p) => loc.startsWith(p.match))?.label ?? "TalentaAI";
 }
 
 function fmt(text) {
@@ -73,7 +73,7 @@ export default function FloatingMentor() {
             <div className="flex items-center gap-2 min-w-0">
               <div className="rounded-full bg-white/15 p-1.5"><Bot className="w-4 h-4" /></div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold leading-none">AI Mentor KKNI</p>
+                <p className="text-sm font-semibold leading-none">AI Mentor</p>
                 <p className="text-[10px] text-white/70 truncate">Konteks: {ctx}</p>
               </div>
             </div>
@@ -88,9 +88,9 @@ export default function FloatingMentor() {
           <div ref={boxRef} className="flex-1 overflow-y-auto p-3 space-y-3 min-h-[200px]">
             {messages.length === 0 && (
               <div className="text-sm" style={{ color: "var(--text-3)" }}>
-                <p className="mb-2">Halo! Tanya apa saja soal jenjang & kompetensi KKNI-mu. Saya tahu kamu sedang di <b style={{ color: "var(--text-base)" }}>{ctx}</b>.</p>
+                <p className="mb-2">Halo! Tanya apa saja soal Skill Rank & kompetensimu. Saya tahu kamu sedang di <b style={{ color: "var(--text-base)" }}>{ctx}</b>.</p>
                 <div className="flex flex-col gap-1.5">
-                  {["Apa langkah prioritas untuk naik jenjang KKNI saya?", `Jelaskan fitur ${ctx} ini untuk saya.`].map((c) => (
+                  {["Apa langkah prioritas untuk naik Skill Rank saya?", `Jelaskan fitur ${ctx} ini untuk saya.`].map((c) => (
                     <button key={c} onClick={() => submit(c)} className="text-left text-xs rounded-lg px-2.5 py-1.5 transition-colors hover:text-brand-600" style={{ border: "1px solid var(--border-2)" }}>{c}</button>
                   ))}
                 </div>

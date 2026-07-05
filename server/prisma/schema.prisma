@@ -15,6 +15,8 @@ model User {
   role             String   @default("user")
   department       String?
   position         String?
+  // Status akademik/karier (menggantikan fokus "pekerja"): siswa_smk | mahasiswa | lulusan_smk | lulusan_s1
+  academicStatus   String?
   education        String?
   certifications   String   @default("[]")
   experienceYears  Int      @default(0)
@@ -22,6 +24,15 @@ model User {
   targetKkniLevel  Int?
   readinessScore   Int      @default(0)
   status           String   @default("not_ready")
+  // Kompetensi SKKNI yang dipilih user sebagai target/patokan semua fitur (referensi ke SkkniDocument.id).
+  chosenSkkniId    String?
+  chosenSkkniTitle String?
+  // Profesi/jabatan yang ditargetkan user (acuan Learning Path AI, mis. "Video Editor Profesional").
+  targetRole       String?
+  // Ringkasan metadata hasil ekstraksi CV terakhir (JSON: education, certifications, skills, experienceYears, dst).
+  cvMeta           String   @default("{}")
+  cvFileName       String?
+  cvUploadedAt     DateTime?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -39,6 +50,22 @@ model User {
   certificates    Certificate[]
   jobs            Job[]
   applications    JobApplication[]
+  learningPlan    LearningPlan?
+  unitProgress    UnitProgress[]
+}
+
+// ── Learning Path AI (satu rencana aktif per user) ───────────────────────────
+// plan = JSON hasil AI: { aiCheck, steps[] } dengan progress tersimpan per-step.
+// Disusun dari hasil ujian (gap) + kompetensi SKKNI yang dipilih + profesi target.
+model LearningPlan {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  targetRole  String?
+  plan        String   @default("{}") // JSON { aiCheck:{...}, steps:[{id,order,title,objective,why,difficulty,competencyRef,estEffort,courseQuery,progress}] }
+  source      String   @default("ai") // ai | fallback
+  generatedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 // ── Misi harian (3 tugas → klaim koin) ───────────────────────────────────────
@@ -184,6 +211,123 @@ model KkniLevel {
   educationMapping String
   jobGroup         String
   descriptors      String
+}
+
+// ── Katalog SKKNI (cache dari API resmi Kemnaker) ────────────────────────────
+// Ditarik SEKALI per dokumen lalu disimpan permanen. API Kemnaker dibatasi ~1 request/60dtk
+// per-IP, jadi semua user dilayani dari cache lokal ini; hanya cache-miss yang menembak API.
+model SkkniDocument {
+  id            String   @id            // UUID dokumen dari Kemnaker (documents[].id)
+  title         String
+  sector        String?
+  number        String?                 // nomor Kepmen (mis. "249")
+  year          String?                 // tahun terbit
+  numberKepmen  String?
+  availability  String   @default("applied")
+  unitsCached   Boolean  @default(false) // apakah unit kompetensinya sudah ditarik
+  unitCount     Int      @default(0)
+  fetchedAt     DateTime @default(now())
+  unitsFetchedAt DateTime?
+  units         SkkniUnit[]
+}
+
+model SkkniUnit {
+  id           String  @id @default(cuid())
+  documentId   String
+  code         String                    // kode unit (mis. "Q.86NUT00.001.1")
+  title        String
+  availability String  @default("applied")
+  document     SkkniDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+}
+
+// Paket soal ujian ("course") per kompetensi — di-generate AI SEKALI dari unit SKKNI lalu
+// disimpan permanen sebagai LIBRARY (dipakai ulang semua user). Tes ulang mengacak urutannya.
+model ExamPackage {
+  id            String   @id @default(cuid())
+  docId         String   @unique
+  title         String
+  questions     String   @default("[]") // JSON [{unitCode, unitTitle, q, options, answerKey}]
+  unitCount     Int      @default(0)
+  questionCount Int      @default(0)
+  createdAt     DateTime @default(now())
+}
+
+// Instance ujian yang SEDANG dikerjakan user — hasil pengacakan dari ExamPackage (urutan soal
+// & opsi diacak, answerKey menyesuaikan). Dihapus setelah submit → tes ulang mengacak lagi.
+model SkkniExam {
+  id        String   @id @default(cuid())
+  userId    String
+  docId     String
+  questions String   @default("[]") // JSON [{unitCode, unitTitle, q, options, answerKey}] (teracak)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, docId])
+}
+
+// ── Kelas & Ujian per UNIT kompetensi ────────────────────────────────────────
+// Ujian jadi granular: tiap unit SKKNI diuji terpisah (jumlah soal variatif) & wajib
+// menyelesaikan "kelas"-nya dulu. Materi kelas + paket soal = LIBRARY global (di-generate
+// AI sekali per unit, dipakai ulang semua user). Progress belajar/unlock = per user.
+
+// Materi kelas satu unit (AI): overview, poin kunci, contoh kasus kerja, langkah praktik.
+model UnitCourse {
+  id        String   @id @default(cuid())
+  docId     String
+  unitCode  String
+  unitTitle String
+  content   String   @default("{}") // JSON { overview, keyPoints[], caseExample, practiceSteps[], estMinutes }
+  createdAt DateTime @default(now())
+
+  @@unique([docId, unitCode])
+  @@index([docId])
+}
+
+// Paket soal satu unit (AI, jumlah soal VARIATIF sesuai kompleksitas unit) — library.
+model UnitExamPackage {
+  id            String   @id @default(cuid())
+  docId         String
+  unitCode      String
+  unitTitle     String
+  questions     String   @default("[]") // JSON [{q, options[4], answerKey}]
+  questionCount Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@unique([docId, unitCode])
+  @@index([docId])
+}
+
+// Progres per user per unit: kelas selesai (learned) + apakah dibuka lewat koin (bypass
+// urutan/kelas → langsung ke ujian). Lulus/skor tetap dibaca dari SkillAssessment/Certificate.
+model UnitProgress {
+  id             String    @id @default(cuid())
+  userId         String
+  docId          String
+  unitCode       String
+  learned        Boolean   @default(false) // kelas ditandai selesai
+  learnedAt      DateTime?
+  unlockedByCoin Boolean   @default(false) // dibeli dgn koin (bypass gating belajar → ujian)
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, unitCode])
+  @@index([userId, docId])
+}
+
+// Instance ujian 1 unit yang sedang dikerjakan user (teracak dari UnitExamPackage).
+// Dihapus setelah submit → tes ulang mengacak lagi. Satu unit aktif per user.
+model UnitExamInstance {
+  id        String   @id @default(cuid())
+  userId    String
+  docId     String
+  unitCode  String
+  unitTitle String
+  questions String   @default("[]") // JSON [{q, options, answerKey}] (teracak)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, unitCode])
 }
 
 model Competency {

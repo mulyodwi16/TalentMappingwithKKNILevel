@@ -15,14 +15,14 @@ router.use(requireAuth);
 // gratis untuk diikuti & malah memberi koin; kelas premium di sini ditebus dengan koin).
 const SHOP_ITEMS = [
   { id: "kelas-uji-kompetensi", name: "Kelas Intensif: Persiapan Uji Kompetensi", desc: "Bimbingan terstruktur menghadapi ujian kompetensi SKKNI agar lulus di percobaan pertama.", cost: 300, category: "Kelas Premium", icon: "graduation" },
-  { id: "kelas-naik-jenjang", name: "Kelas: Strategi Naik Jenjang KKNI", desc: "Peta jalan langkah demi langkah menaikkan jenjang KKNI sesuai profesimu.", cost: 300, category: "Kelas Premium", icon: "graduation" },
+  { id: "kelas-naik-jenjang", name: "Kelas: Strategi Naik Skill Rank", desc: "Peta jalan langkah demi langkah menaikkan Skill Rank sesuai profesimu.", cost: 300, category: "Kelas Premium", icon: "graduation" },
   { id: "bundle-skkni-video", name: "Bundle Materi SKKNI Video Editing", desc: "Kumpulan materi & latihan lengkap 11 unit kompetensi SKKNI 2014-118.", cost: 250, category: "Materi", icon: "book" },
-  { id: "ebook-portofolio", name: "E-book: Membangun Portofolio & CV Juara", desc: "Panduan menyusun CV dan portofolio yang mudah dipetakan ke jenjang KKNI.", cost: 120, category: "Materi", icon: "book" },
+  { id: "ebook-portofolio", name: "E-book: Membangun Portofolio & CV Juara", desc: "Panduan menyusun CV dan portofolio yang mudah dipetakan ke Skill Rank.", cost: 120, category: "Materi", icon: "book" },
   { id: "mentoring-1on1", name: "Sesi Mentoring 1-on-1 (30 menit)", desc: "Konsultasi privat bersama mentor untuk rencana pengembangan kariermu.", cost: 400, category: "Pendampingan", icon: "bot" },
   { id: "sertifikat-showcase", name: "Sorotan Profil Talenta 14 Hari", desc: "Profil kompetensimu disorot ke HRD di jaringan talent pool selama 14 hari.", cost: 350, category: "Peluang", icon: "sparkle" },
 ];
 function getShopItem(id) { return SHOP_ITEMS.find((s) => s.id === id); }
-function voucherCode() { return "KKNI-" + randomBytes(4).toString("hex").toUpperCase(); }
+function voucherCode() { return "RANK-" + randomBytes(4).toString("hex").toUpperCase(); }
 
 // ── Dompet ────────────────────────────────────────────────────────────────────
 router.get("/coins", async (req, res) => {

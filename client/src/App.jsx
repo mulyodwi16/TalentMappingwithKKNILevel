@@ -9,11 +9,13 @@ import useAuthStore from "./store/authStore.js";
 import UserDashboard from "./pages/user/UserDashboard.jsx";
 import CVUpload from "./pages/user/CVUpload.jsx";
 import Exam from "./pages/user/Exam.jsx";
+import Kelas from "./pages/user/Kelas.jsx";
 import SkillGap from "./pages/user/SkillGap.jsx";
 import LearningPath from "./pages/user/LearningPath.jsx";
 import Mentor from "./pages/user/Mentor.jsx";
 import Toko from "./pages/user/Toko.jsx";
 import Jobs from "./pages/user/Jobs.jsx";
+import Profile from "./pages/user/Profile.jsx";
 import HrdDashboard from "./pages/hrd/HrdDashboard.jsx";
 import JobBoard from "./pages/hrd/JobBoard.jsx";
 import AvatarEduSettings from "./pages/admin/AvatarEduSettings.jsx";
@@ -58,12 +60,14 @@ export default function App() {
           {/* User */}
           <Route path="dashboard" element={<DashboardGate />} />
           <Route path="cv-upload" element={<CVUpload />} />
+          <Route path="kelas" element={<Kelas />} />
           <Route path="exam" element={<Exam />} />
           <Route path="skill-gap" element={<SkillGap />} />
           <Route path="learning-path" element={<LearningPath />} />
           <Route path="mentor" element={<Mentor />} />
           <Route path="toko" element={<Toko />} />
           <Route path="jobs" element={<Jobs />} />
+          <Route path="profile" element={<Profile />} />
           {/* HRD */}
           <Route
             path="hrd"

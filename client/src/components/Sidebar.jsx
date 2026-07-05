@@ -2,20 +2,23 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard, Upload, ClipboardCheck, Target, BookOpen,
-  Users, Settings2, Mail, ScrollText, LogOut, X, Bot, ShoppingBag, Compass, GraduationCap,
+  Users, Settings2, Mail, ScrollText, LogOut, X, Bot, ShoppingBag, Compass, GraduationCap, UserCircle,
 } from "lucide-react";
 import useAuthStore from "../store/authStore.js";
+import Logo from "./Logo.jsx";
 
 const NAV = {
   user: [
     { to: "/app/dashboard",     label: "Dashboard",      Icon: LayoutDashboard },
+    { to: "/app/profile",       label: "Profil Saya",    Icon: UserCircle },
     { to: "/app/cv-upload",     label: "Upload CV",      Icon: Upload },
+    { to: "/app/kelas",         label: "Kelas",          Icon: GraduationCap },
     { to: "/app/exam",          label: "Ujian",          Icon: ClipboardCheck },
     { to: "/app/skill-gap",     label: "Skill Gap",      Icon: Target },
     { to: "/app/learning-path", label: "Learning Path",  Icon: BookOpen },
     { to: "/app/mentor",        label: "AI Mentor",      Icon: Bot },
     { to: "/app/jobs",          label: "Peta Posisi",    Icon: Compass },
-    { to: "/app/toko",          label: "Toko & Kelas",   Icon: ShoppingBag },
+    { to: "/app/toko",          label: "Toko Koin",      Icon: ShoppingBag },
   ],
   hrd: [
     { to: "/app/hrd",           label: "Dashboard HRD",  Icon: LayoutDashboard },
@@ -58,13 +61,7 @@ export default function Sidebar({ open, onClose }) {
     >
       {/* Logo + close on mobile */}
       <div className="p-5 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-600 to-tosca-500 flex items-center justify-center text-sm font-bold text-white">K</div>
-          <div>
-            <p className="text-sm font-bold" style={{ color: "var(--text-base)" }}>KKNI Talent</p>
-            <p className="text-xs" style={{ color: "var(--text-4)" }}>Mapping System</p>
-          </div>
-        </div>
+        <Logo size={34} />
         <button
           onClick={onClose}
           className="lg:hidden p-1.5 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors"

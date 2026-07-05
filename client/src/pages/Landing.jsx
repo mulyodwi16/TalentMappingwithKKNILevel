@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Sun, Moon } from "lucide-react";
+import { rankName, rankColor } from "../lib/rank.js";
 
 const LEVELS = [
   { n: 1, title: "Operator Dasar",  edu: "SD" },
@@ -15,7 +16,7 @@ const LEVELS = [
 ];
 
 const FEATURES = [
-  { icon: "⚡", title: "Auto-Mapping Engine",   desc: "Upload CV → prediksi level KKNI otomatis berdasarkan pendidikan & sertifikasi." },
+  { icon: "⚡", title: "Auto-Mapping Engine",   desc: "Upload CV → prediksi Skill Rank otomatis berdasarkan pendidikan & sertifikasi." },
   { icon: "✎",  title: "Ujian Kompetensi",      desc: "Bank soal terstandar SKKNI, timer, penilaian otomatis per kompetensi." },
   { icon: "◎", title: "Skill Gap Radar",        desc: "Radar chart kompetensi aktual vs target level, urutan prioritas gap." },
   { icon: "→",  title: "Learning Path AI",      desc: "Rekomendasi belajar bertahap berbasis AI + katalog resource per kompetensi." },
@@ -25,7 +26,7 @@ const FEATURES = [
 
 const STEPS = [
   { n: "01", title: "Upload CV",       desc: "Unggah CV PDF, sistem ekstrak pendidikan, sertifikasi, dan pengalaman otomatis." },
-  { n: "02", title: "Auto-Mapping",    desc: "Engine prediksi level KKNI awal berdasarkan rules yang dikonfigurasi Admin." },
+  { n: "02", title: "Auto-Mapping",    desc: "Engine prediksi Skill Rank awal berdasarkan rules yang dikonfigurasi Admin." },
   { n: "03", title: "Ujian",           desc: "Ikuti ujian berbasis SKKNI untuk verifikasi kompetensi aktual." },
   { n: "04", title: "Gap & Belajar",   desc: "Radar chart gap, learning path personal, dan tracking progres." },
 ];
@@ -56,7 +57,7 @@ export default function Landing() {
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
           <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: "#fff" }}>K</div>
-          <span style={{ fontWeight: 700, fontSize: 14, color: dark ? "#f0f0ff" : "#1e1b4b" }}>KKNI Talent Mapping</span>
+          <span style={{ fontWeight: 700, fontSize: 14, color: dark ? "#f0f0ff" : "#1e1b4b" }}>TalentaAI</span>
         </div>
         <button onClick={() => setDark(d => !d)} title={dark ? "Light mode" : "Dark mode"}
           style={{ padding: 8, borderRadius: 10, border: "none", background: "transparent", cursor: "pointer", color: dark ? "#a5b4fc" : "#6366f1" }}>
@@ -84,12 +85,12 @@ export default function Landing() {
           <h1 style={{ fontSize: "clamp(2.4rem,6vw,4.2rem)", fontWeight: 900, lineHeight: 1.1, marginBottom: 20, letterSpacing: "-0.02em" }}>
             Petakan Talenta<br />
             <span style={{ background: "linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a78bfa 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-              Berbasis KKNI
+Naik Skill Rank
             </span>
           </h1>
 
           <p style={{ fontSize: 18, lineHeight: 1.7, color: dark ? "#a5b4fc" : "#4f46e5", marginBottom: 36, maxWidth: 560, margin: "0 auto 36px" }}>
-            Upload CV → prediksi level KKNI → ujian verifikasi → skill gap → learning path personalisasi.
+            Upload CV → prediksi Skill Rank → ujian verifikasi → skill gap → learning path personalisasi.
           </p>
 
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: 56 }}>
@@ -103,7 +104,7 @@ export default function Landing() {
 
           {/* Stats */}
           <div style={{ display: "inline-grid", gridTemplateColumns: "repeat(3,1fr)", gap: "0 40px", background: dark ? "rgba(99,102,241,0.08)" : "rgba(255,255,255,0.7)", backdropFilter: "blur(12px)", border: `1px solid ${dark ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.15)"}`, borderRadius: 16, padding: "20px 32px" }}>
-            {[["9","Level","Jenjang KKNI"],["12+","Kompetensi","Terstandar SKKNI"],["100%","Otomatis","Tanpa Manual"]].map(([v,s,l]) => (
+            {[["9","Tier","Skill Rank"],["12+","Kompetensi","Terstandar SKKNI"],["100%","Otomatis","Tanpa Manual"]].map(([v,s,l]) => (
               <div key={l} style={{ textAlign: "center", padding: "0 8px" }}>
                 <p style={{ fontSize: 28, fontWeight: 900, color: "#6366f1", margin: 0 }}>{v} <span style={{ fontSize: 16 }}>{s}</span></p>
                 <p style={{ fontSize: 12, color: dark ? "#a5b4fc" : "#6366f1", margin: "4px 0 0", opacity: 0.8 }}>{l}</p>
@@ -133,12 +134,12 @@ export default function Landing() {
       {/* ── KKNI Levels ── */}
       <section style={{ padding: "72px 24px", background: dark ? "#0f0e1a" : "#eef2ff" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <h2 style={{ textAlign: "center", fontSize: "clamp(1.6rem,3vw,2.2rem)", fontWeight: 800, marginBottom: 40 }}>9 Jenjang KKNI</h2>
+          <h2 style={{ textAlign: "center", fontSize: "clamp(1.6rem,3vw,2.2rem)", fontWeight: 800, marginBottom: 40 }}>9 Tier Skill Rank</h2>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(100px,1fr))", gap: 12 }}>
             {LEVELS.map(({ n, title, edu }, i) => (
               <div key={n} style={{ background: dark ? "rgba(99,102,241,0.1)" : "#ffffff", border: `1px solid ${dark ? "rgba(99,102,241,0.2)" : "#c7d2fe"}`, borderRadius: 14, padding: "14px 10px", textAlign: "center" }}>
-                <div style={{ width: 40, height: 40, borderRadius: 10, margin: "0 auto 10px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, background: `hsl(${240 + i * 10},70%,${dark ? 20 : 92}%)`, color: `hsl(${240 + i * 10},80%,${dark ? 75 : 40}%)` }}>{n}</div>
-                <p style={{ fontSize: 11, fontWeight: 700, margin: "0 0 4px", color: dark ? "#f0f0ff" : "#1e1b4b", lineHeight: 1.3 }}>{title}</p>
+                <div style={{ width: 40, height: 40, borderRadius: 10, margin: "0 auto 10px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, background: `${rankColor(n)}22`, color: rankColor(n) }}>{n}</div>
+                <p style={{ fontSize: 11, fontWeight: 700, margin: "0 0 4px", color: dark ? "#f0f0ff" : "#1e1b4b", lineHeight: 1.3 }}>{rankName(n)}</p>
                 <p style={{ fontSize: 10, color: dark ? "#a5b4fc" : "#6366f1", margin: 0, opacity: 0.8 }}>{edu}</p>
               </div>
             ))}
@@ -167,7 +168,7 @@ export default function Landing() {
       <section style={{ padding: "80px 24px", background: dark ? "#0f0e1a" : "#f5f7ff" }}>
         <div style={{ maxWidth: 640, margin: "0 auto", textAlign: "center", background: dark ? "rgba(99,102,241,0.1)" : "#ffffff", border: `1px solid ${dark ? "rgba(99,102,241,0.25)" : "#e0e7ff"}`, borderRadius: 24, padding: "56px 40px", boxShadow: dark ? "0 0 60px rgba(99,102,241,0.12)" : "0 8px 40px rgba(99,102,241,0.1)" }}>
           <h2 style={{ fontSize: "clamp(1.6rem,3vw,2rem)", fontWeight: 800, marginBottom: 12 }}>Siap Memulai?</h2>
-          <p style={{ color: dark ? "#a5b4fc" : "#4f46e5", marginBottom: 32, fontSize: 15, opacity: 0.9 }}>Daftarkan organisasi Anda dan mulai pemetaan talenta berbasis KKNI hari ini.</p>
+          <p style={{ color: dark ? "#a5b4fc" : "#4f46e5", marginBottom: 32, fontSize: 15, opacity: 0.9 }}>Daftarkan organisasi Anda dan mulai pemetaan talenta hari ini.</p>
           <Link to="/register" style={{ fontSize: 16, fontWeight: 700, color: "#fff", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", padding: "14px 36px", borderRadius: 12, textDecoration: "none", boxShadow: "0 6px 20px rgba(99,102,241,0.4)", display: "inline-block" }}>
             Buat Akun Gratis →
           </Link>
@@ -178,7 +179,7 @@ export default function Landing() {
       </section>
 
       <footer style={{ padding: "28px 24px", textAlign: "center", fontSize: 13, color: dark ? "#6366f1" : "#a5b4fc", borderTop: `1px solid ${dark ? "rgba(99,102,241,0.15)" : "#e0e7ff"}` }}>
-        © 2025 KKNI Talent Mapping System · Berstandar Perpres No. 8 Tahun 2012
+        © 2025 TalentaAI · Selaras Perpres No. 8 Tahun 2012
       </footer>
     </div>
   );

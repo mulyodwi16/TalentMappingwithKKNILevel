@@ -5,6 +5,7 @@ import { Compass, MapPin, Building2, CheckCircle2, XCircle, Award, Loader2, Tren
 import toast from "react-hot-toast";
 import api from "../../api/client.js";
 import { markMission } from "../../lib/missions.js";
+import { rankName } from "../../lib/rank.js";
 
 function matchColor(score) {
   if (score >= 80) return "#10b981";
@@ -23,7 +24,7 @@ function PositionCard({ job, onTarget, targeting }) {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs mt-1" style={{ color: "var(--text-3)" }}>
             {job.company && <span className="flex items-center gap-1"><Building2 className="w-3.5 h-3.5" />{job.company}</span>}
             {job.location && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{job.location}</span>}
-            <span className="badge bg-brand-500/20 text-brand-400 border border-brand-500/30">KKNI {job.kkniLevel}+</span>
+            <span className="badge bg-brand-500/20 text-brand-400 border border-brand-500/30">min. {rankName(job.kkniLevel)}</span>
             <span>min. {job.minExperience} th</span>
           </div>
         </div>
@@ -72,7 +73,7 @@ function PositionCard({ job, onTarget, targeting }) {
             <>
               <p className="flex items-center gap-2" style={{ color: "var(--text-2)" }}>
                 {m.levelOk ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <XCircle className="w-4 h-4 text-red-500" />}
-                Jenjang KKNI {m.levelOk ? "terpenuhi" : `kurang ${m.levelGap} tingkat`}
+                Skill Rank {m.levelOk ? "terpenuhi" : `kurang ${m.levelGap} tier`}
               </p>
               <p className="flex items-center gap-2" style={{ color: "var(--text-2)" }}>
                 {m.expOk ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <XCircle className="w-4 h-4 text-red-500" />}

@@ -1,239 +1,297 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
+import {
+  Sparkles, Target, Loader2, RefreshCw, CheckCircle2, CircleDashed, CircleDot,
+  GraduationCap, ChevronDown, Star, Compass, TrendingUp, AlertTriangle,
+} from "lucide-react";
 import api from "../../api/client.js";
+import { rankName, rankColor } from "../../lib/rank.js";
 
-const PROGRESS_CONFIG = {
-  todo:  { label: "Belum Mulai",       cls: "bg-slate-700 text-slate-400",         icon: "○" },
-  doing: { label: "Sedang Dikerjakan", cls: "bg-amber-500/20 text-amber-400",      icon: "◑" },
-  done:  { label: "Selesai",           cls: "bg-emerald-500/20 text-emerald-400",  icon: "●" },
+const DIFF = {
+  beginner:     { label: "Pemula",   cls: "bg-emerald-500/15 text-emerald-500 border-emerald-500/30" },
+  intermediate: { label: "Menengah", cls: "bg-amber-500/15 text-amber-500 border-amber-500/30" },
+  advanced:     { label: "Mahir",    cls: "bg-violet-500/15 text-violet-400 border-violet-500/30" },
 };
 
-const TYPE_ICON = { video: "▶", course: "◉", article: "≡", certification: "★", book: "▣" };
-
-const LEVEL_BADGE = {
-  beginner:     { label: "Pemula",      cls: "bg-emerald-500/20 text-emerald-400" },
-  intermediate: { label: "Menengah",   cls: "bg-amber-500/20 text-amber-400" },
-  advanced:     { label: "Mahir",      cls: "bg-brand-500/20 text-brand-400" },
+const PROGRESS = {
+  todo:  { label: "Belum Mulai", Icon: CircleDashed, cls: "text-[var(--text-4)]" },
+  doing: { label: "Dikerjakan",  Icon: CircleDot,    cls: "text-amber-500" },
+  done:  { label: "Selesai",     Icon: CheckCircle2, cls: "text-emerald-500" },
 };
 
-function StarRating({ rating }) {
+const VERDICT = {
+  on_track:  { label: "Di Jalur yang Tepat", Icon: TrendingUp,    ring: "#10b981", chip: "bg-emerald-500/15 text-emerald-500" },
+  needs_work:{ label: "Perlu Pengerjaan",    Icon: Compass,       ring: "#f59e0b", chip: "bg-amber-500/15 text-amber-500" },
+  not_ready: { label: "Perlu Peningkatan",   Icon: AlertTriangle, ring: "#ef4444", chip: "bg-red-500/15 text-red-400" },
+};
+
+// ── Kursus AvatarEdu yang cocok untuk sebuah langkah (lazy saat dibuka) ────────
+function StepCourses({ query }) {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["lp-courses", query],
+    queryFn: () => api.get(`/avataredu/courses?q=${encodeURIComponent(query)}&per_page=3`),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!query,
+  });
+  const courses = data?.data || [];
+  if (isLoading) return <p className="text-xs py-2" style={{ color: "var(--text-4)" }}>Mencari kursus…</p>;
+  if (isError || courses.length === 0) return <p className="text-xs py-2" style={{ color: "var(--text-4)" }}>Belum ada kursus cocok di AvatarEdu.</p>;
   return (
-    <span className="text-amber-400 text-xs">
-      {"★".repeat(Math.round(rating))}{"☆".repeat(5 - Math.round(rating))}
-      <span className="text-slate-500 ml-1">{rating?.toFixed(1)}</span>
-    </span>
+    <div className="grid sm:grid-cols-3 gap-2 pt-1">
+      {courses.map((c) => (
+        <Link key={c.slug} to="/app/toko"
+          className="rounded-lg border p-2.5 flex flex-col gap-1 hover:border-brand-500/50 transition-colors"
+          style={{ background: "var(--bg-raised)", borderColor: "var(--border)" }}>
+          <div className="flex items-center gap-1.5 text-[11px]" style={{ color: "var(--text-4)" }}>
+            <GraduationCap className="w-3 h-3 text-brand-500" />
+            {c.average_rating > 0 && <span className="flex items-center gap-0.5 text-amber-400"><Star className="w-2.5 h-2.5 fill-amber-400" />{c.average_rating.toFixed(1)}</span>}
+            {c.duration_hours ? <span>{c.duration_hours} jam</span> : null}
+          </div>
+          <p className="text-xs font-medium line-clamp-2" style={{ color: "var(--text-base)" }}>{c.title}</p>
+          <span className="text-[11px] text-brand-500 mt-auto">Buka di Toko →</span>
+        </Link>
+      ))}
+    </div>
   );
 }
 
-function AvatarEduCourses({ gapQuery }) {
-  const [preview, setPreview] = useState(null);   // slug being previewed
-  const [embedUrls, setEmbedUrls] = useState({}); // { slug: url }
-  const [loadingEmbed, setLoadingEmbed] = useState(null);
-
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["avataredu-courses", gapQuery],
-    queryFn: () => api.get(`/avataredu/courses?q=${encodeURIComponent(gapQuery)}&per_page=6`),
-    staleTime: 5 * 60 * 1000,
-    enabled: !!gapQuery,
-  });
-
-  const handlePreview = async (slug) => {
-    if (preview === slug) { setPreview(null); return; }
-    if (!embedUrls[slug]) {
-      setLoadingEmbed(slug);
-      try {
-        const d = await api.get(`/avataredu/embed-url/${encodeURIComponent(slug)}`);
-        setEmbedUrls((prev) => ({ ...prev, [slug]: d.url }));
-      } catch {
-        toast.error("Gagal memuat preview");
-        setLoadingEmbed(null);
-        return;
-      }
-      setLoadingEmbed(null);
-    }
-    setPreview(slug);
-  };
-
-  const courses = data?.data || [];
-
-  if (isLoading) return <div className="text-center py-8 text-sm" style={{ color: "var(--text-4)" }}>Mencari kursus terkait…</div>;
-  if (isError || courses.length === 0) return <div className="text-center py-6 text-sm" style={{ color: "var(--text-4)" }}>Tidak ada kursus ditemukan.</div>;
-
+function StepCard({ step, index, onProgress, saving }) {
+  const [open, setOpen] = useState(false);
+  const diff = DIFF[step.difficulty] || DIFF.beginner;
+  const pc = PROGRESS[step.progress] || PROGRESS.todo;
+  const done = step.progress === "done";
   return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {courses.map((c) => {
-        const lv = LEVEL_BADGE[c.level] || LEVEL_BADGE.beginner;
-        const isOpen = preview === c.slug;
-        return (
-          <div key={c.slug} className="card overflow-hidden flex flex-col">
-            {c.thumbnail_url && (
-              <img src={c.thumbnail_url} alt={c.title} className="w-full h-36 object-cover" loading="lazy" />
-            )}
-            <div className="p-4 flex flex-col flex-1 gap-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${lv.cls}`}>{lv.label}</span>
-                {c.category && <span className="text-xs" style={{ color: "var(--text-4)" }}>{c.category.name}</span>}
-              </div>
-              <p className="text-sm font-semibold line-clamp-2" style={{ color: "var(--text-base)" }}>{c.title}</p>
-              {c.creator && <p className="text-xs" style={{ color: "var(--text-4)" }}>{c.creator.name}</p>}
-              <div className="flex items-center gap-3 text-xs" style={{ color: "var(--text-4)" }}>
-                {c.average_rating > 0 && <StarRating rating={c.average_rating} />}
-                {c.duration_hours && <span>{c.duration_hours} jam</span>}
-                {c.total_lessons && <span>{c.total_lessons} pelajaran</span>}
-              </div>
-              <p className="text-sm font-bold text-brand-600 mt-auto">{c.formatted_price || "Gratis"}</p>
-              <button
-                onClick={() => handlePreview(c.slug)}
-                disabled={loadingEmbed === c.slug}
-                className="btn-outline text-xs py-1.5 w-full text-center"
-              >
-                {loadingEmbed === c.slug ? "Memuat…" : isOpen ? "Tutup Preview ✕" : "Preview Kursus →"}
-              </button>
-            </div>
+    <div className="relative pl-10">
+      {/* rel garis waktu */}
+      <span className="absolute left-3 top-1 bottom-0 w-px" style={{ background: "var(--border)" }} />
+      <span className={`absolute left-0 top-0 w-6 h-6 rounded-full grid place-items-center text-xs font-black
+        ${done ? "bg-emerald-500 text-white" : "bg-brand-600 text-white"}`}>{done ? "✓" : index + 1}</span>
 
-            {isOpen && embedUrls[c.slug] && (
-              <div className="border-t" style={{ borderColor: "var(--border)" }}>
-                <iframe
-                  src={embedUrls[c.slug]}
-                  width="100%"
-                  height="500"
-                  style={{ border: 0 }}
-                  allow="fullscreen"
-                  title={c.title}
-                />
-              </div>
-            )}
+      <div className="card p-4 space-y-2.5 mb-3">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <p className={`text-sm font-bold ${done ? "line-through opacity-70" : ""}`} style={{ color: "var(--text-base)" }}>{step.title}</p>
+          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${diff.cls}`}>{diff.label}</span>
+        </div>
+
+        {step.objective && <p className="text-xs" style={{ color: "var(--text-2)" }}>{step.objective}</p>}
+        {step.why && (
+          <div className="rounded-lg px-3 py-2 text-xs border-l-2 border-brand-500" style={{ background: "var(--bg-raised)", color: "var(--text-3)" }}>
+            <span className="font-semibold text-brand-500">Kenapa: </span>{step.why}
           </div>
-        );
-      })}
+        )}
+
+        <div className="flex items-center gap-3 flex-wrap text-xs" style={{ color: "var(--text-4)" }}>
+          {step.competencyRef && <span className="truncate max-w-[60%]">◈ {step.competencyRef}</span>}
+          {step.estEffort && <span>◷ {step.estEffort}</span>}
+        </div>
+
+        <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            {Object.entries(PROGRESS).map(([k, v]) => {
+              const active = step.progress === k;
+              return (
+                <button key={k} onClick={() => !active && onProgress(step.id, k)} disabled={saving}
+                  className={`text-[11px] px-2 py-1 rounded-md border transition-colors flex items-center gap-1 disabled:opacity-50
+                    ${active ? "border-brand-500 bg-brand-500/10 " + v.cls : "border-[var(--border)] text-[var(--text-4)] hover:border-brand-500/40"}`}>
+                  <v.Icon className="w-3 h-3" />{v.label}
+                </button>
+              );
+            })}
+          </div>
+          {step.courseQuery && (
+            <button onClick={() => setOpen((o) => !o)} className="text-[11px] text-brand-500 flex items-center gap-1 hover:underline">
+              <GraduationCap className="w-3.5 h-3.5" /> Kursus terkait
+              <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
+            </button>
+          )}
+        </div>
+
+        {open && step.courseQuery && <StepCourses query={step.courseQuery} />}
+      </div>
+    </div>
+  );
+}
+
+function AiCheckCard({ aiCheck, inputs, source }) {
+  const v = VERDICT[aiCheck?.verdict] || VERDICT.needs_work;
+  const cur = inputs?.rank?.current, tgt = inputs?.rank?.target;
+  const readiness = inputs?.readiness?.total ?? 0;
+  return (
+    <div className="card p-5 space-y-4" style={{ borderColor: v.ring + "55" }}>
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 rounded-xl grid place-items-center shrink-0" style={{ background: v.ring + "22" }}>
+          <v.Icon className="w-5 h-5" style={{ color: v.ring }} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${v.chip}`}>{v.label}</span>
+            <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: "var(--bg-raised)", color: "var(--text-4)" }}>
+              {source === "ai" ? "✦ Analisis AI" : "Analisis otomatis"}
+            </span>
+          </div>
+          {aiCheck?.headline && <p className="text-sm font-semibold mt-1.5" style={{ color: "var(--text-base)" }}>{aiCheck.headline}</p>}
+        </div>
+      </div>
+
+      {aiCheck?.message && <p className="text-sm leading-relaxed" style={{ color: "var(--text-2)" }}>{aiCheck.message}</p>}
+
+      {aiCheck?.focus?.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[11px] font-semibold" style={{ color: "var(--text-4)" }}>Fokus:</span>
+          {aiCheck.focus.map((f, i) => (
+            <span key={i} className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: "var(--bg-raised)", color: "var(--text-3)" }}>{f}</span>
+          ))}
+        </div>
+      )}
+
+      {/* Rank saat ini → target + kesiapan */}
+      <div className="flex items-center gap-4 flex-wrap pt-1 border-t" style={{ borderColor: "var(--border)" }}>
+        {cur != null && (
+          <div className="flex items-center gap-2 pt-3">
+            <span className="text-xs" style={{ color: "var(--text-4)" }}>Rank</span>
+            <span className="text-sm font-bold" style={{ color: rankColor(cur) }}>{rankName(cur)}</span>
+            <span style={{ color: "var(--text-4)" }}>→</span>
+            <span className="text-sm font-bold" style={{ color: rankColor(tgt) }}>{rankName(tgt)}</span>
+          </div>
+        )}
+        <div className="flex items-center gap-2 pt-3">
+          <span className="text-xs" style={{ color: "var(--text-4)" }}>Kesiapan</span>
+          <div className="w-28 h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-raised)" }}>
+            <div className="h-full rounded-full" style={{ width: `${readiness}%`, background: v.ring }} />
+          </div>
+          <span className="text-sm font-bold" style={{ color: "var(--text-base)" }}>{readiness}%</span>
+        </div>
+      </div>
     </div>
   );
 }
 
 export default function LearningPath() {
   const qc = useQueryClient();
-  const { data: recs = [], isLoading } = useQuery({
-    queryKey: ["recommendations"],
-    queryFn: () => api.get("/user/recommendations"),
-  });
-  const { data: assessments = [] } = useQuery({
-    queryKey: ["assessments"],
-    queryFn: () => api.get("/user/skill-assessments"),
-  });
+  const [targetRole, setTargetRole] = useState("");
+  const [touched, setTouched] = useState(false);
 
-  const updateProgress = useMutation({
-    mutationFn: ({ id, progress }) => api.put(`/user/recommendations/${id}`, { progress }),
-    onSuccess: () => { qc.invalidateQueries(["recommendations"]); toast.success("Progress diperbarui"); },
-    onError: (err) => toast.error(err || "Gagal"),
+  const { data, isLoading } = useQuery({
+    queryKey: ["learning-path"],
+    queryFn: () => api.get("/learning-path/"),
   });
 
-  // build search query from top gaps
-  const topGaps = assessments.filter((a) => a.gap > 0).sort((a, b) => b.gap - a.gap).slice(0, 3);
-  const gapQuery = topGaps.map((g) => g.competencyName).join(" ");
+  // isi input dari server sekali (kecuali user sudah mengetik).
+  useEffect(() => {
+    if (!touched && data?.targetRole != null) setTargetRole(data.targetRole);
+  }, [data?.targetRole, touched]);
 
-  if (isLoading) return <div className="flex items-center justify-center h-64 text-slate-400">Memuat…</div>;
+  const generate = useMutation({
+    mutationFn: () => api.post("/learning-path/generate", { targetRole }, { timeout: 90_000 }),
+    onSuccess: (res) => {
+      qc.setQueryData(["learning-path"], (old) => ({ ...(old || {}), ...res, llmAvailable: old?.llmAvailable }));
+      toast.success(res.source === "ai" ? "Learning Path disusun oleh AI" : "Learning Path disusun");
+    },
+    onError: (e) => toast.error(typeof e === "string" ? e : "Gagal menyusun rencana"),
+  });
+
+  const setStep = useMutation({
+    mutationFn: ({ stepId, progress }) => api.put("/learning-path/step", { stepId, progress }),
+    onMutate: async ({ stepId, progress }) => {
+      qc.setQueryData(["learning-path"], (old) => {
+        if (!old?.plan) return old;
+        const steps = old.plan.steps.map((s) => (s.id === stepId ? { ...s, progress } : s));
+        return { ...old, plan: { ...old.plan, steps } };
+      });
+    },
+    onError: () => { toast.error("Gagal menyimpan progres"); qc.invalidateQueries(["learning-path"]); },
+  });
+
+  const plan = data?.plan;
+  const inputs = data?.inputs;
+  const noGaps = !inputs?.gaps?.length;
+  const noComp = !inputs?.competency;
+  const done = plan?.steps?.filter((s) => s.progress === "done").length || 0;
+  const total = plan?.steps?.length || 0;
+
+  if (isLoading) return <div className="flex items-center justify-center h-64" style={{ color: "var(--text-4)" }}>Memuat…</div>;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Header */}
       <div>
-        <h2 className="text-xl font-bold" style={{ color: "var(--text-base)" }}>Learning Path Personal</h2>
-        <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>Rekomendasi belajar berdasarkan gap kompetensi Anda</p>
+        <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: "var(--text-base)" }}>
+          <Sparkles className="w-5 h-5 text-brand-500" /> Learning Path Personal
+        </h2>
+        <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>
+          Rencana belajar terurut dari hasil ujianmu, kompetensi SKKNI yang dipilih, dan profesi yang kamu targetkan — dicek oleh AI.
+        </p>
       </div>
 
-      {/* ── Internal recommendations ─────────────────────────────────────── */}
-      {recs.length === 0 ? (
+      {/* Target profesi + tombol susun */}
+      <div className="card p-4 space-y-3">
+        <label className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "var(--text-3)" }}>
+          <Target className="w-3.5 h-3.5 text-brand-500" /> Profesi yang kamu targetkan
+        </label>
+        <div className="flex gap-2 flex-wrap">
+          <input
+            value={targetRole}
+            onChange={(e) => { setTargetRole(e.target.value); setTouched(true); }}
+            placeholder={inputs?.competency ? `mis. ${inputs.competency.title.split(" ").slice(0, 3).join(" ")}…` : "mis. Video Editor Profesional"}
+            className="input flex-1 min-w-[200px]"
+          />
+          <button onClick={() => generate.mutate()} disabled={generate.isPending}
+            className="btn-primary flex items-center gap-2 whitespace-nowrap">
+            {generate.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : plan ? <RefreshCw className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+            {generate.isPending ? "Menyusun…" : plan ? "Perbarui Rencana" : "Susun dengan AI"}
+          </button>
+        </div>
+        {noComp && (
+          <p className="text-xs" style={{ color: "var(--text-4)" }}>
+            Tip: <Link to="/app/profile" className="text-brand-500 hover:underline">pilih kompetensi SKKNI</Link> dan{" "}
+            <Link to="/app/exam" className="text-brand-500 hover:underline">ambil ujian</Link> agar rencana lebih personal.
+          </p>
+        )}
+      </div>
+
+      {/* Kosong */}
+      {!plan ? (
         <div className="card p-10 text-center">
-          <div className="text-4xl mb-3">→</div>
-          <h3 className="font-bold mb-1" style={{ color: "var(--text-base)" }}>Belum Ada Rekomendasi Internal</h3>
-          <p className="text-sm mb-5" style={{ color: "var(--text-3)" }}>Selesaikan ujian agar sistem membuat rekomendasi personal.</p>
-          <Link to="/app/exam" className="btn-primary">Mulai Ujian →</Link>
+          <Compass className="w-10 h-10 mx-auto mb-3 text-brand-500" />
+          <h3 className="font-bold mb-1" style={{ color: "var(--text-base)" }}>Belum Ada Learning Path</h3>
+          <p className="text-sm mb-5 max-w-md mx-auto" style={{ color: "var(--text-3)" }}>
+            Klik <b>Susun dengan AI</b> di atas. AI akan menganalisis {noGaps ? "kompetensi pilihanmu" : `${inputs.gaps.length} gap kompetensi`}
+            {" "}dan menyusun langkah bertahap menuju profesi targetmu.
+          </p>
+          {noGaps && <Link to="/app/exam" className="btn-outline">Ambil Ujian Dulu →</Link>}
         </div>
       ) : (
-        <div className="space-y-4">
-          {recs.map((rec, i) => {
-            const pc = PROGRESS_CONFIG[rec.progress] || PROGRESS_CONFIG.todo;
-            return (
-              <div key={rec.id} className="card p-6 space-y-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center text-sm font-black text-white flex-shrink-0">{i + 1}</div>
-                    <div>
-                      <p className="text-xs mb-0.5" style={{ color: "var(--text-4)" }}>Learning Path #{i + 1}</p>
-                      <p className="text-sm" style={{ color: "var(--text-2)" }}>{rec.reason}</p>
-                    </div>
-                  </div>
-                  <select
-                    value={rec.progress}
-                    onChange={(e) => updateProgress.mutate({ id: rec.id, progress: e.target.value })}
-                    className="input text-xs py-1.5 w-auto"
-                  >
-                    {Object.entries(PROGRESS_CONFIG).map(([k, v]) => (
-                      <option key={k} value={k}>{v.icon} {v.label}</option>
-                    ))}
-                  </select>
-                </div>
+        <>
+          <AiCheckCard aiCheck={plan.aiCheck} inputs={inputs} source={data?.source} />
 
-                {rec.aiAnalysis && (
-                  <div className="rounded-xl p-4 border" style={{ background: "var(--bg-raised)", borderColor: "var(--border)" }}>
-                    <p className="text-xs font-semibold text-brand-600 mb-2">✦ Analisis AI</p>
-                    <p className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: "var(--text-2)" }}>
-                      {rec.aiAnalysis.slice(0, 500)}{rec.aiAnalysis.length > 500 ? "…" : ""}
-                    </p>
-                  </div>
-                )}
-
-                {rec.resources?.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold mb-3" style={{ color: "var(--text-4)" }}>Resource Belajar</p>
-                    <div className="grid sm:grid-cols-2 gap-3">
-                      {rec.resources.map((r) => (
-                        <div key={r.id} className="rounded-xl p-4 border transition-colors"
-                          style={{ background: "var(--bg-raised)", borderColor: "var(--border)" }}>
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-brand-600 text-sm">{TYPE_ICON[r.type] || "◉"}</span>
-                            <span className="text-xs capitalize" style={{ color: "var(--text-4)" }}>{r.type}</span>
-                            {r.duration && <span className="text-xs ml-auto" style={{ color: "var(--text-4)" }}>{r.duration}</span>}
-                          </div>
-                          <p className="text-sm font-semibold mb-1" style={{ color: "var(--text-base)" }}>{r.title}</p>
-                          {r.provider && <p className="text-xs" style={{ color: "var(--text-4)" }}>{r.provider}</p>}
-                          {r.description && <p className="text-xs mt-1.5 line-clamp-2" style={{ color: "var(--text-3)" }}>{r.description}</p>}
-                          {r.url && (
-                            <a href={r.url} target="_blank" rel="noopener noreferrer"
-                              className="text-xs text-brand-600 hover:text-brand-700 mt-2 inline-block">
-                              Buka Link →
-                            </a>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+          {/* Progres keseluruhan */}
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-sm font-bold" style={{ color: "var(--text-base)" }}>Langkah Belajar ({total})</h3>
+            <div className="flex items-center gap-2">
+              <div className="w-32 h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-raised)" }}>
+                <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: total ? `${(done / total) * 100}%` : 0 }} />
               </div>
-            );
-          })}
-        </div>
-      )}
+              <span className="text-xs font-semibold" style={{ color: "var(--text-3)" }}>{done}/{total} selesai</span>
+            </div>
+          </div>
 
-      {/* ── AvatarEdu courses ─────────────────────────────────────────────── */}
-      <div className="card p-6">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xs font-black">A</div>
-          <h3 className="font-bold" style={{ color: "var(--text-base)" }}>Kursus di AvatarEdu</h3>
-        </div>
-        <p className="text-xs mb-5" style={{ color: "var(--text-4)" }}>
-          {gapQuery ? `Hasil pencarian untuk gap: "${gapQuery.slice(0, 60)}${gapQuery.length > 60 ? "…" : ""}"` : "Kursus tersedia dari AvatarEdu.ai"}
-        </p>
-        <AvatarEduCourses gapQuery={gapQuery || "kompetensi kerja"} />
-        <p className="text-xs mt-5" style={{ color: "var(--text-4)" }}>
-          Powered by{" "}
-          <a href="https://avataredu.ai" target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">
-            AvatarEdu.ai
-          </a>
-          {" "}— klik Preview untuk lihat kurikulum, Daftar untuk akses penuh.
-        </p>
-      </div>
+          <div>
+            {plan.steps.map((s, i) => (
+              <StepCard key={s.id} step={s} index={i} saving={setStep.isPending}
+                onProgress={(stepId, progress) => setStep.mutate({ stepId, progress })} />
+            ))}
+          </div>
+
+          {data?.generatedAt && (
+            <p className="text-[11px] text-center" style={{ color: "var(--text-4)" }}>
+              Disusun {data.source === "ai" ? "oleh AI" : "otomatis"} · {new Date(data.generatedAt).toLocaleString("id-ID")}.
+              {" "}Perbarui setelah ujian baru agar rencana menyesuaikan progresmu.
+            </p>
+          )}
+        </>
+      )}
     </div>
   );
 }

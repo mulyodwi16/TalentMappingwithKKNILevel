@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import api from "../../api/client.js";
+import RankBadge from "../../components/RankBadge.jsx";
+import { rankName } from "../../lib/rank.js";
 
 const EMPTY = { order: 1, conditions: { education: "", cert: "", minExperience: "" }, predictedLevel: 3 };
 
@@ -47,7 +49,7 @@ export default function RuleManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-white">Aturan Mapping KKNI</h2>
+          <h2 className="text-xl font-bold text-white">Aturan Mapping Rank</h2>
           <p className="text-slate-400 text-sm mt-0.5">Aturan dicocokkan berurutan — aturan pertama yang cocok menang</p>
         </div>
         <button onClick={openCreate} className="btn-primary text-sm py-2 px-4">+ Tambah Aturan</button>
@@ -57,7 +59,7 @@ export default function RuleManagement() {
         <table className="w-full text-sm">
           <thead className="border-b border-slate-700">
             <tr>
-              {["Urutan", "Pendidikan", "Sertifikasi", "Min. Pengalaman", "→ Level KKNI", "Aksi"].map((h) => (
+              {["Urutan", "Pendidikan", "Sertifikasi", "Min. Pengalaman", "→ Rank", "Aksi"].map((h) => (
                 <th key={h} className="text-left text-xs font-semibold text-slate-500 px-4 py-3">{h}</th>
               ))}
             </tr>
@@ -72,7 +74,7 @@ export default function RuleManagement() {
                 <td className="px-4 py-3 text-slate-400">{r.conditions?.cert || "—"}</td>
                 <td className="px-4 py-3 text-slate-400">{r.conditions?.minExperience ? `${r.conditions.minExperience} thn` : "—"}</td>
                 <td className="px-4 py-3">
-                  <span className="badge bg-brand-500/20 text-brand-400 border-brand-500/30">Level {r.predictedLevel}</span>
+                  <RankBadge level={r.predictedLevel} />
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-1.5">
@@ -114,9 +116,9 @@ export default function RuleManagement() {
                 <input className="input" type="number" min={0} value={form.conditions.minExperience} onChange={(e) => upd("conditions.minExperience", e.target.value)} />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-300 mb-1.5 block">→ Prediksi Level KKNI</label>
+                <label className="text-sm font-medium text-slate-300 mb-1.5 block">→ Prediksi Rank</label>
                 <select className="input" value={form.predictedLevel} onChange={(e) => upd("predictedLevel", parseInt(e.target.value))}>
-                  {[1,2,3,4,5,6,7,8,9].map((l) => <option key={l} value={l}>Level {l}</option>)}
+                  {[1,2,3,4,5,6,7,8,9].map((l) => <option key={l} value={l}>{rankName(l)} (Rank {l})</option>)}
                 </select>
               </div>
               <div className="flex gap-3 pt-2">

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import api from "../../api/client.js";
+import { rankName } from "../../lib/rank.js";
 
 const ROLE_LABEL = { user: "Pekerja", hrd: "HRD", admin: "Admin" };
 const ROLE_CLS   = { user: "text-brand-400", hrd: "text-emerald-400", admin: "text-amber-400" };
@@ -46,7 +47,7 @@ export default function UserManagement() {
           <table className="w-full text-sm">
             <thead className="border-b border-slate-700">
               <tr>
-                {["Nama", "Email", "Role", "Departemen", "Level KKNI", "Status", "Aksi"].map((h) => (
+                {["Nama", "Email", "Role", "Departemen", "Rank", "Status", "Aksi"].map((h) => (
                   <th key={h} className="text-left text-xs font-semibold text-slate-500 px-4 py-3">{h}</th>
                 ))}
               </tr>
@@ -62,7 +63,7 @@ export default function UserManagement() {
                     <span className={`text-xs font-semibold ${ROLE_CLS[u.role]}`}>{ROLE_LABEL[u.role]}</span>
                   </td>
                   <td className="px-4 py-3 text-slate-400">{u.department || "—"}</td>
-                  <td className="px-4 py-3 text-center">{u.currentKkniLevel || "—"}</td>
+                  <td className="px-4 py-3 text-center text-xs">{u.currentKkniLevel ? rankName(u.currentKkniLevel) : "—"}</td>
                   <td className="px-4 py-3">
                     <span className={`badge text-xs ${u.status === "ready" ? "badge-ready" : u.status === "in_progress" ? "badge-in-progress" : "badge-not-ready"}`}>
                       {u.status || "—"}

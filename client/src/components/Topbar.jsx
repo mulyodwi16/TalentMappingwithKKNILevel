@@ -13,7 +13,7 @@ const TITLES = {
   "/app/exam":            "Ujian Kompetensi",
   "/app/skill-gap":       "Skill Gap Analyzer",
   "/app/learning-path":   "Learning Path",
-  "/app/mentor":          "AI Mentor Karier KKNI",
+  "/app/mentor":          "AI Mentor Karier",
   "/app/toko":            "Toko & Kelas",
   "/app/jobs":            "Peta Posisi & Kesiapan",
   "/app/hrd/jobs":        "Peta Posisi & Talenta",
@@ -78,7 +78,7 @@ export default function Topbar({ onBurger }) {
 
       {/* Page title */}
       <h1 className="flex-1 text-sm font-semibold truncate" style={{ color: "var(--text-base)" }}>
-        {TITLES[pathname] || "KKNI Talent"}
+        {TITLES[pathname] || "TalentaAI"}
       </h1>
 
       {/* Koin (khusus User) */}

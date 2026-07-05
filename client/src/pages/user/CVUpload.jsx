@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import api from "../../api/client.js";
+import { rankName } from "../../lib/rank.js";
 
 const LEVEL_COLORS = ["","#64748b","#6b7280","#3b82f6","#06b6d4","#0ea5e9","#2563eb","#8b5cf6","#7c3aed","#6d28d9"];
 
@@ -11,15 +12,15 @@ export default function CVUpload() {
   const inputRef = useRef();
 
   const parse = useMutation({
-    mutationFn: (pdfBase64) => api.post("/user/cv-parse", { pdfBase64 }),
-    onSuccess: (data) => { setResult(data); toast.success("CV berhasil dianalisis!"); },
+    mutationFn: ({ pdfBase64, fileName }) => api.post("/user/cv-parse", { pdfBase64, fileName }),
+    onSuccess: (data) => { setResult(data); toast.success("CV berhasil dianalisis & disimpan ke profil!"); },
     onError: (err) => toast.error(err || "Gagal membaca CV"),
   });
 
   const handleFile = (file) => {
     if (!file || file.type !== "application/pdf") return toast.error("Harap upload file PDF");
     const reader = new FileReader();
-    reader.onload = (e) => parse.mutate(e.target.result);
+    reader.onload = (e) => parse.mutate({ pdfBase64: e.target.result, fileName: file.name });
     reader.readAsDataURL(file);
   };
 
@@ -29,7 +30,7 @@ export default function CVUpload() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <h2 className="text-xl font-bold text-white">Upload CV</h2>
-        <p className="text-slate-400 text-sm mt-1">Unggah CV PDF — sistem akan mengekstrak profil dan memprediksi level KKNI secara otomatis.</p>
+        <p className="text-slate-400 text-sm mt-1">Unggah CV PDF — sistem akan mengekstrak profil dan memprediksi Skill Rank secara otomatis.</p>
       </div>
 
       {/* Drop zone */}
@@ -47,7 +48,7 @@ export default function CVUpload() {
         {parse.isPending ? (
           <>
             <p className="text-brand-400 font-semibold">Menganalisis CV…</p>
-            <p className="text-slate-500 text-sm mt-1">Mengekstrak teks & mengklasifikasi KKNI</p>
+            <p className="text-slate-500 text-sm mt-1">Mengekstrak teks & mengklasifikasi Skill Rank</p>
           </>
         ) : (
           <>
@@ -70,8 +71,8 @@ export default function CVUpload() {
                 {result.predictedLevel}
               </div>
               <div>
-                <p className="text-xs text-slate-500 mb-0.5">Level KKNI Terprediksi</p>
-                <p className="text-xl font-bold text-white">{result.levelInfo?.title || `KKNI Level ${result.predictedLevel}`}</p>
+                <p className="text-xs text-slate-500 mb-0.5">Skill Rank Terprediksi</p>
+                <p className="text-xl font-bold text-white">{rankName(result.predictedLevel)}<span className="text-sm font-normal text-slate-400"> · {result.levelInfo?.title}</span></p>
                 <p className="text-sm text-slate-400">{result.levelInfo?.jobGroup}</p>
               </div>
             </div>

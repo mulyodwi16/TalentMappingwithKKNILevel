@@ -38,8 +38,8 @@ export default function Login() {
       <div className="w-full max-w-md relative">
         {/* logo + heading */}
         <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-600 to-tosca-500 flex items-center justify-center text-xl font-black text-white mx-auto mb-4">K</div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text-base)" }}>Masuk ke KKNI Talent</h1>
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-600 to-tosca-500 flex items-center justify-center text-xl font-black text-white mx-auto mb-4">T</div>
+          <h1 className="text-2xl font-bold" style={{ color: "var(--text-base)" }}>Masuk ke TalentaAI</h1>
           <p className="mt-1 text-sm" style={{ color: "var(--text-3)" }}>Masukkan email & password Anda</p>
         </div>
 

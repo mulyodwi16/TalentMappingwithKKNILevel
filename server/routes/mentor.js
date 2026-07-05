@@ -2,6 +2,8 @@ import express from "express";
 import { prisma } from "../prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { chatComplete, LlmError } from "../llm.js";
+import { rankName } from "../rank.js";
+import { getDocWithUnits } from "../skkni.js";
 
 // AI Mentor Karier KKNI — chat konsultasi yang "grounded" (RAG-lite) ke data KKNI milik
 // pengguna yang login: level saat ini vs target, hasil ujian, skill gap, dan status
@@ -12,20 +14,22 @@ router.use(requireAuth);
 
 // Knowledge base statis yang diinject ke system prompt (fakta deterministik, bukan untuk
 // "dilatih" — hanya grounding). Ringkas biar hemat token.
-const KB = `PENGETAHUAN PLATFORM (KKNI Talent Mapping):
-- KKNI = Kerangka Kualifikasi Nasional Indonesia (Perpres No. 8 Tahun 2012), 9 jenjang kualifikasi:
-  Jenjang 1 (SD) Operator · 2 (SMP) Operator · 3 (SMA/SMK) Operator terampil ·
-  4 (D1) Teknisi/Analis · 5 (D2/D3) Teknisi · 6 (D4/S1) Analis/Teknisi ahli ·
-  7 (Profesi) Ahli · 8 (S2/Spesialis) Ahli spesialis · 9 (S3) Ahli utama.
-- Alur sistem: (1) Upload CV → auto-prediksi jenjang KKNI awal dari pendidikan+sertifikat+pengalaman,
+const KB = `PENGETAHUAN PLATFORM (TalentaAI):
+- Sistem "Skill Rank": 9 tier gamifikasi (selaras 9 jenjang KKNI, Perpres No. 8 Tahun 2012). SELALU sebut level pengguna dengan NAMA TIER-nya (bukan "Level 6"):
+  Rank 1 Bronze (SD) · 2 Silver (SMP) · 3 Gold (SMA/SMK) · 4 Platinum (D1) · 5 Emerald (D2/D3) ·
+  6 Diamond (D4/S1) · 7 Master (Profesi) · 8 Grandmaster (S2) · 9 Legend (S3).
+  PENTING: rank DIRAIH dari KOMPETENSI yang dibuktikan (lulus unit ujian, sertifikat, course selesai), BUKAN sekadar ijazah.
+  Pendidikan hanya "seed" awal yang dibatasi (maks Platinum). Maka lulusan SMK yang terampil bisa menyamai/melampaui lulusan S3.
+  Untuk naik rank: buktikan lebih banyak kompetensi (ujian & course sesuai tingkat kesulitannya), bukan menunggu ijazah.
+- Alur sistem: (1) Upload CV → auto-prediksi Skill Rank awal dari pendidikan+sertifikat+pengalaman,
   (2) Ujian kompetensi terstandar SKKNI, (3) Skill Gap Analyzer (radar kompetensi aktual vs target),
   (4) Learning Path + kursus AvatarEdu untuk menutup gap, (5) status kesiapan promosi otomatis.
 - Ambang lulus kompetensi: skor >= 60% per kompetensi. Readiness score = % kompetensi yang lulus.
   Status: >=80% "Siap Naik", >=50% "Dalam Proses", <50% "Perlu Peningkatan".
 - Fitur yang bisa kamu arahkan (rute app): Dashboard (/app/dashboard), Upload CV (/app/cv-upload),
   Ujian Kompetensi (/app/exam), Skill Gap (/app/skill-gap), Learning Path (/app/learning-path).
-- Kompetensi & soal diturunkan dari dokumen SKKNI (mis. Video Editing SKKNI 2014-118). Untuk naik/menyesuaikan
-  jenjang, tutup gap kompetensi lalu ambil ujian ulang.`;
+- Kompetensi & soal diturunkan dari dokumen SKKNI (mis. Video Editing SKKNI 2014-118). Untuk naik Skill Rank,
+  tutup gap kompetensi lalu ambil ujian ulang.`;
 
 // Rangkai konteks data KKNI milik pengguna → dipakai untuk personalisasi & analisis gap.
 async function buildContext(userId) {
@@ -50,6 +54,21 @@ async function buildContext(userId) {
     .filter((a) => a.gap === 0)
     .map((a) => a.competencyName);
 
+  // Kompetensi SKKNI target (jika sudah dipilih) — patokan skill terstandar.
+  let skkniBlock = "";
+  if (u.chosenSkkniId) {
+    try {
+      const doc = await getDocWithUnits(u.chosenSkkniId);
+      if (doc) {
+        const unitTitles = doc.units.slice(0, 20).map((x) => `• ${x.title}`).join("\n");
+        skkniBlock =
+          `\n- Kompetensi SKKNI TARGET: ${doc.title}${doc.numberKepmen ? ` (${doc.numberKepmen})` : ""} — ${doc.unitCount} unit kompetensi standar.\n` +
+          (unitTitles ? `  Unit/skill yang harus dikuasai untuk kompetensi ini:\n${unitTitles}${doc.units.length > 20 ? "\n  …dan lainnya." : ""}\n` : "") +
+          `  Gunakan daftar unit ini sebagai acuan skill yang perlu dipelajari & diuji untuk profesi target pengguna.`;
+      }
+    } catch { /* non-fatal */ }
+  }
+
   const statusLabel = u.status === "ready" ? "Siap Naik" : u.status === "in_progress" ? "Dalam Proses" : "Perlu Peningkatan";
   const descOf = (lvl) => {
     if (!lvl) return "";
@@ -62,10 +81,10 @@ async function buildContext(userId) {
   return `DATA KKNI PENGGUNA (gunakan untuk personalisasi & analisis gap):
 - Nama: ${u.name}${u.position ? ` · Posisi: ${u.position}` : ""}${u.department ? ` · Departemen: ${u.department}` : ""}
 - Pendidikan: ${u.education || "-"} · Pengalaman: ${u.experienceYears || 0} tahun · Sertifikat: ${certs.length ? certs.join(", ") : "-"}
-- Jenjang KKNI SAAT INI: ${u.currentKkniLevel ? `Level ${u.currentKkniLevel} (${curLevel?.title || "-"})${descOf(curLevel)}` : "belum dipetakan — sarankan Upload CV dulu"}
-- Jenjang TARGET: ${u.targetKkniLevel ? `Level ${u.targetKkniLevel} (${tgtLevel?.title || "-"})${descOf(tgtLevel)}` : "belum diset"}
-- Readiness score: ${u.readinessScore ?? 0}% · Status kesiapan: ${statusLabel}
-- Terakhir ujian: ${lastAttempt ? `jenjang ${lastAttempt.kkniLevel}, readiness ${lastAttempt.readinessScore}%` : "belum pernah ujian — sarankan ambil Ujian Kompetensi"}
+- Skill Rank SAAT INI: ${u.currentKkniLevel ? `${rankName(u.currentKkniLevel)} (Rank ${u.currentKkniLevel} · ${curLevel?.title || "-"})${descOf(curLevel)}` : "belum dipetakan — sarankan Upload CV dulu"}
+- Skill Rank TARGET: ${u.targetKkniLevel ? `${rankName(u.targetKkniLevel)} (Rank ${u.targetKkniLevel} · ${tgtLevel?.title || "-"})${descOf(tgtLevel)}` : "belum diset"}
+- Readiness score: ${u.readinessScore ?? 0}% · Status kesiapan: ${statusLabel}${skkniBlock}
+- Terakhir ujian: ${lastAttempt ? `Rank ${rankName(lastAttempt.kkniLevel)}, readiness ${lastAttempt.readinessScore}%` : "belum pernah ujian — sarankan ambil Ujian Kompetensi"}
 - Kompetensi yang masih GAP (prioritas tutup, urut dari terbesar): ${gaps.length ? gaps.join("; ") : "(belum ada / semua terpenuhi)"}
 - Kompetensi yang sudah KUAT: ${strong.length ? strong.join(", ") : "(belum ada)"}
 - Jika pengguna tanya "apa yang harus saya pelajari / bagaimana naik level", jawab dari daftar GAP di atas dan arahkan ke Skill Gap + Learning Path.`;
@@ -98,9 +117,9 @@ router.post("/chat", async (req, res) => {
   const system = {
     role: "system",
     content:
-      `Kamu adalah "AI Mentor Karier KKNI" pada platform KKNI Talent Mapping. ` +
-      `Tugasmu: membantu pekerja memahami jenjang KKNI-nya, menutup gap kompetensi, mempersiapkan ujian, ` +
-      `dan menyusun langkah agar siap naik/menyesuaikan jenjang. Jawab dalam Bahasa Indonesia, ringkas, ramah, ` +
+      `Kamu adalah "AI Mentor Karier" pada platform TalentaAI. ` +
+      `Tugasmu: membantu pengguna memahami Skill Rank-nya (sistem tier gamifikasi Bronze→Legend, selaras KKNI), menutup gap kompetensi, mempersiapkan ujian, ` +
+      `dan menyusun langkah agar naik Skill Rank. Selalu sebut level dengan NAMA TIER-nya (mis. "Diamond"), bukan "Level 6". Jawab dalam Bahasa Indonesia, ringkas, ramah, ` +
       `dan actionable (pakai poin/langkah bila perlu). Prioritaskan menutup GAP kompetensi pengguna dan arahkan ke ` +
       `fitur platform yang tepat (Skill Gap, Learning Path, Ujian). Jangan mengarang angka/regulasi di luar pengetahuan ` +
       `yang diberikan; jika tidak yakin, katakan dan sarankan verifikasi ke sumber resmi (Perpres 8/2012, SKKNI Kemnaker).\n\n` +
@@ -132,8 +151,8 @@ router.post("/summarize", async (req, res) => {
 
   const system = {
     role: "system",
-    content: `Ringkas percakapan konsultasi karier KKNI berikut menjadi POIN-POIN singkat (maks 8 butir): ` +
-      `konteks pengguna (jenjang, target, gap), pertanyaan utama, saran yang sudah diberikan, dan hal yang masih perlu ditindaklanjuti. ` +
+    content: `Ringkas percakapan konsultasi karier berikut menjadi POIN-POIN singkat (maks 8 butir): ` +
+      `konteks pengguna (Skill Rank, target, gap), pertanyaan utama, saran yang sudah diberikan, dan hal yang masih perlu ditindaklanjuti. ` +
       `Bahasa Indonesia, padat. ${prev ? "Gabungkan dengan ringkasan sebelumnya:\n" + prev : ""}`,
   };
   try {

@@ -15,6 +15,10 @@ import mentorRoutes from "./routes/mentor.js";
 import gamificationRoutes from "./routes/gamification.js";
 import missionRoutes from "./routes/missions.js";
 import jobRoutes from "./routes/jobs.js";
+import skkniRoutes from "./routes/skkni.js";
+import learningPathRoutes from "./routes/learningpath.js";
+import kelasRoutes from "./routes/kelas.js";
+import { kickCatalogSyncIfEmpty } from "./skkni.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -36,6 +40,9 @@ app.use("/api/avataredu", avatareduRoutes);
 app.use("/api/mentor",    mentorRoutes);
 app.use("/api/missions",  missionRoutes);
 app.use("/api/jobs",      jobRoutes);
+app.use("/api/skkni",     skkniRoutes);
+app.use("/api/learning-path", learningPathRoutes);
+app.use("/api/kelas",     kelasRoutes);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 
@@ -56,4 +63,8 @@ app.use((err, _req, res, _next) => {
 
 process.on("SIGTERM", () => prisma.$disconnect());
 
-app.listen(PORT, () => console.log(`API on http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`API on http://localhost:${PORT}`);
+  // Warm-up katalog SKKNI di latar belakang (throttled, tak menghambat startup).
+  kickCatalogSyncIfEmpty();
+});

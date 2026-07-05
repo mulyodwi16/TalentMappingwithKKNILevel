@@ -6,6 +6,8 @@ import {
 } from "recharts";
 import toast from "react-hot-toast";
 import api from "../../api/client.js";
+import RankBadge from "../../components/RankBadge.jsx";
+import { rankName } from "../../lib/rank.js";
 import useAuthStore from "../../store/authStore.js";
 
 const STATUS_CONFIG = {
@@ -93,7 +95,7 @@ export default function HrdDashboard() {
       {/* Charts */}
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="card p-6">
-          <h3 className="font-semibold text-white mb-4">Distribusi Level KKNI</h3>
+          <h3 className="font-semibold text-white mb-4">Distribusi Skill Rank</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={levelData}>
               <XAxis dataKey="level" tick={{ fill: "#94a3b8", fontSize: 11 }} />
@@ -133,8 +135,8 @@ export default function HrdDashboard() {
               value={filters.department} onChange={(e) => setFilters((f) => ({ ...f, department: e.target.value }))} />
             <select className="input text-sm py-1.5 w-auto" value={filters.level}
               onChange={(e) => setFilters((f) => ({ ...f, level: e.target.value }))}>
-              <option value="">Semua Level</option>
-              {[1,2,3,4,5,6,7,8,9].map((l) => <option key={l} value={l}>Level {l}</option>)}
+              <option value="">Semua Rank</option>
+              {[1,2,3,4,5,6,7,8,9].map((l) => <option key={l} value={l}>{rankName(l)}</option>)}
             </select>
           </div>
           <div className="flex gap-2">
@@ -147,7 +149,7 @@ export default function HrdDashboard() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-700">
-                {["Nama", "Email", "Departemen", "Pendidikan", "Level KKNI", "Readiness", "Status"].map((h) => (
+                {["Nama", "Email", "Departemen", "Pendidikan", "Rank", "Readiness", "Status"].map((h) => (
                   <th key={h} className="text-left text-xs font-semibold text-slate-500 pb-2 pr-4">{h}</th>
                 ))}
               </tr>
@@ -167,7 +169,7 @@ export default function HrdDashboard() {
                     <td className="py-3 pr-4 text-slate-400">{w.education || "—"}</td>
                     <td className="py-3 pr-4">
                       {w.currentKkniLevel ? (
-                        <span className="badge bg-brand-500/20 text-brand-400 border-brand-500/30">Level {w.currentKkniLevel}</span>
+                        <RankBadge level={w.currentKkniLevel} />
                       ) : <span className="text-slate-600">—</span>}
                     </td>
                     <td className="py-3 pr-4">

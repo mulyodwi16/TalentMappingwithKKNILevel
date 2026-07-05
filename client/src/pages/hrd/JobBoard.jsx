@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Compass, Plus, Users, X, Trash2, Loader2, CheckCircle2, Star, Target } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../api/client.js";
+import { rankName } from "../../lib/rank.js";
 
 const EMPTY = { title: "", company: "", location: "", department: "", description: "", kkniLevel: 3, minExperience: 0, skills: "", certifications: "", modules: "" };
 
@@ -31,7 +32,7 @@ function TalentPool({ jobId, onClose }) {
                     {c.interested && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />}{c.user.name}
                   </p>
                   <p className="text-xs" style={{ color: "var(--text-4)" }}>
-                    KKNI {c.user.currentKkniLevel || "-"} · {c.user.experienceYears || 0} th · {c.user.position || "-"}
+                    {c.user.currentKkniLevel ? rankName(c.user.currentKkniLevel) : "Unranked"} · {c.user.experienceYears || 0} th · {c.user.position || "-"}
                     {c.eligible && <span className="text-emerald-500"> · siap ✓</span>}
                   </p>
                   {c.missingSkills?.length > 0 && <p className="text-[11px] mt-0.5" style={{ color: "var(--text-4)" }}>perlu: {c.missingSkills.slice(0, 3).join(", ")}</p>}
@@ -109,7 +110,7 @@ export default function JobBoard() {
             <div><label className="text-xs" style={{ color: "var(--text-3)" }}>Perusahaan/Unit</label>{inp("company", { placeholder: "PT Kreatif" })}</div>
             <div><label className="text-xs" style={{ color: "var(--text-3)" }}>Lokasi</label>{inp("location", { placeholder: "Jakarta" })}</div>
             <div><label className="text-xs" style={{ color: "var(--text-3)" }}>Departemen</label>{inp("department", { placeholder: "Produksi" })}</div>
-            <div><label className="text-xs" style={{ color: "var(--text-3)" }}>Min. Jenjang KKNI</label>{inp("kkniLevel", { type: "number", min: 1, max: 9 })}</div>
+            <div><label className="text-xs" style={{ color: "var(--text-3)" }}>Min. Skill Rank (1=Bronze … 9=Legend)</label>{inp("kkniLevel", { type: "number", min: 1, max: 9 })}</div>
             <div><label className="text-xs" style={{ color: "var(--text-3)" }}>Min. Pengalaman (th)</label>{inp("minExperience", { type: "number", min: 0 })}</div>
           </div>
           <div><label className="text-xs" style={{ color: "var(--text-3)" }}>Keahlian dibutuhkan (pisah koma)</label>{inp("skills", { placeholder: "Menyunting Audio/Video, Export Hasil Editing" })}</div>
@@ -138,7 +139,7 @@ export default function JobBoard() {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="font-bold" style={{ color: "var(--text-base)" }}>{j.title}</p>
-                  <p className="text-xs" style={{ color: "var(--text-4)" }}>{j.company || "-"} · KKNI {j.kkniLevel}+ · {j.minExperience} th</p>
+                  <p className="text-xs" style={{ color: "var(--text-4)" }}>{j.company || "-"} · min. {rankName(j.kkniLevel)} · {j.minExperience} th</p>
                 </div>
                 <span className={`badge ${j.status === "open" ? "badge-ready" : "badge-not-ready"}`}>{j.status === "open" ? "Aktif" : "Ditutup"}</span>
               </div>
