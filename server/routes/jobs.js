@@ -1,7 +1,7 @@
 import express from "express";
 import { prisma } from "../prisma.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { buildSkillProfile, matchJob, safeArr } from "../jobmatch.js";
+import { buildSkillProfile, matchJob, safeArr, detectSkillEvidence } from "../jobmatch.js";
 
 // Peta Posisi & Kesiapan (talent mapping internal — BUKAN rekrutmen eksternal):
 // HRD memposting profil posisi berkriteria (level KKNI, skill, pengalaman, sertifikasi) + modul
@@ -79,12 +79,42 @@ router.get("/:id", async (req, res) => {
   const j = await prisma.job.findUnique({ where: { id: req.params.id } });
   if (!j) return res.status(404).json({ error: "Posisi tidak ditemukan." });
   const job = shapeJob(j);
-  let match = null, targeted = false;
+  let match = null, targeted = false, claims = [];
   if (req.user.role === "user") {
     match = matchJob(job, await buildSkillProfile(req.user.id));
     targeted = !!(await prisma.jobApplication.findUnique({ where: { jobId_userId: { jobId: j.id, userId: req.user.id } } }));
+    claims = await prisma.skillClaim.findMany({ where: { userId: req.user.id, jobId: j.id }, orderBy: { createdAt: "desc" } }).catch(() => []);
   }
-  res.json({ ...job, match, targeted });
+  res.json({ ...job, match, targeted, claims });
+});
+
+// Kirim CV/portofolio untuk MENGKLAIM sebuah skill posisi (#5). AI mendeteksi indikasi
+// bukti — tapi klaim ini TIDAK memvalidasi kompetensi; validasi hanya dari lulus ujian.
+router.post("/:id/detect-skill", requireRole("user"), async (req, res) => {
+  const j = await prisma.job.findUnique({ where: { id: req.params.id } });
+  if (!j) return res.status(404).json({ error: "Posisi tidak ditemukan." });
+  const skill = String(req.body?.skill || "").trim().slice(0, 160);
+  const detail = String(req.body?.detail || "").trim().slice(0, 1200);
+  if (!skill) return res.status(400).json({ error: "Skill wajib diisi." });
+
+  const u = await prisma.user.findUnique({ where: { id: req.user.id }, select: { cvMeta: true } });
+  let cvMeta = {}; try { cvMeta = JSON.parse(u?.cvMeta || "{}"); } catch { /* ignore */ }
+  const result = await detectSkillEvidence({ skill, cvMeta, detail });
+
+  const claim = await prisma.skillClaim.upsert({
+    where: { userId_jobId_skill: { userId: req.user.id, jobId: j.id, skill } },
+    create: { userId: req.user.id, jobId: j.id, skill, source: detail ? "portfolio" : "cv", detail: detail || null, aiDetected: result.detected, aiNote: result.note },
+    update: { source: detail ? "portfolio" : "cv", detail: detail || null, aiDetected: result.detected, aiNote: result.note, createdAt: new Date() },
+  });
+  res.json({ claim, detected: result.detected, note: result.note });
+});
+
+// Hapus sebuah klaim skill.
+router.delete("/claim/:claimId", requireRole("user"), async (req, res) => {
+  const c = await prisma.skillClaim.findUnique({ where: { id: req.params.claimId } });
+  if (!c || c.userId !== req.user.id) return res.status(404).json({ error: "Klaim tidak ditemukan." });
+  await prisma.skillClaim.delete({ where: { id: c.id } });
+  res.json({ ok: true });
 });
 
 router.put("/:id", requireRole("hrd", "admin"), async (req, res) => {

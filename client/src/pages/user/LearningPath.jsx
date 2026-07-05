@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import {
   Sparkles, Target, Loader2, RefreshCw, CheckCircle2, CircleDashed, CircleDot,
   GraduationCap, ChevronDown, Star, Compass, TrendingUp, AlertTriangle,
+  FileText, PenLine, Award, MapPin, MessageCircle, ArrowRight, ScanLine,
 } from "lucide-react";
 import api from "../../api/client.js";
 import { rankName, rankColor } from "../../lib/rank.js";
@@ -16,9 +17,9 @@ const DIFF = {
 };
 
 const PROGRESS = {
-  todo:  { label: "Belum Mulai", Icon: CircleDashed, cls: "text-[var(--text-4)]" },
-  doing: { label: "Dikerjakan",  Icon: CircleDot,    cls: "text-amber-500" },
-  done:  { label: "Selesai",     Icon: CheckCircle2, cls: "text-emerald-500" },
+  todo:  { label: "Belum Mulai", Icon: CircleDashed, color: "var(--text-4)", chip: "bg-[var(--bg-raised)] text-[var(--text-4)]" },
+  doing: { label: "Dikerjakan",  Icon: CircleDot,    color: "#f59e0b",       chip: "bg-amber-500/15 text-amber-500" },
+  done:  { label: "Selesai",     Icon: CheckCircle2, color: "#10b981",       chip: "bg-emerald-500/15 text-emerald-500" },
 };
 
 const VERDICT = {
@@ -27,7 +28,53 @@ const VERDICT = {
   not_ready: { label: "Perlu Peningkatan",   Icon: AlertTriangle, ring: "#ef4444", chip: "bg-red-500/15 text-red-400" },
 };
 
-// ── Kursus AvatarEdu yang cocok untuk sebuah langkah (lazy saat dibuka) ────────
+// Fitur aplikasi untuk mengerjakan tiap langkah (permintaan #4: link ke fitur terkait).
+const FEATURE = {
+  kelas:    { label: "Buka Kelas",     to: "/app/kelas",     Icon: GraduationCap },
+  ujian:    { label: "Ke Ujian",       to: "/app/exam",      Icon: PenLine },
+  cv:       { label: "Unggah CV",      to: "/app/cv-upload", Icon: FileText },
+  evidence: { label: "Tambah Bukti",   to: "/app/profile",   Icon: Award },
+  peta:     { label: "Peta Posisi",    to: "/app/jobs",      Icon: MapPin },
+  mentor:   { label: "Tanya AI Mentor", to: "/app/mentor",   Icon: MessageCircle },
+};
+
+// ── Ilustrasi hero: perjalanan belajar (jalur berliku + milestone) ──────────────
+function JourneyArt({ done = 0, total = 0 }) {
+  const pct = total ? done / total : 0;
+  return (
+    <svg viewBox="0 0 400 120" className="w-full h-auto" role="img" aria-label="Ilustrasi perjalanan belajar">
+      <defs>
+        <linearGradient id="lp-path" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#10b981" />
+          <stop offset="1" stopColor="rgb(var(--brand-500))" />
+        </linearGradient>
+        <radialGradient id="lp-goal" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0" stopColor="rgb(var(--brand-400))" /><stop offset="1" stopColor="rgb(var(--brand-600))" />
+        </radialGradient>
+      </defs>
+      {/* jalur dasar */}
+      <path d="M20 96 C 90 96, 90 40, 150 40 S 230 92, 290 66 S 360 26, 384 26"
+        fill="none" stroke="var(--border-2)" strokeWidth="5" strokeLinecap="round" strokeDasharray="2 10" />
+      {/* jalur progres */}
+      <path d="M20 96 C 90 96, 90 40, 150 40 S 230 92, 290 66 S 360 26, 384 26"
+        fill="none" stroke="url(#lp-path)" strokeWidth="5" strokeLinecap="round"
+        pathLength="1" strokeDasharray="1" strokeDashoffset={1 - pct}
+        style={{ transition: "stroke-dashoffset 1s ease" }} />
+      {/* titik awal */}
+      <circle cx="20" cy="96" r="7" fill="#10b981" />
+      <text x="20" y="116" textAnchor="middle" fontSize="9" fill="var(--text-4)">Mulai</text>
+      {/* milestone tengah */}
+      <circle cx="150" cy="40" r="5" fill="rgb(var(--brand-500))" opacity={pct > 0.3 ? 1 : 0.4} />
+      <circle cx="290" cy="66" r="5" fill="rgb(var(--brand-500))" opacity={pct > 0.6 ? 1 : 0.4} />
+      {/* tujuan (bendera/rank) */}
+      <circle cx="384" cy="26" r="11" fill="url(#lp-goal)" />
+      <path d="M380 20 h9 v6 h-9 z" fill="#fff" opacity="0.9" />
+      <text x="384" y="52" textAnchor="middle" fontSize="9" fill="var(--text-4)">Target</text>
+    </svg>
+  );
+}
+
+// ── Kursus AvatarEdu yang cocok untuk sebuah langkah (lazy saat dibuka) ─────────
 function StepCourses({ query }) {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["lp-courses", query],
@@ -37,11 +84,11 @@ function StepCourses({ query }) {
   });
   const courses = data?.data || [];
   if (isLoading) return <p className="text-xs py-2" style={{ color: "var(--text-4)" }}>Mencari kursus…</p>;
-  if (isError || courses.length === 0) return <p className="text-xs py-2" style={{ color: "var(--text-4)" }}>Belum ada kursus cocok di AvatarEdu.</p>;
+  if (isError || courses.length === 0) return <p className="text-xs py-2" style={{ color: "var(--text-4)" }}>Belum ada kursus cocok di AvatarEdu. Coba <Link to="/app/kelas" className="text-brand-500 hover:underline">Kelas</Link>.</p>;
   return (
     <div className="grid sm:grid-cols-3 gap-2 pt-1">
       {courses.map((c) => (
-        <Link key={c.slug} to="/app/toko"
+        <Link key={c.slug} to="/app/kelas"
           className="rounded-lg border p-2.5 flex flex-col gap-1 hover:border-brand-500/50 transition-colors"
           style={{ background: "var(--bg-raised)", borderColor: "var(--border)" }}>
           <div className="flex items-center gap-1.5 text-[11px]" style={{ color: "var(--text-4)" }}>
@@ -50,26 +97,33 @@ function StepCourses({ query }) {
             {c.duration_hours ? <span>{c.duration_hours} jam</span> : null}
           </div>
           <p className="text-xs font-medium line-clamp-2" style={{ color: "var(--text-base)" }}>{c.title}</p>
-          <span className="text-[11px] text-brand-500 mt-auto">Buka di Toko →</span>
+          <span className="text-[11px] text-brand-500 mt-auto">Buka di Kelas →</span>
         </Link>
       ))}
     </div>
   );
 }
 
-function StepCard({ step, index, onProgress, saving }) {
+function StepCard({ step, index }) {
   const [open, setOpen] = useState(false);
   const diff = DIFF[step.difficulty] || DIFF.beginner;
   const pc = PROGRESS[step.progress] || PROGRESS.todo;
   const done = step.progress === "done";
+  const feat = FEATURE[step.feature] || FEATURE.ujian;
+  // Tautkan langsung ke unit terkait bila ada kode (Kelas & Ujian menerima ?unit=).
+  const featTo = step.unitCode && (step.feature === "kelas" || step.feature === "ujian")
+    ? `${feat.to}?unit=${encodeURIComponent(step.unitCode)}` : feat.to;
+
   return (
     <div className="relative pl-10">
-      {/* rel garis waktu */}
-      <span className="absolute left-3 top-1 bottom-0 w-px" style={{ background: "var(--border)" }} />
-      <span className={`absolute left-0 top-0 w-6 h-6 rounded-full grid place-items-center text-xs font-black
-        ${done ? "bg-emerald-500 text-white" : "bg-brand-600 text-white"}`}>{done ? "✓" : index + 1}</span>
+      <span className="absolute left-3 top-6 bottom-0 w-px" style={{ background: "var(--border)" }} />
+      <span className="absolute left-0 top-1 w-6 h-6 rounded-full grid place-items-center text-xs font-black transition-colors"
+        style={{ background: done ? "#10b981" : step.progress === "doing" ? "#f59e0b" : "var(--bg-muted)",
+                 color: step.progress === "todo" ? "var(--text-3)" : "#fff" }}>
+        {done ? "✓" : index + 1}
+      </span>
 
-      <div className="card p-4 space-y-2.5 mb-3">
+      <div className="card p-4 space-y-2.5 mb-3" style={done ? { borderColor: "#10b98155" } : undefined}>
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <p className={`text-sm font-bold ${done ? "line-through opacity-70" : ""}`} style={{ color: "var(--text-base)" }}>{step.title}</p>
           <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${diff.cls}`}>{diff.label}</span>
@@ -83,33 +137,73 @@ function StepCard({ step, index, onProgress, saving }) {
         )}
 
         <div className="flex items-center gap-3 flex-wrap text-xs" style={{ color: "var(--text-4)" }}>
-          {step.competencyRef && <span className="truncate max-w-[60%]">◈ {step.competencyRef}</span>}
+          {step.competencyRef && <span className="truncate max-w-[55%]">◈ {step.competencyRef}</span>}
           {step.estEffort && <span>◷ {step.estEffort}</span>}
         </div>
 
+        {/* Status TERLACAK OTOMATIS (bukan manual) */}
         <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
-          <div className="flex items-center gap-1.5">
-            {Object.entries(PROGRESS).map(([k, v]) => {
-              const active = step.progress === k;
-              return (
-                <button key={k} onClick={() => !active && onProgress(step.id, k)} disabled={saving}
-                  className={`text-[11px] px-2 py-1 rounded-md border transition-colors flex items-center gap-1 disabled:opacity-50
-                    ${active ? "border-brand-500 bg-brand-500/10 " + v.cls : "border-[var(--border)] text-[var(--text-4)] hover:border-brand-500/40"}`}>
-                  <v.Icon className="w-3 h-3" />{v.label}
-                </button>
-              );
-            })}
+          <div className="flex items-center gap-2">
+            <span className={`text-[11px] font-semibold px-2 py-1 rounded-md inline-flex items-center gap-1 ${pc.chip}`}>
+              <pc.Icon className="w-3 h-3" /> {pc.label}
+            </span>
+            {step.progressNote && <span className="text-[11px]" style={{ color: pc.color }}>{step.progressNote}</span>}
           </div>
-          {step.courseQuery && (
-            <button onClick={() => setOpen((o) => !o)} className="text-[11px] text-brand-500 flex items-center gap-1 hover:underline">
-              <GraduationCap className="w-3.5 h-3.5" /> Kursus terkait
-              <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {step.courseQuery && (
+              <button onClick={() => setOpen((o) => !o)} className="text-[11px] text-brand-500 flex items-center gap-1 hover:underline">
+                <GraduationCap className="w-3.5 h-3.5" /> Kursus
+                <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
+              </button>
+            )}
+            {!done && (
+              <Link to={featTo} className="text-[11px] font-semibold text-white bg-brand-600 hover:bg-brand-700 px-2.5 py-1 rounded-md inline-flex items-center gap-1">
+                <feat.Icon className="w-3.5 h-3.5" /> {feat.label} <ArrowRight className="w-3 h-3" />
+              </Link>
+            )}
+          </div>
         </div>
 
         {open && step.courseQuery && <StepCourses query={step.courseQuery} />}
       </div>
+    </div>
+  );
+}
+
+// Panel transparansi: data user yang dipertimbangkan AI (permintaan #4).
+function ConsideredData({ inputs }) {
+  if (!inputs) return null;
+  const a = inputs.activity || {};
+  const items = [
+    { Icon: FileText, label: "CV", val: inputs.cv?.hasCv ? `${inputs.cv.skills?.length || 0} keahlian` : "Belum ada", ok: inputs.cv?.hasCv, to: "/app/cv-upload" },
+    { Icon: GraduationCap, label: "Kelas diikuti", val: `${a.classesTaken || 0} kelas`, ok: (a.classesTaken || 0) > 0, to: "/app/kelas" },
+    { Icon: PenLine, label: "Ujian diambil", val: `${a.examAttempts || 0}×`, ok: (a.examAttempts || 0) > 0, to: "/app/exam" },
+    { Icon: CheckCircle2, label: "Unit lulus", val: `${inputs.passedUnits?.length || 0}`, ok: (inputs.passedUnits?.length || 0) > 0, to: "/app/exam" },
+    { Icon: Award, label: "Sertifikat", val: `${a.certCount || 0}`, ok: (a.certCount || 0) > 0, to: "/app/profile" },
+    { Icon: Sparkles, label: "Bukti eksternal", val: `${a.evidenceCount || 0}`, ok: (a.evidenceCount || 0) > 0, to: "/app/profile" },
+    { Icon: Target, label: "Kompetensi target", val: inputs.competency?.title ? "Dipilih" : "Belum", ok: !!inputs.competency, to: "/app/profile" },
+    { Icon: AlertTriangle, label: "Gap terdeteksi", val: `${inputs.gaps?.length || 0}`, ok: true, to: "/app/skill-gap" },
+  ];
+  return (
+    <div className="card p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <ScanLine className="w-4 h-4 text-brand-500" />
+        <h3 className="text-sm font-bold" style={{ color: "var(--text-base)" }}>Data yang dipertimbangkan AI</h3>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {items.map((it) => (
+          <Link key={it.label} to={it.to} className="rounded-lg p-2.5 flex items-start gap-2 hover:bg-[var(--bg-muted)] transition-colors" style={{ background: "var(--bg-raised)" }}>
+            <it.Icon className="w-4 h-4 mt-0.5 shrink-0" style={{ color: it.ok ? "#10b981" : "var(--text-4)" }} />
+            <div className="min-w-0">
+              <p className="text-[11px]" style={{ color: "var(--text-4)" }}>{it.label}</p>
+              <p className="text-xs font-semibold truncate" style={{ color: it.ok ? "var(--text-base)" : "var(--text-4)" }}>{it.val}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+      <p className="text-[11px] mt-3" style={{ color: "var(--text-4)" }}>
+        AI menyusun rencana dari seluruh data di atas. Makin lengkap datamu, makin personal rencananya. Progres tiap langkah <b>dilacak otomatis</b> dari aktivitas ini.
+      </p>
     </div>
   );
 }
@@ -146,7 +240,6 @@ function AiCheckCard({ aiCheck, inputs, source }) {
         </div>
       )}
 
-      {/* Rank saat ini → target + kesiapan */}
       <div className="flex items-center gap-4 flex-wrap pt-1 border-t" style={{ borderColor: "var(--border)" }}>
         {cur != null && (
           <div className="flex items-center gap-2 pt-3">
@@ -178,7 +271,6 @@ export default function LearningPath() {
     queryFn: () => api.get("/learning-path/"),
   });
 
-  // isi input dari server sekali (kecuali user sudah mengetik).
   useEffect(() => {
     if (!touched && data?.targetRole != null) setTargetRole(data.targetRole);
   }, [data?.targetRole, touched]);
@@ -192,18 +284,6 @@ export default function LearningPath() {
     onError: (e) => toast.error(typeof e === "string" ? e : "Gagal menyusun rencana"),
   });
 
-  const setStep = useMutation({
-    mutationFn: ({ stepId, progress }) => api.put("/learning-path/step", { stepId, progress }),
-    onMutate: async ({ stepId, progress }) => {
-      qc.setQueryData(["learning-path"], (old) => {
-        if (!old?.plan) return old;
-        const steps = old.plan.steps.map((s) => (s.id === stepId ? { ...s, progress } : s));
-        return { ...old, plan: { ...old.plan, steps } };
-      });
-    },
-    onError: () => { toast.error("Gagal menyimpan progres"); qc.invalidateQueries(["learning-path"]); },
-  });
-
   const plan = data?.plan;
   const inputs = data?.inputs;
   const noGaps = !inputs?.gaps?.length;
@@ -215,15 +295,31 @@ export default function LearningPath() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: "var(--text-base)" }}>
-          <Sparkles className="w-5 h-5 text-brand-500" /> Learning Path Personal
-        </h2>
-        <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>
-          Rencana belajar terurut dari hasil ujianmu, kompetensi SKKNI yang dipilih, dan profesi yang kamu targetkan — dicek oleh AI.
-        </p>
+      {/* Header + ilustrasi */}
+      <div className="card p-5 relative overflow-hidden">
+        <div className="grid md:grid-cols-2 gap-4 items-center">
+          <div>
+            <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: "var(--text-base)" }}>
+              <Sparkles className="w-5 h-5 text-brand-500" /> Learning Path Personal
+            </h2>
+            <p className="text-sm mt-1.5" style={{ color: "var(--text-3)" }}>
+              Rencana belajar terurut dari <b>seluruh datamu</b> — CV, kelas yang diikuti, ujian, keahlian, dan kompetensi target — disusun & dicek AI. Progres <b>dilacak otomatis</b>.
+            </p>
+            {plan && (
+              <div className="flex items-center gap-2 mt-3">
+                <div className="w-40 h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-raised)" }}>
+                  <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: total ? `${(done / total) * 100}%` : 0 }} />
+                </div>
+                <span className="text-xs font-semibold" style={{ color: "var(--text-3)" }}>{done}/{total} selesai</span>
+              </div>
+            )}
+          </div>
+          <JourneyArt done={done} total={total} />
+        </div>
       </div>
+
+      {/* Data yang dipertimbangkan AI */}
+      <ConsideredData inputs={inputs} />
 
       {/* Target profesi + tombol susun */}
       <div className="card p-4 space-y-3">
@@ -251,7 +347,6 @@ export default function LearningPath() {
         )}
       </div>
 
-      {/* Kosong */}
       {!plan ? (
         <div className="card p-10 text-center">
           <Compass className="w-10 h-10 mx-auto mb-3 text-brand-500" />
@@ -266,28 +361,21 @@ export default function LearningPath() {
         <>
           <AiCheckCard aiCheck={plan.aiCheck} inputs={inputs} source={data?.source} />
 
-          {/* Progres keseluruhan */}
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-sm font-bold" style={{ color: "var(--text-base)" }}>Langkah Belajar ({total})</h3>
-            <div className="flex items-center gap-2">
-              <div className="w-32 h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-raised)" }}>
-                <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: total ? `${(done / total) * 100}%` : 0 }} />
-              </div>
-              <span className="text-xs font-semibold" style={{ color: "var(--text-3)" }}>{done}/{total} selesai</span>
-            </div>
-          </div>
+          <h3 className="text-sm font-bold flex items-center gap-2" style={{ color: "var(--text-base)" }}>
+            Langkah Belajar ({total})
+            <span className="text-[11px] font-normal px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 inline-flex items-center gap-1">
+              <ScanLine className="w-3 h-3" /> progres otomatis
+            </span>
+          </h3>
 
           <div>
-            {plan.steps.map((s, i) => (
-              <StepCard key={s.id} step={s} index={i} saving={setStep.isPending}
-                onProgress={(stepId, progress) => setStep.mutate({ stepId, progress })} />
-            ))}
+            {plan.steps.map((s, i) => <StepCard key={s.id} step={s} index={i} />)}
           </div>
 
           {data?.generatedAt && (
             <p className="text-[11px] text-center" style={{ color: "var(--text-4)" }}>
               Disusun {data.source === "ai" ? "oleh AI" : "otomatis"} · {new Date(data.generatedAt).toLocaleString("id-ID")}.
-              {" "}Perbarui setelah ujian baru agar rencana menyesuaikan progresmu.
+              {" "}Perbarui setelah aktivitas baru agar rencana & progres menyesuaikan.
             </p>
           )}
         </>

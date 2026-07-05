@@ -5,7 +5,7 @@ import {
   searchLocal, ensureUnits, ingestUnits, getDocWithUnits,
   getCatalogStatus, syncCatalog, SkkniError, listCategories,
   ensureExamPackage, buildShuffledInstance, courseCoverage, COURSE_UNITS,
-  ensureUnitExamPackage, buildUnitExamInstance, unitStates,
+  ensureUnitExamPackage, buildUnitExamInstance, unitStates, ensureCompetencyWeight, gradeFreeText,
 } from "../skkni.js";
 import { isLlmConfigured } from "../llm.js";
 import { awardOnce, COIN } from "../gamification.js";
@@ -65,10 +65,12 @@ router.post("/choose", async (req, res) => {
     await prisma.user.update({ where: { id: req.user.id }, data: { chosenSkkniId: doc.id, chosenSkkniTitle: title } });
 
     if (doc.unitsCached) {
+      ensureCompetencyWeight(doc.id).catch((e) => console.warn("[skkni] weight bg:", e.message));
       return res.json({ ok: true, ready: true, chosen: { id: doc.id, title, unitCount: doc.unitCount } });
     }
     // Belum ada unit → tarik di latar belakang (lewat antrean throttle). Tidak menunggu.
-    ingestUnits(doc.id).catch((e) => console.warn("[skkni] ingest bg:", e.message));
+    // Setelah unit ter-cache, klasifikasi bobot kompetensi (cap rank).
+    ingestUnits(doc.id).then(() => ensureCompetencyWeight(doc.id)).catch((e) => console.warn("[skkni] ingest/weight bg:", e.message));
     res.json({ ok: true, ready: false, chosen: { id: doc.id, title } });
   } catch (e) {
     const status = e instanceof SkkniError ? e.status : 502;
@@ -217,9 +219,13 @@ function shapeUnitExam(instance, unit, competencyTitle) {
     competencyTitle,
     unitCode: unit.code,
     unitTitle: unit.title,
-    timeLimit: Math.max(8, Math.ceil(instance.length * 1.5)),
+    // Isian & urutan butuh waktu lebih: MC ~1 mnt, isian/urutan ~4 mnt.
+    timeLimit: instance.reduce((t, q) => t + ((q.type || "mc") === "mc" ? 1 : 4), 0) || 10,
     totalQuestions: instance.length,
-    questions: instance.map((q, i) => ({ id: i, competencyCode: unit.code, competencyName: unit.title, question: q.q, options: q.options })),
+    questions: instance.map((q, i) => ({
+      id: i, type: q.type || "mc", competencyCode: unit.code, competencyName: unit.title,
+      question: q.q, options: (q.type || "mc") === "mc" ? q.options : undefined, // jawaban/acuan tak dikirim
+    })),
   };
 }
 
@@ -269,10 +275,28 @@ router.post("/exam/:code/submit", async (req, res) => {
     if (!inst) return res.status(400).json({ error: "Ambil soal ujian dulu." });
     const questions = JSON.parse(inst.questions);
 
-    let correct = 0;
-    questions.forEach((q, i) => { if (Number(answers[i]) === q.answerKey) correct++; });
-    const score = questions.length ? Math.round((correct / questions.length) * 100) : 0;
+    // MC dinilai otomatis; isian/urutan dinilai AI (gradeFreeText). Skor unit = rata-rata semua soal.
+    const perQ = {};        // index → { score, feedback }
+    const freeItems = [];
+    questions.forEach((q, i) => {
+      const type = q.type || "mc";
+      if (type === "mc") {
+        perQ[i] = { score: Number(answers[i]) === q.answerKey ? 100 : 0, feedback: null };
+      } else {
+        freeItems.push({ index: i, type, q: q.q, answer: typeof answers[i] === "string" ? answers[i] : "", keyPoints: q.keyPoints, idealSteps: q.idealSteps });
+      }
+    });
+    if (freeItems.length) {
+      let graded = {};
+      try { graded = await gradeFreeText(inst.unitTitle, freeItems); } catch (e) { console.error("gradeFreeText:", e.message); }
+      for (const it of freeItems) {
+        const g = graded[it.index] || { score: (it.answer || "").trim().length >= 25 ? 50 : 0, feedback: "Belum bisa dinilai AI." };
+        perQ[it.index] = g;
+      }
+    }
+    const score = questions.length ? Math.round(Object.values(perQ).reduce((a, b) => a + (b.score || 0), 0) / questions.length) : 0;
     const passed = score >= 60;
+    const breakdown = questions.map((q, i) => ({ question: q.q, type: q.type || "mc", score: perQ[i]?.score ?? 0, feedback: perQ[i]?.feedback || null }));
 
     // SkillAssessment unit → dibaca Skill Gap / rank / readiness.
     await prisma.skillAssessment.upsert({
@@ -316,7 +340,7 @@ router.post("/exam/:code/submit", async (req, res) => {
 
     res.json({
       source: "skkni-unit", unitCode: code, unitTitle: inst.unitTitle,
-      score, passed, correct, total: questions.length, certificate, coin,
+      score, passed, total: questions.length, breakdown, certificate, coin,
       rank, overallReadiness: overall?.total, attemptId: attempt.id, units: states, retake: true,
     });
   } catch (e) {

@@ -22,6 +22,8 @@ model User {
   experienceYears  Int      @default(0)
   currentKkniLevel Int?
   targetKkniLevel  Int?
+  // Foto profil (data URI base64, di-resize kecil di klien). Kustomisasi profil.
+  avatarUrl        String?
   readinessScore   Int      @default(0)
   status           String   @default("not_ready")
   // Kompetensi SKKNI yang dipilih user sebagai target/patokan semua fitur (referensi ke SkkniDocument.id).
@@ -52,6 +54,54 @@ model User {
   applications    JobApplication[]
   learningPlan    LearningPlan?
   unitProgress    UnitProgress[]
+  evidence        ExternalEvidence[]
+  skillClaims     SkillClaim[]
+}
+
+// ── Bukti kompetensi EKSTERNAL (poin plus untuk menembus cap bobot kompetensi) ──
+// Sertifikasi resmi (BNSP/nasional/internasional — BUKAN ujian kita), portofolio,
+// pengalaman kerja, pelatihan/webinar. Diverifikasi AI (plausibilitas + relevansi +
+// level yang diimplikasikan). Menaikkan rank DI ATAS cap ujian, tapi tetap butuh
+// koroborasi ujian (headroom terbatas di rankcalc).
+model ExternalEvidence {
+  id                String   @id @default(cuid())
+  userId            String
+  type              String   // certification | portfolio | experience | training
+  title             String
+  issuer            String?
+  description       String?
+  url               String?
+  relatedCompetency String?
+  credibility       Int      @default(0)  // 0-100 (penilaian AI)
+  rankImplied       Int      @default(0)  // 1-9 level yang diimplikasikan
+  verdict           String?              // ringkas alasan AI
+  status            String   @default("pending") // pending | verified | rejected
+  createdAt         DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+// ── Klaim skill dari CV/Portofolio (Peta Posisi #5) ──────────────────────────
+// CV/portofolio HANYA bisa "mengklaim" penguasaan skill (dideteksi AI). Klaim ini
+// TIDAK memvalidasi kompetensi — validasi hanya dari LULUS UJIAN proyek ini.
+// `validated` diturunkan runtime (bukan disimpan) dari SkillAssessment/Certificate.
+model SkillClaim {
+  id         String   @id @default(cuid())
+  userId     String
+  jobId      String?              // konteks posisi (opsional)
+  skill      String               // nama skill/kompetensi yang diklaim
+  source     String               // cv | portfolio
+  detail     String?              // deskripsi portofolio / tautan
+  aiDetected Boolean  @default(false) // AI menemukan buktinya di CV/portofolio?
+  aiNote     String?              // ringkas alasan AI
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, jobId, skill])
+  @@index([userId])
 }
 
 // ── Learning Path AI (satu rencana aktif per user) ───────────────────────────
@@ -228,6 +278,12 @@ model SkkniDocument {
   unitCount     Int      @default(0)
   fetchedAt     DateTime @default(now())
   unitsFetchedAt DateTime?
+  // Bobot kesulitan kompetensi (di-klasifikasi AI) → menentukan RANK MAKSIMAL yang bisa
+  // diraih dari lulus ujian kita saja. Mencegah "overcapacity" (mis. Video Editing basic
+  // tak bisa Legend). Untuk melampaui cap ini butuh bukti eksternal terverifikasi.
+  weightMaxRank Int?                     // 5..9 (rank maksimal via ujian)
+  weightTier    String?                  // label: "Operasional" | "Teknis" | "Ahli" dst
+  weightReason  String?                  // alasan singkat (transparansi)
   units         SkkniUnit[]
 }
 

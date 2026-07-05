@@ -60,6 +60,19 @@ router.put("/profile", async (req, res) => {
   res.json({ ...rest, certifications: JSON.parse(certifications) });
 });
 
+// ── Foto profil (kustomisasi #8) — data URI base64, di-resize kecil di klien ──
+router.put("/avatar", async (req, res) => {
+  const { avatarUrl } = req.body || {};
+  if (avatarUrl != null && avatarUrl !== "") {
+    if (typeof avatarUrl !== "string" || !/^data:image\/(png|jpe?g|webp);base64,/.test(avatarUrl))
+      return res.status(400).json({ error: "Format foto tidak valid (PNG/JPG/WebP)." });
+    // Batasi ~400 KB (data URI) agar DB tetap ringan; klien sudah me-resize ke ~256px.
+    if (avatarUrl.length > 420_000) return res.status(400).json({ error: "Foto terlalu besar. Maks ~300 KB." });
+  }
+  await prisma.user.update({ where: { id: req.user.id }, data: { avatarUrl: avatarUrl || null } });
+  res.json({ avatarUrl: avatarUrl || null });
+});
+
 // ── CV Parse ──────────────────────────────────────────────────────────────────
 router.post("/cv-parse", async (req, res) => {
   try {

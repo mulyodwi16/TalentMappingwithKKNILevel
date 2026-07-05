@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import api from "../../api/client.js";
 import { rankName } from "../../lib/rank.js";
 
-const ROLE_LABEL = { user: "Pekerja", hrd: "HRD", admin: "Admin" };
+const ROLE_LABEL = { user: "Talenta", hrd: "HRD", admin: "Admin" };
 const ROLE_CLS   = { user: "text-brand-400", hrd: "text-emerald-400", admin: "text-amber-400" };
 
 const EMPTY = { name: "", email: "", password: "", role: "user", department: "", position: "" };

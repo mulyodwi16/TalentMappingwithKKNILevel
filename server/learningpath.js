@@ -24,13 +24,23 @@ function difficultyForRank(level) {
   return "beginner";
 }
 
-// Kumpulkan seluruh masukan yang dipakai untuk menyusun & menjelaskan rencana.
+const safe = (j, fb) => { try { return typeof j === "string" ? JSON.parse(j) : (j ?? fb); } catch { return fb; } };
+
+// Kumpulkan SELURUH masukan pertimbangan AI (permintaan #4): CV (pendidikan, keahlian,
+// sertifikasi, pengalaman), kelas yang diikuti, ujian yang diambil, unit yang lulus,
+// bukti eksternal, gap, kompetensi target. Data selengkap mungkin agar rencana personal.
 export async function buildInputs(userId) {
-  const [u, assessments, rank, readiness] = await Promise.all([
+  const [u, assessments, rank, readiness, certs, unitProg, classesRedeem, courseTx, evidence, attempts] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId } }),
     prisma.skillAssessment.findMany({ where: { userId } }),
     computeRank(userId),
     computeReadiness(userId),
+    prisma.certificate.findMany({ where: { userId }, orderBy: { issuedAt: "desc" } }).catch(() => []),
+    prisma.unitProgress.findMany({ where: { userId } }).catch(() => []),
+    prisma.shopRedemption.findMany({ where: { userId } }).catch(() => []),
+    prisma.coinTransaction.findMany({ where: { userId, refType: "course" }, orderBy: { createdAt: "desc" } }).catch(() => []),
+    prisma.externalEvidence.findMany({ where: { userId, status: "verified" } }).catch(() => []),
+    prisma.examAttempt.count({ where: { userId } }).catch(() => 0),
   ]);
   if (!u) return null;
 
@@ -41,6 +51,9 @@ export async function buildInputs(userId) {
   const strong = assessments
     .filter((a) => a.gap === 0 && a.currentScore >= 60)
     .map((a) => a.competencyName);
+  const passedUnits = assessments
+    .filter((a) => a.currentScore >= 60)
+    .map((a) => ({ name: a.competencyName, code: a.competencyCode, score: a.currentScore }));
 
   // Unit kompetensi standar dari dokumen SKKNI yang dipilih (patokan skill yang harus dikuasai).
   let competency = null;
@@ -59,12 +72,27 @@ export async function buildInputs(userId) {
     } catch { /* non-fatal */ }
   }
 
+  const cv = safe(u.cvMeta, {});
+  const cvSkills = [...new Set([...(cv.skills || []), ...(cv.certifications || [])])];
+  const classes = [
+    ...classesRedeem.map((r) => ({ kind: "premium", name: r.itemName })),
+    ...courseTx.map((t) => ({ kind: "avataredu", name: (t.reason || "Kursus").replace(/^Mulai kursus:\s*/i, "") })),
+  ];
+
   return {
     user: {
       name: u.name,
-      education: u.education || null,
+      education: u.education || cv.education || null,
       academicStatus: u.academicStatus || null,
       targetRole: u.targetRole || null,
+      experienceYears: u.experienceYears ?? cv.experienceYears ?? 0,
+    },
+    cv: {
+      hasCv: !!(cv.parsedAt || cv.education),
+      skills: cvSkills,
+      certifications: cv.certifications || [],
+      experienceYears: cv.experienceYears ?? u.experienceYears ?? 0,
+      education: cv.education || u.education || null,
     },
     rank: {
       current: rank.effective,
@@ -73,13 +101,83 @@ export async function buildInputs(userId) {
       targetName: rankName(u.targetKkniLevel || Math.min(9, rank.effective + 1)),
       masteryScore: rank.masteryScore,
       next: rank.next,
+      weightCap: rank.weightCap, cappedByWeight: rank.cappedByWeight,
     },
     readiness: { total: readiness.total, cv: readiness.cv, exam: readiness.exam, cert: readiness.cert, status: readiness.status },
     competency,
     gaps,
     strong,
+    passedUnits,
+    classes,
+    certificates: certs.map((c) => ({ name: c.name, score: c.score })),
+    evidence: evidence.map((e) => ({ title: e.title, type: e.type, rankImplied: e.rankImplied })),
+    activity: {
+      examAttempts: attempts,
+      classesTaken: classes.length,
+      certCount: certs.length,
+      unitsLearned: unitProg.filter((p) => p.learned).length,
+      evidenceCount: evidence.length,
+    },
     baseDifficulty: difficultyForRank(rank.effective),
   };
+}
+
+// ── Pelacakan progres OTOMATIS (permintaan #4: tracker langsung dideteksi AI, bukan manual) ──
+// Progres tiap langkah DITURUNKAN dari aktivitas nyata user, bukan diisi tangan:
+//   unit lulus (skor≥60) → done · sedang dipelajari/diuji (<60 / kelas dibuka) → doing · lainnya → todo.
+function normalizeTitle(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); }
+
+export async function deriveStepProgress(userId, steps) {
+  if (!Array.isArray(steps) || !steps.length) return steps || [];
+  const [assessments, unitProg, u, certs, classesRedeem, courseTx, evidence, attempts] = await Promise.all([
+    prisma.skillAssessment.findMany({ where: { userId } }),
+    prisma.unitProgress.findMany({ where: { userId } }).catch(() => []),
+    prisma.user.findUnique({ where: { id: userId }, select: { cvMeta: true } }),
+    prisma.certificate.count({ where: { userId } }).catch(() => 0),
+    prisma.shopRedemption.count({ where: { userId } }).catch(() => 0),
+    prisma.coinTransaction.count({ where: { userId, refType: "course" } }).catch(() => 0),
+    prisma.externalEvidence.count({ where: { userId, status: "verified" } }).catch(() => 0),
+    prisma.examAttempt.count({ where: { userId } }).catch(() => 0),
+  ]);
+  const byCode = new Map(assessments.map((a) => [a.competencyCode, a]));
+  const byTitle = new Map(assessments.map((a) => [normalizeTitle(a.competencyName), a]));
+  const learnedCodes = new Set(unitProg.filter((p) => p.learned).map((p) => p.unitCode));
+  const learningCodes = new Set(unitProg.map((p) => p.unitCode));
+  const hasCv = !!safe(u?.cvMeta, {}).parsedAt || !!safe(u?.cvMeta, {}).education;
+  const classesTaken = classesRedeem + courseTx;
+
+  const mark = (progress, note) => ({ progress, progressNote: note || null, autoTracked: true });
+
+  const resolveUnit = (step) => {
+    let a = step.unitCode ? byCode.get(step.unitCode) : null;
+    if (!a && step.competencyRef) a = byTitle.get(normalizeTitle(step.competencyRef));
+    if (!a && step.title) a = byTitle.get(normalizeTitle(step.title));
+    const code = step.unitCode || a?.competencyCode;
+    if (a && a.currentScore >= 60) return mark("done", `Lulus ujian ${a.currentScore}%`);
+    if (a && a.currentScore > 0) return mark("doing", `Ujian ${a.currentScore}% — belum lulus (min 60%)`);
+    if (code && learnedCodes.has(code)) return mark("doing", "Materi kelas selesai — tinggal lulus ujiannya");
+    if (code && learningCodes.has(code)) return mark("doing", "Kelas sedang berjalan");
+    return mark("todo");
+  };
+
+  return steps.map((s) => {
+    const t = s.trackType || "unit";
+    let r;
+    switch (t) {
+      case "cv":          r = hasCv ? mark("done", "CV sudah diunggah") : mark("todo"); break;
+      case "class":       r = classesTaken > 0 ? mark("done", `${classesTaken} kelas diikuti`) : mark("todo"); break;
+      case "certificate": r = certs > 0 ? mark("done", `${certs} sertifikat terbit`) : mark("todo"); break;
+      case "evidence":    r = evidence > 0 ? mark("done", `${evidence} bukti terverifikasi`) : mark("todo"); break;
+      case "exam":
+        // Ujian yang menyasar unit tertentu → lacak kelulusan unit itu (lebih akurat).
+        if (s.unitCode || s.competencyRef) r = resolveUnit(s);
+        else r = attempts > 0 ? mark("doing", `${attempts} percobaan ujian`) : mark("todo");
+        break;
+      case "unit":
+      default:            r = resolveUnit(s); break;
+    }
+    return { ...s, ...r };
+  });
 }
 
 // Ambil blok JSON pertama yang valid dari teks LLM (toleran terhadap ```json fences / prosa).
@@ -93,8 +191,13 @@ function extractJson(text) {
   try { return JSON.parse(raw.slice(start, end + 1)); } catch { return null; }
 }
 
+const TRACK_TYPES = ["unit", "cv", "class", "certificate", "evidence", "exam"];
+const FEATURES = ["kelas", "ujian", "cv", "evidence", "peta", "mentor"];
+
 function normStep(s, i) {
   const difficulty = DIFFICULTY.includes(s?.difficulty) ? s.difficulty : "beginner";
+  const trackType = TRACK_TYPES.includes(s?.trackType) ? s.trackType : "unit";
+  const feature = FEATURES.includes(s?.feature) ? s.feature : (trackType === "cv" ? "cv" : trackType === "evidence" ? "evidence" : trackType === "class" ? "kelas" : "ujian");
   return {
     id: `s${i + 1}`,
     order: i + 1,
@@ -103,8 +206,12 @@ function normStep(s, i) {
     why: String(s?.why || "").slice(0, 400),
     difficulty,
     competencyRef: String(s?.competencyRef || s?.competency || "").slice(0, 160) || null,
+    unitCode: String(s?.unitCode || "").slice(0, 40) || null,
+    trackType,
+    feature,
     estEffort: String(s?.estEffort || s?.effort || "").slice(0, 40) || null,
     courseQuery: String(s?.courseQuery || s?.query || "").slice(0, 60) || null,
+    // progress diisi otomatis oleh deriveStepProgress (bukan manual).
     progress: "todo",
   };
 }
@@ -112,39 +219,51 @@ function normStep(s, i) {
 // Susun prompt & panggil LLM → rencana terstruktur (JSON). Lempar LlmError bila gagal.
 async function generateWithLlm(inputs) {
   const comp = inputs.competency;
+  // Unit DENGAN KODE agar AI bisa menautkan langkah ke unit tertentu (untuk pelacakan otomatis).
   const unitLines = comp?.units?.length
-    ? comp.units.slice(0, 24).map((x) => `• ${x.title}`).join("\n")
+    ? comp.units.slice(0, 26).map((x) => `• [${x.code}] ${x.title}`).join("\n")
     : "(belum ada — user belum memilih kompetensi SKKNI)";
   const gapLines = inputs.gaps.length
-    ? inputs.gaps.map((g) => `• ${g.name} — skor ${g.score}%, gap -${g.gap}%`).join("\n")
+    ? inputs.gaps.map((g) => `• [${g.code}] ${g.name} — skor ${g.score}%, gap -${g.gap}%`).join("\n")
     : "(belum ada hasil ujian; gunakan unit kompetensi di atas sebagai basis)";
+  const passedLines = inputs.passedUnits.length
+    ? inputs.passedUnits.map((p) => `• [${p.code}] ${p.name} (${p.score}%)`).join("\n")
+    : "(belum ada unit yang lulus)";
 
   const context =
     `PROFIL PENGGUNA:\n` +
-    `- Nama: ${inputs.user.name} · Pendidikan/status: ${inputs.user.education || inputs.user.academicStatus || "-"}\n` +
+    `- Nama: ${inputs.user.name} · Pendidikan: ${inputs.user.education || inputs.user.academicStatus || "-"} · Pengalaman: ${inputs.user.experienceYears} tahun\n` +
     `- Skill Rank SAAT INI: ${inputs.rank.currentName} (Rank ${inputs.rank.current}) → TARGET: ${inputs.rank.targetName} (Rank ${inputs.rank.target})\n` +
     `- Skor Kesiapan: ${inputs.readiness.total}/100 (CV ${inputs.readiness.cv}, Ujian ${inputs.readiness.exam}, Sertifikat ${inputs.readiness.cert}) · status ${inputs.readiness.status}\n` +
     `- PROFESI DITARGETKAN: ${inputs.user.targetRole || "(belum diisi — simpulkan dari kompetensi)"}\n` +
-    `- Tingkat kesulitan dasar yang pas untuk jenjangnya: ${inputs.baseDifficulty}\n\n` +
+    `- Tingkat kesulitan dasar yang pas: ${inputs.baseDifficulty}\n\n` +
+    `DATA CV: ${inputs.cv.hasCv ? "ADA" : "BELUM diunggah"}` +
+    (inputs.cv.hasCv ? ` · Keahlian terdeteksi: ${inputs.cv.skills.length ? inputs.cv.skills.join(", ") : "-"} · Sertifikasi: ${inputs.cv.certifications.length ? inputs.cv.certifications.join(", ") : "-"}` : "") + `\n` +
+    `AKTIVITAS BELAJAR: ${inputs.activity.classesTaken} kelas diikuti (${inputs.classes.map((c) => c.name).slice(0, 6).join(", ") || "-"}) · ${inputs.activity.unitsLearned} materi unit dipelajari · ${inputs.activity.examAttempts} percobaan ujian · ${inputs.activity.certCount} sertifikat · ${inputs.activity.evidenceCount} bukti eksternal terverifikasi\n` +
+    `BUKTI EKSTERNAL TERVERIFIKASI: ${inputs.evidence.length ? inputs.evidence.map((e) => e.title).join(", ") : "(belum ada)"}\n\n` +
     `KOMPETENSI SKKNI YANG DIPILIH: ${comp ? `${comp.title}${comp.number ? ` (${comp.number})` : ""} — ${comp.unitCount} unit` : "(belum dipilih)"}\n` +
-    `UNIT/SKILL STANDAR YANG HARUS DIKUASAI:\n${unitLines}\n\n` +
-    `KOMPETENSI YANG MASIH GAP (prioritas tutup, dari hasil ujian):\n${gapLines}\n\n` +
+    `UNIT/SKILL STANDAR (pakai KODE dalam [] untuk field unitCode):\n${unitLines}\n\n` +
+    `GAP dari hasil ujian (prioritas tutup):\n${gapLines}\n\n` +
+    `UNIT YANG SUDAH LULUS (JANGAN diulang; anggap dikuasai):\n${passedLines}\n\n` +
     `KOMPETENSI YANG SUDAH KUAT: ${inputs.strong.length ? inputs.strong.join(", ") : "(belum ada)"}`;
 
   const system = {
     role: "system",
     content:
       `Kamu perancang "Learning Path" pada platform karier TalentaAI (selaras SKKNI/KKNI Indonesia). ` +
-      `Susun rencana belajar PERSONAL, TERURUT, dan REALISTIS untuk membawa pengguna dari rank saat ini menuju profesi & rank target, ` +
-      `dengan PRIORITAS menutup gap kompetensi dari hasil ujian dan menguasai unit SKKNI yang dipilih. ` +
-      `Tingkat kesulitan tiap langkah HARUS menyesuaikan jenjang pengguna (mulai dari "${inputs.baseDifficulty}", naik bertahap). ` +
-      `Balas HANYA JSON valid (tanpa prosa, tanpa markdown) dengan bentuk PERSIS:\n` +
-      `{"aiCheck":{"verdict":"on_track|needs_work|not_ready","headline":"1 kalimat ringkas kondisi","message":"2-4 kalimat analisis kesiapan vs target + saran fokus","focus":["area fokus utama","..."]},` +
-      `"steps":[{"title":"judul langkah singkat","objective":"apa yang dikuasai setelah langkah ini","why":"kaitkan ke gap/unit/target","difficulty":"beginner|intermediate|advanced","competencyRef":"nama unit/kompetensi terkait","estEffort":"mis. 1-2 minggu","courseQuery":"kata kunci singkat cari kursus (1-3 kata, Indonesia/Inggris)"}]}\n` +
-      `Buat 4-7 langkah, urut dari fondasi ke lanjutan. Bahasa Indonesia. Jangan mengarang unit di luar konteks.`,
+      `Susun rencana belajar PERSONAL, TERURUT, dan REALISTIS dari kondisi NYATA pengguna (CV, kelas yang sudah diikuti, ujian yang diambil, unit yang lulus, keahlian) menuju profesi & rank target, ` +
+      `dengan PRIORITAS menutup gap kompetensi dan menguasai unit SKKNI yang belum lulus. JANGAN menyuruh mengulang unit yang sudah lulus. ` +
+      `Tingkat kesulitan tiap langkah menyesuaikan jenjang pengguna (mulai "${inputs.baseDifficulty}", naik bertahap). ` +
+      `Progres tiap langkah akan DILACAK OTOMATIS oleh sistem dari aktivitas user — maka setiap langkah HARUS bisa dilacak: ` +
+      `beri "trackType" & jika terkait unit tertentu isi "unitCode" PERSIS dari daftar (dalam []). ` +
+      `Balas HANYA JSON valid (tanpa prosa/markdown) dengan bentuk PERSIS:\n` +
+      `{"aiCheck":{"verdict":"on_track|needs_work|not_ready","headline":"1 kalimat kondisi","message":"2-4 kalimat analisis kesiapan vs target + saran fokus, sebut data yang dipertimbangkan","focus":["area fokus","..."]},` +
+      `"steps":[{"title":"judul singkat","objective":"hasil setelah langkah ini","why":"kaitkan ke gap/unit/CV/target","difficulty":"beginner|intermediate|advanced","competencyRef":"nama unit terkait","unitCode":"kode unit jika ada, mis. J.591200.001.01","trackType":"unit|cv|class|certificate|evidence|exam","feature":"kelas|ujian|cv|evidence|peta|mentor","estEffort":"mis. 1-2 minggu","courseQuery":"kata kunci cari kursus 1-3 kata"}]}\n` +
+      `"feature" = fitur aplikasi untuk mengerjakan langkah: "kelas" (belajar materi), "ujian" (buktikan kompetensi), "cv" (unggah CV), "evidence" (tambah bukti/sertifikasi eksternal), "peta" (cek peta posisi), "mentor" (tanya AI). ` +
+      `Buat 4-7 langkah urut fondasi→lanjutan. Bahasa Indonesia. Jangan mengarang unit di luar konteks.`,
   };
 
-  const result = await chatComplete([system, { role: "user", content: context }], { temperature: 0.5, maxTokens: 1400 });
+  const result = await chatComplete([system, { role: "user", content: context }], { temperature: 0.5, maxTokens: 1700 });
   const parsed = extractJson(result.content);
   if (!parsed || !Array.isArray(parsed.steps) || parsed.steps.length === 0) {
     throw new LlmError("Respons AI tidak dalam format rencana yang valid.", 502);
@@ -168,6 +287,17 @@ function generateFallback(inputs) {
   const base = inputs.baseDifficulty;
   const bump = (d) => DIFFICULTY[Math.min(2, DIFFICULTY.indexOf(d) + 1)];
 
+  // 0) Jika belum ada CV, langkah pertama unggah CV (dilacak otomatis).
+  if (!inputs.cv?.hasCv) {
+    steps.push({
+      title: "Lengkapi & unggah CV",
+      objective: "Unggah CV agar keahlian & pendidikanmu terbaca dan dibandingkan dengan standar SKKNI.",
+      why: "CV menyumbang skor kesiapan dan membuat rencana ini makin personal.",
+      difficulty: "beginner", competencyRef: null, unitCode: null,
+      trackType: "cv", feature: "cv", estEffort: "10 menit", courseQuery: null,
+    });
+  }
+
   // 1) Tutup gap terbesar dulu (dari hasil ujian).
   inputs.gaps.slice(0, 4).forEach((g) => {
     steps.push({
@@ -175,25 +305,28 @@ function generateFallback(inputs) {
       objective: `Naikkan skor "${g.name}" dari ${g.score}% ke minimal 60% (lulus).`,
       why: `Gap terbesar dari hasil ujian (-${g.gap}%). Menutup ini paling cepat menaikkan kesiapan & Skill Rank.`,
       difficulty: g.gap >= 40 ? base : bump(base),
-      competencyRef: g.name,
+      competencyRef: g.name, unitCode: g.code || null,
+      trackType: "unit", feature: "kelas",
       estEffort: g.gap >= 40 ? "2-3 minggu" : "1-2 minggu",
       courseQuery: g.name?.split(/\s+/).slice(0, 2).join(" "),
     });
   });
 
-  // 2) Jika gap sedikit, lanjut ke unit SKKNI yang belum diuji.
-  if (steps.length < 4 && inputs.competency?.units?.length) {
+  // 2) Jika gap sedikit, lanjut ke unit SKKNI yang belum lulus (skip yang sudah lulus).
+  if (steps.length < 5 && inputs.competency?.units?.length) {
+    const passedCodes = new Set((inputs.passedUnits || []).map((p) => p.code));
     const covered = new Set(inputs.gaps.map((g) => g.name).concat(inputs.strong));
     inputs.competency.units
-      .filter((x) => !covered.has(x.title))
-      .slice(0, 5 - steps.length)
+      .filter((x) => !covered.has(x.title) && !passedCodes.has(x.code))
+      .slice(0, 6 - steps.length)
       .forEach((x, i) => {
         steps.push({
           title: `Pelajari unit: ${x.title}`,
           objective: `Kuasai unit standar SKKNI "${x.title}" lalu ambil ujiannya.`,
           why: `Bagian dari kompetensi target "${inputs.competency.title}" yang belum kamu buktikan.`,
           difficulty: i === 0 ? base : bump(base),
-          competencyRef: x.title,
+          competencyRef: x.title, unitCode: x.code || null,
+          trackType: "unit", feature: "kelas",
           estEffort: "1-2 minggu",
           courseQuery: x.title?.split(/\s+/).slice(0, 2).join(" "),
         });
@@ -202,14 +335,25 @@ function generateFallback(inputs) {
 
   // 3) Langkah penutup: ambil ujian ulang untuk mengunci kenaikan rank.
   steps.push({
-    title: "Ambil ujian ulang & raih sertifikat",
+    title: "Ambil ujian & raih sertifikat",
     objective: `Buktikan kompetensi lewat ujian (soal diacak) untuk naik menuju ${inputs.rank.targetName}.`,
     why: "Rank & kesiapan naik dari BUKTI kompetensi (unit lulus + sertifikat), bukan sekadar belajar.",
     difficulty: bump(base),
-    competencyRef: inputs.competency?.title || null,
-    estEffort: "1 minggu",
-    courseQuery: null,
+    competencyRef: inputs.competency?.title || null, unitCode: null,
+    trackType: "exam", feature: "ujian",
+    estEffort: "1 minggu", courseQuery: null,
   });
+
+  // 4) Jika rank tercapai batas bobot, dorong bukti eksternal menuju ahli.
+  if (inputs.rank?.cappedByWeight) {
+    steps.push({
+      title: "Tambahkan bukti kompetensi eksternal",
+      objective: "Lampirkan sertifikasi resmi (BNSP/nasional), portofolio, atau pengalaman untuk menembus batas rank ujian.",
+      why: "Rank ujianmu sudah mencapai batas bobot kompetensi ini — bukti eksternal yang membuka jalan ke tingkat ahli.",
+      difficulty: "advanced", competencyRef: null, unitCode: null,
+      trackType: "evidence", feature: "evidence", estEffort: "fleksibel", courseQuery: null,
+    });
+  }
 
   const passedShare = inputs.readiness.exam;
   const verdict = inputs.readiness.total >= 80 ? "on_track" : inputs.readiness.total >= 50 ? "needs_work" : "not_ready";
@@ -252,30 +396,20 @@ export async function generatePlan(userId, targetRole) {
     create: { userId, targetRole: inputs.user.targetRole, plan: JSON.stringify(plan), source },
     update: { targetRole: inputs.user.targetRole, plan: JSON.stringify(plan), source, generatedAt: new Date() },
   });
-  return { plan, source, targetRole: inputs.user.targetRole, generatedAt: saved.generatedAt, inputs };
+  // Progres dilacak OTOMATIS dari aktivitas nyata (bukan manual).
+  const steps = await deriveStepProgress(userId, plan.steps);
+  return { plan: { ...plan, steps }, source, targetRole: inputs.user.targetRole, generatedAt: saved.generatedAt, inputs };
 }
 
-// Ambil rencana tersimpan (tanpa regenerasi). Kembalikan null bila belum ada.
+// Ambil rencana tersimpan (tanpa regenerasi). Progres selalu dihitung ULANG dari aktivitas terbaru.
 export async function getPlan(userId) {
   const row = await prisma.learningPlan.findUnique({ where: { userId } });
   const inputs = await buildInputs(userId);
   if (!row) return { plan: null, targetRole: inputs?.user.targetRole || null, inputs, llmAvailable: isLlmConfigured() };
   let plan = null;
   try { plan = JSON.parse(row.plan); } catch { /* corrupt */ }
+  if (plan?.steps) plan = { ...plan, steps: await deriveStepProgress(userId, plan.steps) };
   return { plan, source: row.source, targetRole: row.targetRole, generatedAt: row.generatedAt, inputs, llmAvailable: isLlmConfigured() };
 }
 
-// Perbarui progress satu langkah (todo|doing|done) di rencana tersimpan.
-export async function setStepProgress(userId, stepId, progress) {
-  const valid = ["todo", "doing", "done"];
-  if (!valid.includes(progress)) throw new LlmError("Progress tidak valid.", 400);
-  const row = await prisma.learningPlan.findUnique({ where: { userId } });
-  if (!row) throw new LlmError("Belum ada rencana.", 404);
-  let plan;
-  try { plan = JSON.parse(row.plan); } catch { throw new LlmError("Rencana rusak.", 500); }
-  const step = (plan.steps || []).find((s) => s.id === stepId);
-  if (!step) throw new LlmError("Langkah tidak ditemukan.", 404);
-  step.progress = progress;
-  await prisma.learningPlan.update({ where: { userId }, data: { plan: JSON.stringify(plan) } });
-  return { ok: true, stepId, progress };
-}
+// (DIHAPUS) Progres langkah tidak lagi diisi manual — dilacak otomatis oleh deriveStepProgress.

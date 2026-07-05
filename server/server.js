@@ -18,6 +18,7 @@ import jobRoutes from "./routes/jobs.js";
 import skkniRoutes from "./routes/skkni.js";
 import learningPathRoutes from "./routes/learningpath.js";
 import kelasRoutes from "./routes/kelas.js";
+import evidenceRoutes from "./routes/evidence.js";
 import { kickCatalogSyncIfEmpty } from "./skkni.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -43,6 +44,7 @@ app.use("/api/jobs",      jobRoutes);
 app.use("/api/skkni",     skkniRoutes);
 app.use("/api/learning-path", learningPathRoutes);
 app.use("/api/kelas",     kelasRoutes);
+app.use("/api/evidence",  evidenceRoutes);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 

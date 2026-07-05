@@ -22,9 +22,9 @@ function TalentPool({ jobId, onClose }) {
           <button onClick={onClose} style={{ color: "var(--text-3)" }}><X className="w-5 h-5" /></button>
         </div>
         <div className="p-4 space-y-2">
-          <p className="text-xs mb-1" style={{ color: "var(--text-4)" }}>Semua pekerja terurut kecocokan. ⭐ = menyatakan minat pada posisi ini.</p>
+          <p className="text-xs mb-1" style={{ color: "var(--text-4)" }}>Semua talenta terurut kecocokan. ⭐ = menyatakan minat pada posisi ini.</p>
           {isLoading ? <p className="text-sm text-center py-6" style={{ color: "var(--text-4)" }}>Memuat…</p>
-            : !data?.candidates?.length ? <p className="text-sm text-center py-6" style={{ color: "var(--text-4)" }}>Belum ada pekerja.</p>
+            : !data?.candidates?.length ? <p className="text-sm text-center py-6" style={{ color: "var(--text-4)" }}>Belum ada talenta.</p>
             : data.candidates.map((c) => (
               <div key={c.user.id} className="flex items-center justify-between gap-3 rounded-lg p-3" style={{ border: "1px solid var(--border)", backgroundColor: c.interested ? "rgba(245,158,11,0.06)" : "transparent" }}>
                 <div className="min-w-0">

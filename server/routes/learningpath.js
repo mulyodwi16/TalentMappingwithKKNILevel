@@ -1,7 +1,7 @@
 import express from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { LlmError } from "../llm.js";
-import { getPlan, generatePlan, setStepProgress } from "../learningpath.js";
+import { getPlan, generatePlan } from "../learningpath.js";
 
 // Learning Path AI (permintaan #4): rencana belajar personal dari hasil ujian +
 // kompetensi SKKNI yang dipilih + profesi target, plus pengecekan kesiapan oleh AI.
@@ -29,13 +29,7 @@ router.post("/generate", async (req, res) => {
   }
 });
 
-// Ubah progress satu langkah.
-router.put("/step", async (req, res) => {
-  try {
-    res.json(await setStepProgress(req.user.id, req.body?.stepId, req.body?.progress));
-  } catch (e) {
-    res.status(errStatus(e)).json({ error: e.message || "Gagal memperbarui langkah." });
-  }
-});
+// Catatan: progres langkah TIDAK lagi diisi manual — dilacak otomatis dari aktivitas
+// user (unit lulus, kelas, CV, sertifikat, bukti) di deriveStepProgress. Endpoint /step dihapus.
 
 export default router;

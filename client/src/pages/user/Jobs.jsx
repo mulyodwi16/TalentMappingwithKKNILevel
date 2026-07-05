@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Compass, MapPin, Building2, CheckCircle2, XCircle, Award, Loader2, TrendingUp, Star, BookOpen, Target } from "lucide-react";
+import {
+  Compass, MapPin, Building2, CheckCircle2, XCircle, Award, Loader2, TrendingUp,
+  BookOpen, Target, GraduationCap, PenLine, FileText, ShieldCheck, Clock, ArrowRight, Info,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../api/client.js";
 import { markMission } from "../../lib/missions.js";
@@ -13,9 +16,152 @@ function matchColor(score) {
   return "#ef4444";
 }
 
-function PositionCard({ job, onTarget, targeting }) {
-  const [open, setOpen] = useState(false);
+// Status validasi sebuah skill terhadap invariant proyek: bukti sah = LULUS UJIAN.
+const SKILL_STATUS = {
+  validated: { label: "Tervalidasi", sub: "lulus ujian", Icon: ShieldCheck, color: "#10b981", chip: "bg-emerald-500/15 text-emerald-500" },
+  claimed:   { label: "Terdeteksi CV/portofolio", sub: "menunggu validasi ujian", Icon: Clock, color: "#f59e0b", chip: "bg-amber-500/15 text-amber-500" },
+  missing:   { label: "Belum ada bukti", sub: "pelajari & buktikan", Icon: XCircle, color: "#ef4444", chip: "bg-red-500/10 text-red-400" },
+};
+
+// Form kirim CV/portofolio untuk mengklaim satu skill (AI mendeteksi indikasi bukti).
+function ClaimForm({ jobId, skill, onDone }) {
+  const [detail, setDetail] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function submit(e) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      const r = await api.post(`/jobs/${jobId}/detect-skill`, { skill, detail }, { timeout: 60_000 });
+      if (r.detected) toast.success("AI mendeteksi bukti skill ini — kini menunggu validasi ujian.");
+      else toast(r.note || "Belum ada indikasi kuat di CV/portofolio.", { icon: "🔍" });
+      onDone();
+    } catch (e2) {
+      toast.error(typeof e2 === "string" ? e2 : "Gagal memproses");
+    } finally { setBusy(false); }
+  }
+  return (
+    <form onSubmit={submit} className="mt-2 rounded-lg p-2.5 space-y-2" style={{ background: "var(--bg-raised)", border: "1px solid var(--border)" }}>
+      <p className="text-[11px]" style={{ color: "var(--text-4)" }}>
+        Ceritakan pengalaman/portofolio yang membuktikan <b style={{ color: "var(--text-2)" }}>{skill}</b> (mis. proyek, tautan, hasil kerja). AI + CV-mu akan dinilai.
+      </p>
+      <textarea value={detail} onChange={(e) => setDetail(e.target.value)} rows={2}
+        placeholder="mis. Mengedit 30+ video promosi untuk klien X, portofolio: link…"
+        className="input text-xs resize-none w-full" />
+      <button type="submit" disabled={busy} className="btn-primary text-[11px] py-1.5 px-3 w-full flex items-center justify-center gap-1.5">
+        {busy ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Menilai (AI)…</> : "Kirim untuk dideteksi AI"}
+      </button>
+    </form>
+  );
+}
+
+// Rincian langkah memenuhi sebuah posisi (level, pengalaman, tiap skill) + status validasi.
+function FulfillmentPlan({ job, onChanged }) {
   const m = job.match;
+  const [claimFor, setClaimFor] = useState(null);
+  if (!m) return null;
+  const claimNote = (skill) => (job.claims || []).find((c) => c.skill === skill)?.aiNote;
+
+  const skillRow = (skill, status) => {
+    const s = SKILL_STATUS[status];
+    return (
+      <div key={skill} className="rounded-lg p-2.5" style={{ background: "var(--bg-raised)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center gap-2 flex-wrap">
+          <s.Icon className="w-4 h-4 shrink-0" style={{ color: s.color }} />
+          <span className="text-sm font-medium" style={{ color: "var(--text-base)" }}>{skill}</span>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${s.chip}`}>{s.label}</span>
+        </div>
+        {status === "claimed" && (
+          <p className="text-[11px] mt-1 pl-6" style={{ color: "var(--text-4)" }}>
+            {claimNote(skill) || "Terindikasi dari CV/portofolio."} <b style={{ color: s.color }}>Lulus ujiannya agar kompetensi ini sah.</b>
+          </p>
+        )}
+        {status !== "validated" && (
+          <div className="flex items-center gap-2 flex-wrap mt-2 pl-6">
+            <Link to="/app/kelas" className="text-[11px] inline-flex items-center gap-1 text-brand-600 hover:underline"><GraduationCap className="w-3 h-3" /> Pelajari di Kelas</Link>
+            <Link to="/app/exam" className="text-[11px] inline-flex items-center gap-1 font-semibold text-white bg-brand-600 hover:bg-brand-700 px-2 py-0.5 rounded"><PenLine className="w-3 h-3" /> Validasi via Ujian</Link>
+            {status === "missing" && (
+              <button onClick={() => setClaimFor(claimFor === skill ? null : skill)} className="text-[11px] inline-flex items-center gap-1 hover:underline" style={{ color: "var(--text-3)" }}>
+                <FileText className="w-3 h-3" /> Kirim CV/Portofolio
+              </button>
+            )}
+          </div>
+        )}
+        {claimFor === skill && <ClaimForm jobId={job.id} skill={skill} onDone={() => { setClaimFor(null); onChanged(); }} />}
+      </div>
+    );
+  };
+
+  return (
+    <div className="mt-4 pt-4 space-y-3" style={{ borderTop: "1px solid var(--border)" }}>
+      {/* Penjelasan aturan validasi */}
+      <div className="rounded-lg p-3 text-xs flex gap-2" style={{ background: "var(--bg-raised)", color: "var(--text-3)" }}>
+        <Info className="w-4 h-4 shrink-0 text-brand-500 mt-0.5" />
+        <p>Untuk memenuhi target ini: <b>kuasai skill di Kelas</b>, lalu <b>buktikan lewat Ujian</b>. CV/portofolio bisa dideteksi AI untuk mempercepat pengenalan skill-mu — tapi kompetensi <b>hanya sah setelah lulus ujian</b> proyek ini.</p>
+      </div>
+
+      {/* Level & pengalaman */}
+      <div className="grid sm:grid-cols-2 gap-2">
+        <div className="rounded-lg p-2.5 flex items-center gap-2" style={{ background: "var(--bg-raised)" }}>
+          {m.levelOk ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <XCircle className="w-4 h-4 text-red-500" />}
+          <div className="text-xs">
+            <p style={{ color: "var(--text-base)" }}>Skill Rank {m.levelOk ? "terpenuhi" : `kurang ${m.levelGap} tier`}</p>
+            {!m.levelOk && <p style={{ color: "var(--text-4)" }}>Naik rank dengan lulus lebih banyak unit ujian & sertifikat.</p>}
+          </div>
+        </div>
+        <div className="rounded-lg p-2.5 flex items-center gap-2" style={{ background: "var(--bg-raised)" }}>
+          {m.expOk ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <XCircle className="w-4 h-4 text-amber-500" />}
+          <div className="text-xs">
+            <p style={{ color: "var(--text-base)" }}>Pengalaman {m.expOk ? "terpenuhi" : `kurang ${m.expGap} tahun`}</p>
+            {!m.expOk && <p style={{ color: "var(--text-4)" }}>Isi pengalaman di Profil / lampirkan bukti.</p>}
+          </div>
+        </div>
+      </div>
+
+      {/* Skill per status */}
+      <div>
+        <p className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: "var(--text-3)" }}>
+          <Target className="w-3.5 h-3.5 text-brand-600" /> Skill yang diminta ({(m.matchedSkills?.length || 0)}/{job.skills.length} tervalidasi)
+        </p>
+        <div className="space-y-1.5">
+          {(m.matchedSkills || []).map((s) => skillRow(s, "validated"))}
+          {(m.claimedSkills || []).map((s) => skillRow(s, "claimed"))}
+          {(m.missingSkills || []).map((s) => skillRow(s, "missing"))}
+        </div>
+      </div>
+
+      {job.modules?.length > 0 && (
+        <div className="rounded-lg p-3" style={{ background: "var(--bg-raised)" }}>
+          <p className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: "var(--text-3)" }}><BookOpen className="w-3.5 h-3.5 text-brand-600" /> Modul dari HRD:</p>
+          <ul className="space-y-1">
+            {job.modules.map((mod, i) => (
+              <li key={i} className="text-xs flex items-center gap-1.5" style={{ color: "var(--text-2)" }}>
+                <span className="text-brand-600">▸</span>
+                {mod.url ? <a href={mod.url} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">{mod.title}</a> : mod.title}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <Link to="/app/learning-path" className="text-xs text-brand-600 hover:underline inline-flex items-center gap-1">
+        Susun Learning Path untuk menutup gap ini <ArrowRight className="w-3 h-3" />
+      </Link>
+    </div>
+  );
+}
+
+function PositionCard({ job, onTarget, targeting }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  // Saat dibuka, ambil detail (match + klaim skill) yang selalu segar.
+  const { data: detail, isLoading } = useQuery({
+    queryKey: ["job", job.id],
+    queryFn: () => api.get(`/jobs/${job.id}`),
+    enabled: open,
+  });
+  const view = detail || job;
+  const m = view.match;
+
   return (
     <div className="card p-5">
       <div className="flex items-start justify-between gap-3">
@@ -37,8 +183,12 @@ function PositionCard({ job, onTarget, targeting }) {
       </div>
 
       {m && (
-        <div className={`mt-2 text-xs font-medium ${m.eligible ? "text-emerald-500" : "text-amber-600"}`}>
-          {m.eligible ? "✓ Skill-mu sudah memenuhi posisi ini" : "Belum sepenuhnya memenuhi — cek yang perlu dikejar"}
+        <div className={`mt-2 text-xs font-medium ${m.eligible ? "text-emerald-500" : m.readyToValidate ? "text-amber-500" : "text-amber-600"}`}>
+          {m.eligible
+            ? "✓ Skill tervalidasi memenuhi posisi ini"
+            : m.readyToValidate
+              ? "Skill sudah dikenali — tinggal lulus ujian untuk memvalidasi"
+              : "Belum memenuhi — buka untuk lihat langkah memenuhinya"}
         </div>
       )}
 
@@ -46,63 +196,33 @@ function PositionCard({ job, onTarget, targeting }) {
 
       <div className="flex flex-wrap gap-1.5 mt-3">
         {job.skills.map((s) => {
-          const has = m ? m.matchedSkills.includes(s) : false;
+          const validated = m?.matchedSkills?.includes(s);
+          const claimed = m?.claimedSkills?.includes(s);
+          const cls = validated ? "bg-emerald-500/15 text-emerald-500" : claimed ? "bg-amber-500/15 text-amber-500" : "bg-red-500/10 text-red-400";
           return (
-            <span key={s} className={`text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${has ? "bg-emerald-500/15 text-emerald-500" : "bg-red-500/10 text-red-400"}`}>
-              {m && (has ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />)} {s}
+            <span key={s} className={`text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${cls}`}>
+              {m && (validated ? <ShieldCheck className="w-3 h-3" /> : claimed ? <Clock className="w-3 h-3" /> : <XCircle className="w-3 h-3" />)} {s}
             </span>
           );
         })}
       </div>
 
       <div className="flex items-center gap-2 mt-4">
-        <button onClick={() => setOpen((v) => !v)} className="btn-outline text-xs py-1.5 px-3">{open ? "Tutup" : "Detail & Modul"}</button>
-        <button
-          onClick={() => onTarget(job)}
-          disabled={targeting}
-          className={`text-xs py-1.5 px-4 ml-auto rounded-xl font-medium flex items-center gap-1.5 transition-colors ${job.targeted ? "bg-brand-600 text-white" : "btn-outline"}`}
-        >
+        <button onClick={() => setOpen((v) => !v)} className="btn-outline text-xs py-1.5 px-3">{open ? "Tutup" : "Cara Memenuhi Target"}</button>
+        <button onClick={() => onTarget(job)} disabled={targeting}
+          className={`text-xs py-1.5 px-4 ml-auto rounded-xl font-medium flex items-center gap-1.5 transition-colors ${job.targeted ? "bg-brand-600 text-white" : "btn-outline"}`}>
           {targeting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : job.targeted ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Target className="w-3.5 h-3.5" />}
           {job.targeted ? "Jadi Target" : "Jadikan Target"}
         </button>
       </div>
 
-      {open && (
-        <div className="mt-4 pt-4 space-y-3 text-sm" style={{ borderTop: "1px solid var(--border)" }}>
-          {m && (
-            <>
-              <p className="flex items-center gap-2" style={{ color: "var(--text-2)" }}>
-                {m.levelOk ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <XCircle className="w-4 h-4 text-red-500" />}
-                Skill Rank {m.levelOk ? "terpenuhi" : `kurang ${m.levelGap} tier`}
-              </p>
-              <p className="flex items-center gap-2" style={{ color: "var(--text-2)" }}>
-                {m.expOk ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <XCircle className="w-4 h-4 text-red-500" />}
-                Pengalaman {m.expOk ? "terpenuhi" : `kurang ${m.expGap} tahun`}
-              </p>
-              {m.missingSkills.length > 0 && (
-                <div className="rounded-lg p-3" style={{ backgroundColor: "var(--bg-raised)" }}>
-                  <p className="text-xs font-semibold mb-1 flex items-center gap-1.5" style={{ color: "var(--text-3)" }}><TrendingUp className="w-3.5 h-3.5 text-amber-500" /> Yang perlu dikejar:</p>
-                  <p className="text-xs" style={{ color: "var(--text-2)" }}>{m.missingSkills.join(", ")}</p>
-                </div>
-              )}
-            </>
-          )}
-          {job.modules?.length > 0 && (
-            <div className="rounded-lg p-3" style={{ backgroundColor: "var(--bg-raised)" }}>
-              <p className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: "var(--text-3)" }}><BookOpen className="w-3.5 h-3.5 text-brand-600" /> Modul untuk memenuhi posisi ini (dari HRD):</p>
-              <ul className="space-y-1">
-                {job.modules.map((mod, i) => (
-                  <li key={i} className="text-xs flex items-center gap-1.5" style={{ color: "var(--text-2)" }}>
-                    <span className="text-brand-600">▸</span>
-                    {mod.url ? <a href={mod.url} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">{mod.title}</a> : mod.title}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <Link to="/app/learning-path" className="text-xs text-brand-600 hover:underline inline-flex items-center gap-1">Buka Learning Path untuk menutup gap →</Link>
+      {open && (isLoading ? (
+        <div className="mt-4 pt-4 flex items-center gap-2 text-xs" style={{ borderTop: "1px solid var(--border)", color: "var(--text-4)" }}>
+          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Memuat rincian…
         </div>
-      )}
+      ) : (
+        <FulfillmentPlan job={view} onChanged={() => { qc.invalidateQueries(["job", job.id]); qc.invalidateQueries(["jobs"]); }} />
+      ))}
     </div>
   );
 }
@@ -131,14 +251,25 @@ export default function Jobs() {
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: "var(--text-base)" }}><Compass className="w-5 h-5 text-brand-600" /> Peta Posisi & Kesiapan</h2>
-        <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>Posisi target dari HRD — cek apakah skill-mu sudah memenuhi, lihat yang perlu dikejar, dan jadikan target kariermu.</p>
+        <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>Posisi target dari HRD. Buka tiap posisi untuk melihat <b>langkah konkret memenuhinya</b> — dan ingat: kompetensi hanya <b>tervalidasi lewat ujian</b>, bukan sekadar tertulis di CV.</p>
       </div>
 
-      {/* Sertifikat & skill saya */}
+      {/* Legend status skill */}
+      <div className="card p-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+        <span className="font-semibold" style={{ color: "var(--text-3)" }}>Status skill:</span>
+        {Object.entries(SKILL_STATUS).map(([k, s]) => (
+          <span key={k} className="flex items-center gap-1.5" style={{ color: "var(--text-3)" }}>
+            <s.Icon className="w-3.5 h-3.5" style={{ color: s.color }} /> <b style={{ color: s.color }}>{s.label}</b>
+            <span style={{ color: "var(--text-4)" }}>· {s.sub}</span>
+          </span>
+        ))}
+      </div>
+
+      {/* Sertifikat saya */}
       <div className="card p-5">
-        <p className="text-sm font-bold mb-2 flex items-center gap-2" style={{ color: "var(--text-base)" }}><Award className="w-4 h-4 text-amber-500" /> Sertifikat Kompetensi Saya</p>
+        <p className="text-sm font-bold mb-2 flex items-center gap-2" style={{ color: "var(--text-base)" }}><Award className="w-4 h-4 text-amber-500" /> Sertifikat Kompetensi Saya (bukti tervalidasi)</p>
         {certs.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--text-4)" }}>Belum ada. Lulus ujian kompetensi untuk mendapatkan sertifikat yang menaikkan kesiapanmu ke posisi tertentu.</p>
+          <p className="text-sm" style={{ color: "var(--text-4)" }}>Belum ada. Lulus ujian kompetensi untuk mendapatkan sertifikat yang <b>memvalidasi</b> skill-mu ke posisi tertentu.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {certs.map((c) => (

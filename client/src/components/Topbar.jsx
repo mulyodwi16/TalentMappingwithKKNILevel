@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bell, Sun, Moon, Menu } from "lucide-react";
+import { Bell, Sun, Moon, Menu, UserCircle, LogOut, Palette, Check } from "lucide-react";
 import api from "../api/client.js";
 import useAuthStore from "../store/authStore.js";
 import CoinPill from "./CoinPill.jsx";
 import HelpButton from "./HelpButton.jsx";
+import { ACCENTS, getAccent, applyAccent } from "../lib/theme.js";
+
+const ROLE_LABEL = { user: "Talenta", hrd: "HRD", admin: "Admin" };
 
 const TITLES = {
   "/app/dashboard":       "Dashboard",
@@ -29,10 +32,15 @@ const TITLES = {
 
 export default function Topbar({ onBurger }) {
   const { pathname } = useLocation();
-  const { user } = useAuthStore();
+  const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
   const [showNotif, setShowNotif] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [accent, setAccent] = useState(getAccent);
   const [dark, setDark] = useState(() => localStorage.getItem("theme") === "dark");
   const qc = useQueryClient();
+
+  const pickAccent = (key) => { applyAccent(key); setAccent(key); };
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
@@ -54,10 +62,12 @@ export default function Topbar({ onBurger }) {
   const unread = notifs.filter((n) => !n.read).length;
 
   useEffect(() => {
-    const close = () => setShowNotif(false);
-    if (showNotif) document.addEventListener("click", close);
+    const close = () => { setShowNotif(false); setShowProfile(false); };
+    if (showNotif || showProfile) document.addEventListener("click", close);
     return () => document.removeEventListener("click", close);
-  }, [showNotif]);
+  }, [showNotif, showProfile]);
+
+  const doLogout = () => { qc.clear(); logout(); navigate("/login"); };
 
   const iconBtn = "p-2 rounded-xl transition-colors hover:bg-brand-50";
 
@@ -140,12 +150,75 @@ export default function Topbar({ onBurger }) {
         )}
       </div>
 
-      {/* Avatar */}
-      <div
-        className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-600 to-tosca-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-        title={user?.name}
-      >
-        {user?.name?.[0]?.toUpperCase() || "?"}
+      {/* Avatar + dropdown profil */}
+      <div className="relative" onClick={(e) => e.stopPropagation()}>
+        <button
+          onClick={() => { setShowProfile((v) => !v); setShowNotif(false); }}
+          className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-600 to-tosca-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0 hover:ring-2 hover:ring-brand-400/50 transition-shadow"
+          title={user?.name}
+          aria-label="Menu profil"
+        >
+          {user?.name?.[0]?.toUpperCase() || "?"}
+        </button>
+
+        {showProfile && (
+          <div className="absolute right-0 top-12 w-64 card z-50 overflow-hidden" style={{ padding: 0 }}>
+            {/* Identitas */}
+            <div className="px-4 py-3 flex items-center gap-3" style={{ borderBottom: "1px solid var(--border)" }}>
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-600 to-tosca-500 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
+                {user?.name?.[0]?.toUpperCase() || "?"}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold truncate" style={{ color: "var(--text-base)" }}>{user?.name}</p>
+                <p className="text-xs text-brand-600">{ROLE_LABEL[user?.role] || user?.role}</p>
+              </div>
+            </div>
+
+            {/* Menu */}
+            <div className="py-1">
+              <Link
+                to="/app/profile"
+                onClick={() => setShowProfile(false)}
+                className="flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-brand-50 transition-colors"
+                style={{ color: "var(--text-2)" }}
+              >
+                <UserCircle size={16} /> Profil Saya
+              </Link>
+            </div>
+
+            {/* Kustomisasi warna aksen */}
+            <div className="px-4 py-3" style={{ borderTop: "1px solid var(--border)" }}>
+              <p className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: "var(--text-3)" }}>
+                <Palette size={13} /> Warna Tampilan
+              </p>
+              <div className="flex items-center gap-2">
+                {ACCENTS.map((a) => (
+                  <button
+                    key={a.key}
+                    onClick={() => pickAccent(a.key)}
+                    title={a.label}
+                    className="w-6 h-6 rounded-full flex items-center justify-center transition-transform hover:scale-110"
+                    style={{ background: a.color, outline: accent === a.key ? "2px solid var(--text-base)" : "none", outlineOffset: "1px" }}
+                    aria-label={`Warna ${a.label}`}
+                  >
+                    {accent === a.key && <Check size={13} className="text-white" strokeWidth={3} />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Logout */}
+            <div className="py-1" style={{ borderTop: "1px solid var(--border)" }}>
+              <button
+                onClick={doLogout}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-red-50 hover:text-red-500 transition-colors"
+                style={{ color: "var(--text-3)" }}
+              >
+                <LogOut size={16} /> Keluar
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </header>
   );

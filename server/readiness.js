@@ -8,10 +8,11 @@ import { prisma } from "./prisma.js";
 export const READINESS_WEIGHTS = { cv: 25, exam: 60, cert: 15 };
 
 export async function computeReadiness(userId) {
-  const [u, assess, certCount] = await Promise.all([
+  const [u, assess, certCount, evidenceCount] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId } }),
     prisma.skillAssessment.findMany({ where: { userId } }),
     prisma.certificate.count({ where: { userId } }),
+    prisma.externalEvidence.count({ where: { userId, status: "verified" } }).catch(() => 0),
   ]);
   if (!u) return { total: 0, cv: 0, exam: 0, cert: 0, assessed: 0, passed: 0, certCount: 0 };
 
@@ -23,11 +24,12 @@ export async function computeReadiness(userId) {
   const passed = assess.filter((a) => a.currentScore >= 60).length;
   const exam = assess.length ? Math.round(READINESS_WEIGHTS.exam * (passed / assess.length)) : 0;
 
-  const cert = Math.min(READINESS_WEIGHTS.cert, certCount * 5);
+  // Bonus: sertifikat ujian + bukti eksternal terverifikasi (poin plus).
+  const cert = Math.min(READINESS_WEIGHTS.cert, (certCount + evidenceCount) * 5);
 
   const total = Math.min(100, cv + exam + cert);
   const status = total >= 80 ? "ready" : total >= 50 ? "in_progress" : "not_ready";
-  return { total, cv, exam, cert, status, assessed: assess.length, passed, certCount };
+  return { total, cv, exam, cert, status, assessed: assess.length, passed, certCount, evidenceCount };
 }
 
 // Hitung ulang & simpan ke user.readinessScore + status. Panggil setelah CV/ujian/sertifikat berubah.

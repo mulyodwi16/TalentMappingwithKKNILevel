@@ -2,6 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Warna aksen (brand/tosca) sebagai RGB triplet — bisa diganti runtime ────── */
+/* Default = Indigo. Preset lain di-set via html[data-accent="..."] di bawah. */
+:root {
+  --brand-50: 238 242 255;  --brand-100: 224 231 255; --brand-200: 199 210 254;
+  --brand-400: 129 140 248; --brand-500: 99 102 241;  --brand-600: 79 70 229;  --brand-700: 67 56 202;
+  --tosca-500: 139 92 246;  --tosca-600: 124 58 237;
+}
+html[data-accent="emerald"] {
+  --brand-50: 236 253 245;  --brand-100: 209 250 229; --brand-200: 167 243 208;
+  --brand-400: 52 211 153;  --brand-500: 16 185 129;  --brand-600: 5 150 105;  --brand-700: 4 120 87;
+  --tosca-500: 20 184 166;  --tosca-600: 13 148 136;
+}
+html[data-accent="rose"] {
+  --brand-50: 255 241 242;  --brand-100: 255 228 230; --brand-200: 254 205 211;
+  --brand-400: 251 113 133; --brand-500: 244 63 94;   --brand-600: 225 29 72;  --brand-700: 190 18 60;
+  --tosca-500: 236 72 153;  --tosca-600: 219 39 119;
+}
+html[data-accent="amber"] {
+  --brand-50: 255 251 235;  --brand-100: 254 243 199; --brand-200: 253 230 138;
+  --brand-400: 251 191 36;  --brand-500: 245 158 11;  --brand-600: 217 119 6;  --brand-700: 180 83 9;
+  --tosca-500: 249 115 22;  --tosca-600: 234 88 12;
+}
+html[data-accent="sky"] {
+  --brand-50: 240 249 255;  --brand-100: 224 242 254; --brand-200: 186 230 253;
+  --brand-400: 56 189 248;  --brand-500: 14 165 233;  --brand-600: 2 132 199;  --brand-700: 3 105 161;
+  --tosca-500: 99 102 241;  --tosca-600: 79 70 229;
+}
+
 /* ── CSS Variables ─────────────────────────────────────────────────────────── */
 :root {
   --bg-page:    #f5f7ff;
@@ -117,6 +145,47 @@ html.dark {
 .page-enter {
   animation: page-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+
+/* ── Rank showcase (ala main-menu ranked game) ─────────────────────────────── */
+@keyframes rank-float   { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes rank-spin    { to { transform: rotate(360deg); } }
+@keyframes rank-shimmer { 0% { transform: translateX(-120%); } 60%,100% { transform: translateX(320%); } }
+@keyframes rank-glow    { 0%,100% { opacity: 0.55; } 50% { opacity: 0.9; } }
+.rank-emblem   { animation: rank-float 5s ease-in-out infinite; will-change: transform; }
+.rank-rays     { animation: rank-spin 48s linear infinite; transform-origin: center; will-change: transform; }
+.rank-glow     { animation: rank-glow 4s ease-in-out infinite; }
+.rank-lp-sheen { animation: rank-shimmer 2.6s ease-in-out infinite; }
+
+/* ── Rank-up celebration overlay ───────────────────────────────────────────── */
+@keyframes rankup-backdrop { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rankup-emblem {
+  0%   { transform: scale(0.2) rotate(-18deg); opacity: 0; }
+  55%  { transform: scale(1.14) rotate(4deg);  opacity: 1; }
+  75%  { transform: scale(0.97) rotate(0deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+@keyframes rankup-burst  { from { transform: scale(0.3); opacity: 0.9; } to { transform: scale(2.4); opacity: 0; } }
+@keyframes rankup-text   { 0% { opacity: 0; transform: translateY(14px); } 100% { opacity: 1; transform: translateY(0); } }
+@keyframes rankup-conf   { 0% { transform: translateY(-10vh) rotate(0); opacity: 1; } 100% { transform: translateY(112vh) rotate(720deg); opacity: 0.9; } }
+.rankup-backdrop { animation: rankup-backdrop 0.4s ease both; }
+.rankup-emblem   { animation: rankup-emblem 1.1s cubic-bezier(0.16,1,0.3,1) both; }
+.rankup-burst    { animation: rankup-burst 1.2s ease-out forwards; }
+.rankup-text     { animation: rankup-text 0.6s ease both; }
+.rankup-conf     { animation: rankup-conf linear forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rank-emblem, .rank-rays, .rank-glow, .rank-lp-sheen,
+  .rankup-emblem, .rankup-burst, .rankup-conf { animation: none !important; }
+}
+
+/* RankHero/RankUpOverlay = panel gelap dramatis disengaja (ala main-menu game).
+   Kebal terhadap light-mode override agar teks terang tetap terbaca di atas panel gelap.
+   Specificity dibuat lebih tinggi dari aturan override di bawah (html:not(.dark) .app-root …). */
+html:not(.dark) .app-root .rank-dark .text-white     { color: #ffffff !important; }
+html:not(.dark) .app-root .rank-dark .text-slate-200 { color: #e2e8f0 !important; }
+html:not(.dark) .app-root .rank-dark .text-slate-300 { color: #cbd5e1 !important; }
+html:not(.dark) .app-root .rank-dark .text-slate-400 { color: #94a3b8 !important; }
+html:not(.dark) .app-root .rank-dark .text-slate-500 { color: #64748b !important; }
 
 /* ── Responsive ────────────────────────────────────────────────────────────── */
 @media (max-width: 480px) {

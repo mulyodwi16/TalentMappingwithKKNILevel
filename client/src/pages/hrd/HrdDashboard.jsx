@@ -5,6 +5,7 @@ import {
   PieChart, Pie, Cell, Legend,
 } from "recharts";
 import toast from "react-hot-toast";
+import { X, Award, ClipboardCheck, Target } from "lucide-react";
 import api from "../../api/client.js";
 import RankBadge from "../../components/RankBadge.jsx";
 import { rankName } from "../../lib/rank.js";
@@ -26,10 +27,95 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
+// ── Detail 1 talenta: kompetensi + bukti dari ujian (unit lulus, sertifikat, riwayat) ──
+function WorkerDetailModal({ id, onClose }) {
+  const { data, isLoading } = useQuery({ queryKey: ["hrd-worker", id], queryFn: () => api.get(`/hrd/worker/${id}`) });
+  const w = data?.worker;
+  const passed = data?.assessments?.filter((a) => a.passed).length || 0;
+  const total = data?.assessments?.length || 0;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6" style={{ background: "rgba(0,0,0,0.6)" }} onClick={onClose}>
+      <div className="w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col shadow-2xl" style={{ background: "var(--bg-surface)", maxHeight: "90vh" }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between gap-3 p-4 border-b" style={{ borderColor: "var(--border)" }}>
+          <div className="min-w-0">
+            <p className="text-base font-bold truncate" style={{ color: "var(--text-base)" }}>{w?.name || "Memuat…"}</p>
+            {w && <p className="text-xs" style={{ color: "var(--text-4)" }}>{w.email} · {w.academicStatus || w.education || "-"}</p>}
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg shrink-0 hover:bg-[var(--bg-muted)]" style={{ color: "var(--text-3)" }}><X className="w-4 h-4" /></button>
+        </div>
+
+        <div className="p-4 space-y-4 overflow-y-auto">
+          {isLoading ? (
+            <p className="text-sm text-center py-8" style={{ color: "var(--text-4)" }}>Memuat detail…</p>
+          ) : (
+            <>
+              {/* Ringkas */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="rounded-xl p-3 text-center" style={{ background: "var(--bg-raised)" }}>
+                  <div className="flex justify-center mb-1">{w?.currentKkniLevel ? <RankBadge level={w.currentKkniLevel} /> : <span style={{ color: "var(--text-4)" }}>—</span>}</div>
+                  <p className="text-[11px]" style={{ color: "var(--text-4)" }}>Skill Rank</p>
+                </div>
+                <div className="rounded-xl p-3 text-center" style={{ background: "var(--bg-raised)" }}>
+                  <p className="text-xl font-black" style={{ color: "var(--text-base)" }}>{passed}/{total}</p>
+                  <p className="text-[11px]" style={{ color: "var(--text-4)" }}>Unit lulus</p>
+                </div>
+                <div className="rounded-xl p-3 text-center" style={{ background: "var(--bg-raised)" }}>
+                  <p className="text-xl font-black text-emerald-500">{data?.certificates?.length || 0}</p>
+                  <p className="text-[11px]" style={{ color: "var(--text-4)" }}>Sertifikat</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-sm">
+                <Target className="w-4 h-4 text-brand-500" />
+                <span style={{ color: "var(--text-3)" }}>Kompetensi:</span>
+                <span className="font-semibold" style={{ color: "var(--text-base)" }}>{data?.competency?.title || "Belum dipilih"}</span>
+              </div>
+
+              {/* Penilaian per unit (dari ujian) */}
+              <div>
+                <p className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: "var(--text-3)" }}><ClipboardCheck className="w-3.5 h-3.5" /> Penilaian Unit (hasil ujian)</p>
+                {total === 0 ? (
+                  <p className="text-xs" style={{ color: "var(--text-4)" }}>Belum ada hasil ujian.</p>
+                ) : (
+                  <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                    {data.assessments.map((a) => (
+                      <div key={a.code}>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="truncate pr-2" style={{ color: "var(--text-2)" }}>{a.name}</span>
+                          <span className={a.passed ? "text-emerald-500" : "text-red-400"}>{a.score}% {a.passed ? "✓" : ""}</span>
+                        </div>
+                        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--bg-muted)" }}>
+                          <div className={`h-full rounded-full ${a.passed ? "bg-emerald-500" : "bg-red-500"}`} style={{ width: `${a.score}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Sertifikat */}
+              {data?.certificates?.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: "var(--text-3)" }}><Award className="w-3.5 h-3.5 text-emerald-500" /> Sertifikat ({data.certificates.length})</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {data.certificates.map((c) => (
+                      <span key={c.id} className="text-[11px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 rounded-lg px-2 py-0.5">{c.name} · {c.score}%</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function HrdDashboard() {
-  const { user } = useAuthStore();
   const [filters, setFilters] = useState({ status: "", department: "", level: "" });
   const [showRequest, setShowRequest] = useState(false);
+  const [detailId, setDetailId] = useState(null);
   const [reqForm, setReqForm] = useState({ type: "buka_ujian_ulang", payload: "" });
 
   const { data: workers = [], isLoading } = useQuery({
@@ -53,22 +139,18 @@ export default function HrdDashboard() {
 
   const exportExcel = async () => {
     try {
-      const res = await fetch("/api/hrd/export/excel", {
-        headers: { Authorization: `Bearer ${useAuthStore.getState().token}` },
-      });
+      const res = await fetch("/api/hrd/export/excel", { headers: { Authorization: `Bearer ${useAuthStore.getState().token}` } });
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url; a.download = "talent-mapping.xlsx"; a.click();
       URL.revokeObjectURL(url);
       toast.success("File diunduh");
-    } catch {
-      toast.error("Gagal ekspor");
-    }
+    } catch { toast.error("Gagal ekspor"); }
   };
 
   const levelData = Object.entries(analytics?.levelDistribution || {})
-    .map(([level, count]) => ({ level: `Level ${level}`, count }))
+    .map(([level, count]) => ({ level: rankName(Number(level)), count }))
     .sort((a, b) => a.level.localeCompare(b.level));
 
   const statusPie = Object.entries(analytics?.statusCounts || {}).map(([k, v]) => ({
@@ -80,9 +162,9 @@ export default function HrdDashboard() {
       {/* Stats */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Pekerja", value: analytics?.total || 0, color: "text-white" },
+          { label: "Total Talenta", value: analytics?.total || 0, color: "text-white" },
           { label: "Siap Naik", value: analytics?.statusCounts?.ready || 0, color: "text-emerald-400" },
-          { label: "Dalam Proses", value: analytics?.statusCounts?.in_progress || 0, color: "text-amber-400" },
+          { label: "Sertifikat Terbit", value: analytics?.totalCertificates || 0, color: "text-amber-400" },
           { label: "Rata-rata Readiness", value: `${analytics?.avgReadiness || 0}%`, color: "text-brand-400" },
         ].map((s) => (
           <div key={s.label} className="card p-5 text-center">
@@ -99,7 +181,7 @@ export default function HrdDashboard() {
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={levelData}>
               <XAxis dataKey="level" tick={{ fill: "#94a3b8", fontSize: 11 }} />
-              <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} />
+              <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} allowDecimals={false} />
               <Tooltip content={<CustomTooltip />} />
               <Bar dataKey="count" fill="#2563eb" radius={[6, 6, 0, 0]} name="Jumlah" />
             </BarChart>
@@ -120,19 +202,16 @@ export default function HrdDashboard() {
         </div>
       </div>
 
-      {/* Workers table */}
+      {/* Talent table */}
       <div className="card p-6">
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <h3 className="font-semibold text-white flex-1">Daftar Pekerja</h3>
+          <h3 className="font-semibold text-white flex-1">Daftar Talenta</h3>
           <div className="flex gap-2 flex-wrap">
-            {/* Filters */}
             <select className="input text-sm py-1.5 w-auto" value={filters.status}
               onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}>
               <option value="">Semua Status</option>
               {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
             </select>
-            <input className="input text-sm py-1.5 w-32" placeholder="Departemen"
-              value={filters.department} onChange={(e) => setFilters((f) => ({ ...f, department: e.target.value }))} />
             <select className="input text-sm py-1.5 w-auto" value={filters.level}
               onChange={(e) => setFilters((f) => ({ ...f, level: e.target.value }))}>
               <option value="">Semua Rank</option>
@@ -149,7 +228,7 @@ export default function HrdDashboard() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-700">
-                {["Nama", "Email", "Departemen", "Pendidikan", "Rank", "Readiness", "Status"].map((h) => (
+                {["Nama", "Kompetensi", "Rank", "Unit Lulus", "Sertifikat", "Readiness", "Status"].map((h) => (
                   <th key={h} className="text-left text-xs font-semibold text-slate-500 pb-2 pr-4">{h}</th>
                 ))}
               </tr>
@@ -162,15 +241,18 @@ export default function HrdDashboard() {
               ) : workers.map((w) => {
                 const sc = STATUS_CONFIG[w.status] || STATUS_CONFIG.not_ready;
                 return (
-                  <tr key={w.id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="py-3 pr-4 font-medium text-white">{w.name}</td>
-                    <td className="py-3 pr-4 text-slate-400">{w.email}</td>
-                    <td className="py-3 pr-4 text-slate-400">{w.department || "—"}</td>
-                    <td className="py-3 pr-4 text-slate-400">{w.education || "—"}</td>
+                  <tr key={w.id} onClick={() => setDetailId(w.id)} className="hover:bg-slate-800/30 transition-colors cursor-pointer">
                     <td className="py-3 pr-4">
-                      {w.currentKkniLevel ? (
-                        <RankBadge level={w.currentKkniLevel} />
-                      ) : <span className="text-slate-600">—</span>}
+                      <p className="font-medium text-white">{w.name}</p>
+                      <p className="text-xs text-slate-500">{w.email}</p>
+                    </td>
+                    <td className="py-3 pr-4 text-slate-300">{w.chosenSkkniTitle || <span className="text-slate-600">—</span>}</td>
+                    <td className="py-3 pr-4">{w.currentKkniLevel ? <RankBadge level={w.currentKkniLevel} /> : <span className="text-slate-600">—</span>}</td>
+                    <td className="py-3 pr-4 text-slate-300">
+                      {w.assessedUnits ? <span><b className="text-emerald-400">{w.passedUnits}</b>/{w.assessedUnits}</span> : <span className="text-slate-600">—</span>}
+                    </td>
+                    <td className="py-3 pr-4">
+                      {w.certCount ? <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded px-1.5 py-0.5">{w.certCount}</span> : <span className="text-slate-600">—</span>}
                     </td>
                     <td className="py-3 pr-4">
                       <div className="flex items-center gap-2">
@@ -187,7 +269,10 @@ export default function HrdDashboard() {
             </tbody>
           </table>
         </div>
+        <p className="text-xs text-slate-500 mt-3">Klik baris talenta untuk melihat detail kompetensi, unit lulus, & sertifikat dari hasil ujian.</p>
       </div>
+
+      {detailId && <WorkerDetailModal id={detailId} onClose={() => setDetailId(null)} />}
 
       {/* Request modal */}
       {showRequest && (
@@ -206,12 +291,8 @@ export default function HrdDashboard() {
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-300 mb-1.5 block">Keterangan</label>
-                <textarea
-                  className="input h-24 resize-none"
-                  placeholder="Detail request Anda…"
-                  value={reqForm.payload}
-                  onChange={(e) => setReqForm((f) => ({ ...f, payload: e.target.value }))}
-                />
+                <textarea className="input h-24 resize-none" placeholder="Detail request Anda…"
+                  value={reqForm.payload} onChange={(e) => setReqForm((f) => ({ ...f, payload: e.target.value }))} />
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setShowRequest(false)} className="btn-outline flex-1">Batal</button>

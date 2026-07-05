@@ -11,7 +11,7 @@
 //   GET /documents?page=N        → daftar dokumen SKKNI (50/hal, 25 hal ≈ 1.250 dok) → katalog
 //   GET /documents/{id}          → detail dokumen + array `units` (unit kompetensi = "skill")
 import { prisma } from "./prisma.js";
-import { chatComplete } from "./llm.js";
+import { chatComplete, isLlmConfigured } from "./llm.js";
 
 const BASE = "https://skkni-api.kemnaker.go.id/v1/public";
 const MIN_GAP_MS = 70_000;   // jarak minimal antar request keluar (window per-IP nyatanya > 60dtk)
@@ -421,26 +421,40 @@ export async function ensureUnitCourse(docId, unit) {
   });
 }
 
-// Soal PG untuk SATU unit — jumlah VARIATIF (UNIT_Q_MIN..UNIT_Q_MAX) sesuai keluasan unit,
-// berbasis kasus kerja nyata (bukan pertanyaan umum).
+// Paket soal 1 unit — 3 TIPE (validasi mendalam, bukan sekadar keberuntungan #6):
+//  • "mc"          pilihan ganda (pengetahuan)
+//  • "situational" studi kasus situasional (AI menilai penalaran vs keyPoints)
+//  • "steporder"   urutan/tahapan mengerjakan (AI menilai efisiensi vs idealSteps)
+// Total 10-15 soal, semua berbasis kasus kerja nyata.
 async function generateSingleUnitExam(compTitle, unit) {
   const prompt =
-    `Anda penyusun uji kompetensi berbasis SKKNI. Kompetensi/profesi: "${compTitle}". ` +
-    `Buat soal pilihan ganda untuk MENGUJI penguasaan SATU unit: "${unit.title}" (kode ${unit.code}). ` +
-    `Jumlah soal MENYESUAIKAN keluasan unit: antara ${UNIT_Q_MIN} sampai ${UNIT_Q_MAX} soal ` +
-    `(unit sederhana lebih sedikit, unit kompleks lebih banyak). ` +
-    `Soal harus SPESIFIK & berbasis KASUS/PRAKTIK di tempat kerja nyata, bukan definisi umum. ` +
-    `Tiap soal: 4 opsi, satu benar (answerKey indeks 0-3). ` +
-    `Balas HANYA JSON array valid: [{"q":"...","options":["..","..","..",".."],"answerKey":0}]`;
-  const r = await chatComplete([{ role: "user", content: prompt }], { temperature: 0.6, maxTokens: 320 * UNIT_Q_MAX + 400 });
+    `Anda penyusun UJI KOMPETENSI berbasis SKKNI. Kompetensi/profesi: "${compTitle}". ` +
+    `Buat PAKET soal untuk menguji penguasaan SATU unit: "${unit.title}" (kode ${unit.code}). ` +
+    `TOTAL 10-15 soal, campuran 3 tipe, SEMUA berbasis kasus kerja nyata (bukan definisi umum):\n` +
+    `1) type "mc" (6-9 soal): pilihan ganda, 4 opsi, satu benar (answerKey 0-3).\n` +
+    `2) type "situational" (2-4 soal): studi kasus situasional ala pertanyaan HRD saat wawancara ` +
+    `(mis. konflik rekan kerja, deadline mepet, sumber daya terbatas, revisi klien). Sertakan "keyPoints": 3-5 poin jawaban ideal.\n` +
+    `3) type "steporder" (1-2 soal): minta user menjelaskan TAHAPAN mengerjakan sesuatu secara paling efisien. Sertakan "idealSteps": urutan langkah ideal (array).\n` +
+    `Balas HANYA JSON array valid; tiap elemen SALAH SATU bentuk:\n` +
+    `{"type":"mc","q":"...","options":["..","..","..",".."],"answerKey":0}\n` +
+    `{"type":"situational","q":"...","keyPoints":["..",".."]}\n` +
+    `{"type":"steporder","q":"...","idealSteps":["..",".."]}`;
+  const r = await chatComplete([{ role: "user", content: prompt }], { temperature: 0.6, maxTokens: 4000 });
   const text = r.content || "";
   const m = text.match(/\[[\s\S]*\]/);
   const arr = JSON.parse(m ? m[0] : text);
-  const cleaned = arr
-    .filter((q) => q && typeof q.q === "string" && Array.isArray(q.options) && q.options.length >= 2)
-    .map((q) => ({ q: q.q, options: q.options.slice(0, 4), answerKey: Math.max(0, Math.min(3, Number(q.answerKey) || 0)) }));
-  // Klamp jumlah ke rentang wajar (jaga bila AI berlebihan/kurang).
-  return cleaned.slice(0, Math.max(UNIT_Q_MIN, Math.min(UNIT_Q_MAX + 2, cleaned.length)));
+  const cleaned = [];
+  for (const q of arr) {
+    if (!q || typeof q.q !== "string") continue;
+    if (q.type === "situational") {
+      cleaned.push({ type: "situational", q: q.q, keyPoints: Array.isArray(q.keyPoints) ? q.keyPoints.slice(0, 6).map((x) => String(x).slice(0, 200)) : [] });
+    } else if (q.type === "steporder") {
+      cleaned.push({ type: "steporder", q: q.q, idealSteps: Array.isArray(q.idealSteps) ? q.idealSteps.slice(0, 12).map((x) => String(x).slice(0, 160)) : [] });
+    } else if (Array.isArray(q.options) && q.options.length >= 2) {
+      cleaned.push({ type: "mc", q: q.q, options: q.options.slice(0, 4), answerKey: Math.max(0, Math.min(3, Number(q.answerKey) || 0)) });
+    }
+  }
+  return cleaned.slice(0, 16);
 }
 
 // Ambil/generate paket soal 1 unit (cache di UnitExamPackage). Butuh LLM untuk generate.
@@ -455,14 +469,44 @@ export async function ensureUnitExamPackage(docId, unit) {
   });
 }
 
-// Instance ujian 1 unit: acak urutan soal + opsi, answerKey menyesuaikan.
+// Instance ujian 1 unit: acak urutan soal; untuk MC acak opsi & sesuaikan answerKey.
+// Soal isian/urutan diteruskan apa adanya (menyertakan referensi penilaian, server-side).
 export function buildUnitExamInstance(pkg) {
   const base = JSON.parse(pkg.questions);
   return shuffle(base).map((q) => {
+    if ((q.type || "mc") !== "mc") return q;
     const opts = q.options.map((text, idx) => ({ text, correct: idx === q.answerKey }));
     const s = shuffle(opts);
-    return { q: q.q, options: s.map((o) => o.text), answerKey: s.findIndex((o) => o.correct) };
+    return { type: "mc", q: q.q, options: s.map((o) => o.text), answerKey: s.findIndex((o) => o.correct) };
   });
+}
+
+// Penilaian AI untuk jawaban bebas (situational/steporder) → skor 0-100 + feedback per soal.
+// items: [{ index, type, q, answer, keyPoints?, idealSteps? }]
+export async function gradeFreeText(unitTitle, items) {
+  if (!items.length) return {};
+  if (!isLlmConfigured()) {
+    const out = {};
+    for (const it of items) out[it.index] = { score: (it.answer || "").trim().length >= 25 ? 60 : 0, feedback: "Dinilai otomatis (AI nonaktif)." };
+    return out;
+  }
+  const list = items.map((it) => {
+    const ref = it.type === "steporder"
+      ? `Urutan langkah ideal (acuan): ${(it.idealSteps || []).join(" → ")}`
+      : `Poin kunci jawaban ideal (acuan): ${(it.keyPoints || []).join("; ")}`;
+    return `SOAL #${it.index} [${it.type}]: ${it.q}\n${ref}\nJAWABAN USER: ${(it.answer || "(kosong)").slice(0, 1200)}`;
+  }).join("\n\n");
+  const prompt =
+    `Kamu penilai uji kompetensi unit "${unitTitle}". Nilai TIAP jawaban user (skor 0-100) berdasar ` +
+    `relevansi, ketepatan, kelengkapan penalaran, dan (untuk steporder) efisiensi & urutan logis dibanding acuan. ` +
+    `Jawaban kosong/asal = 0-20; sebagian benar = 40-70; sangat baik = 80-100. Feedback singkat & konstruktif (Bahasa Indonesia).\n\n${list}\n\n` +
+    `Balas HANYA JSON array: [{"index":<n>,"score":0-100,"feedback":"<=1 kalimat"}]`;
+  const r = await chatComplete([{ role: "user", content: prompt }], { temperature: 0.2, maxTokens: 250 * items.length + 500 });
+  const m = (r.content || "").match(/\[[\s\S]*\]/);
+  const arr = JSON.parse(m ? m[0] : r.content);
+  const out = {};
+  for (const o of arr) out[Number(o.index)] = { score: Math.max(0, Math.min(100, Number(o.score) || 0)), feedback: String(o.feedback || "").slice(0, 240) };
+  return out;
 }
 
 // Status semua unit dari kompetensi terpilih: urut + gating berjenjang.
@@ -508,3 +552,58 @@ export async function unitStates(userId, docId) {
     };
   });
 }
+
+// ══ BOBOT KOMPETENSI → CAP RANK ══════════════════════════════════════════════
+// Tiap kompetensi punya "berat" berbeda: petani ≠ ahli pertanian. Bobot menentukan
+// rank MAKSIMAL yang bisa diraih dari lulus ujian kita (cegah overcapacity). Untuk
+// melampaui butuh bukti eksternal terverifikasi. Di-klasifikasi AI (cache), fallback heuristik.
+const RANK_NAMES = ["", "Bronze", "Silver", "Gold", "Platinum", "Emerald", "Diamond", "Master", "Grandmaster", "Legend"];
+
+function heuristicWeight(title, unitTitles) {
+  const text = `${title} ${unitTitles.join(" ")}`.toLowerCase();
+  const advanced = /(ahli|spesialis|lanjut|advanced|arsitek|analis|manajer|manajerial|konsultan|desain sistem|machine learning|kecerdasan buatan|forensik|auditor|perancang|master)/.test(text);
+  const basic = /(dasar|operator|pengoperasian|pemula|entry|membersihkan|merapikan|dokumentasi dasar|asisten|pembantu)/.test(text);
+  const n = unitTitles.length;
+  const maxRank = advanced ? 8 : basic ? 5 : (n > 20 ? 7 : 6);
+  return { maxRank, tier: advanced ? "Ahli" : basic ? "Operasional" : "Teknis", reason: "Perkiraan otomatis dari cakupan & kata kunci unit." };
+}
+
+async function classifyWeightLlm(title, unitTitles) {
+  const list = unitTitles.slice(0, 24).map((t) => `• ${t}`).join("\n");
+  const prompt =
+    `Nilai TINGKAT KESULITAN/BOBOT kompetensi SKKNI berikut untuk menentukan RANK MAKSIMAL yang pantas ` +
+    `bila seseorang menguasai SELURUH unitnya lewat ujian standar.\n` +
+    `Skala rank (9 tier): 3 Gold, 4 Platinum, 5 Emerald, 6 Diamond, 7 Master, 8 Grandmaster, 9 Legend.\n` +
+    `Pedoman: kompetensi OPERASIONAL/dasar (mis. editing video dasar, entri data) → maks 5-6. ` +
+    `TEKNIS/menengah → 6-7. SPESIALIS/AHLI (mis. CG/VFX lanjutan, machine learning, bedah, arsitektur sistem) → 8-9.\n` +
+    `Kompetensi: "${title}"\nUnit:\n${list}\n\n` +
+    `Balas HANYA JSON: {"maxRank":<5-9>,"tier":"Operasional|Teknis|Spesialis|Ahli","reason":"<=1 kalimat singkat kenapa"}`;
+  const r = await chatComplete([{ role: "user", content: prompt }], { temperature: 0.2, maxTokens: 200 });
+  const m = (r.content || "").match(/\{[\s\S]*\}/);
+  const o = JSON.parse(m ? m[0] : r.content);
+  return {
+    maxRank: Math.max(5, Math.min(9, Number(o.maxRank) || 6)),
+    tier: String(o.tier || "Teknis").slice(0, 24),
+    reason: String(o.reason || "").slice(0, 240),
+  };
+}
+
+// Ambil/hitung bobot kompetensi (cache di SkkniDocument). Aman dipanggil berkali-kali.
+export async function ensureCompetencyWeight(docId) {
+  const doc = await prisma.skkniDocument.findUnique({
+    where: { id: docId }, include: { units: { orderBy: { code: "asc" }, take: 24, select: { title: true } } },
+  });
+  if (!doc) return null;
+  if (doc.weightMaxRank) return doc;
+  const unitTitles = doc.units.map((u) => u.title);
+  if (!unitTitles.length) return doc; // unit belum ter-cache — tunda
+  let w;
+  try { w = isLlmConfigured() ? await classifyWeightLlm(doc.title, unitTitles) : heuristicWeight(doc.title, unitTitles); }
+  catch (e) { console.warn("[skkni] weight LLM gagal, heuristik:", e.message); w = heuristicWeight(doc.title, unitTitles); }
+  return prisma.skkniDocument.update({
+    where: { id: docId },
+    data: { weightMaxRank: w.maxRank, weightTier: w.tier, weightReason: w.reason },
+  });
+}
+
+export function rankNameOf(level) { return RANK_NAMES[level] || "Unranked"; }

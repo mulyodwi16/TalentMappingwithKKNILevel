@@ -8,11 +8,31 @@ import {
 import api from "../../api/client.js";
 import useAuthStore from "../../store/authStore.js";
 import RankBadge from "../../components/RankBadge.jsx";
-import RankIcon from "../../components/RankIcon.jsx";
+import RankHero from "../../components/RankHero.jsx";
 import CertificateModal from "../../components/CertificateModal.jsx";
 import { RANKS, rankName, rankOf } from "../../lib/rank.js";
 
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "—");
+
+// Resize gambar ke maks `size` px (kotak, cover) → data URI JPEG kecil untuk foto profil.
+function resizeToDataUrl(file, size = 256, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement("canvas");
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      const scale = Math.max(size / img.width, size / img.height);
+      const w = img.width * scale, h = img.height * scale;
+      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Gagal memuat gambar")); };
+    img.src = url;
+  });
+}
 
 export default function Profile() {
   const { user } = useAuthStore();
@@ -22,6 +42,24 @@ export default function Profile() {
   const [chosenDoc, setChosenDoc] = useState(null); // { units: [...] }
   const [loading, setLoading] = useState(true);
   const [viewCert, setViewCert] = useState(null);
+  const fileRef = useRef(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  async function onAvatarPick(e) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // izinkan pilih file sama lagi
+    if (!file) return;
+    if (!/^image\//.test(file.type)) { toast.error("File harus berupa gambar"); return; }
+    setUploadingAvatar(true);
+    try {
+      const dataUrl = await resizeToDataUrl(file, 256);
+      await api.put("/user/avatar", { avatarUrl: dataUrl });
+      toast.success("Foto profil diperbarui");
+      await load();
+    } catch (err) {
+      toast.error(typeof err === "string" ? err : "Gagal mengunggah foto");
+    } finally { setUploadingAvatar(false); }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -69,36 +107,44 @@ export default function Profile() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header identitas */}
-      <div className="card p-6">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-600 to-tosca-500 flex items-center justify-center text-2xl font-black text-white shrink-0">
-            {(p.name || "?").charAt(0).toUpperCase()}
-          </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-bold truncate" style={{ color: "var(--text-base)" }}>{p.name}</h1>
-            <p className="text-sm" style={{ color: "var(--text-4)" }}>{p.email}</p>
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <RankBadge level={p.currentKkniLevel} />
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onAvatarPick} />
+
+      {/* Rank sebagai komponen utama (terbesar, di tengah) + foto profil */}
+      <RankHero
+        rank={ov.rank}
+        rankInfo={ov.rankInfo}
+        readiness={ov.readiness?.total ?? p.readinessScore ?? 0}
+        competency={ov.chosenSkkni?.title}
+        avatar={{ name: p.name, url: p.avatarUrl }}
+        onAvatarClick={() => !uploadingAvatar && fileRef.current?.click()}
+        footer={
+          <div className="mt-5 flex flex-col items-center gap-1">
+            <h1 className="text-lg font-bold text-white">{p.name}</h1>
+            <p className="text-xs text-slate-400">{p.email}</p>
+            <div className="mt-1 flex items-center gap-2 flex-wrap justify-center">
               {p.targetKkniLevel ? (
-                <span className="text-xs flex items-center gap-1" style={{ color: "var(--text-4)" }}>
+                <span className="text-xs flex items-center gap-1 text-slate-400">
                   <Target className="w-3 h-3" /> Target: {rankName(p.targetKkniLevel)}
                 </span>
               ) : null}
+              <button onClick={() => !uploadingAvatar && fileRef.current?.click()}
+                className="text-xs font-semibold text-brand-400 hover:underline disabled:opacity-60" disabled={uploadingAvatar}>
+                {uploadingAvatar ? "Mengunggah…" : p.avatarUrl ? "Ganti foto" : "Upload foto"}
+              </button>
+              {p.avatarUrl && !uploadingAvatar && (
+                <button onClick={async () => { await api.put("/user/avatar", { avatarUrl: "" }); toast.success("Foto dihapus"); load(); }}
+                  className="text-xs text-slate-500 hover:text-red-400">Hapus foto</button>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-3xl font-bold font-mono text-brand-600">{ov.readiness?.total ?? p.readinessScore ?? 0}%</p>
-              <p className="text-xs uppercase tracking-wider" style={{ color: "var(--text-4)" }}>Kesiapan</p>
-            </div>
-            {p.currentKkniLevel ? <RankIcon level={p.currentKkniLevel} size={64} title={rankName(p.currentKkniLevel)} /> : null}
-          </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* Rincian Skor Kesiapan + penjelasan Rank */}
       <ReadinessCard readiness={ov.readiness} rankInfo={ov.rankInfo} rank={ov.rank} level={ov.rank?.effective ?? p.currentKkniLevel} />
+
+      {/* Bukti kompetensi eksternal — poin plus menembus cap bobot kompetensi */}
+      <EvidenceCard rank={ov.rank} onChanged={load} />
 
       {/* Kompetensi SKKNI target — patokan semua fitur */}
       <SkkniSection chosen={ov.chosenSkkni} doc={chosenDoc} onChanged={load} autoOpen={welcome && !ov.chosenSkkni} />
@@ -248,12 +294,26 @@ function ReadinessCard({ readiness, rankInfo, rank, level }) {
               <span aria-hidden>→</span>
               <span>diraih dari kompetensi: <b style={{ color: rankOf(rank.earned)?.color }}>{rankName(rank.earned)}</b></span>
             </div>
-            <p className="mt-1" style={{ color: "var(--text-4)" }}>
+
+            {/* Bobot kompetensi & cap rank (transparansi anti-overcapacity) */}
+            {rank.weightCap && (
+              <div className="mt-1.5 pt-1.5" style={{ borderTop: "1px dashed var(--border-2)" }}>
+                <span>Bobot kompetensi: <b style={{ color: "var(--text-2)" }}>{rank.weightTier || "—"}</b> · rank maks dari ujian: <b style={{ color: rankOf(rank.weightCap)?.color }}>{rankName(rank.weightCap)}</b></span>
+                {rank.cappedByWeight && (
+                  <p className="mt-1 text-amber-600">
+                    Rank ujianmu <b>dibatasi</b> bobot kompetensi ini. Untuk melampaui menuju <b>ahli</b>, tambahkan <b>bukti eksternal</b>: sertifikasi resmi (BNSP/nasional/internasional), portofolio, & pengalaman kerja.
+                  </p>
+                )}
+                {rank.weightReason && <p className="mt-0.5" style={{ color: "var(--text-4)" }}>{rank.weightReason}</p>}
+              </div>
+            )}
+
+            <p className="mt-1.5" style={{ color: "var(--text-4)" }}>
               {raisedBySkill
                 ? `Kompetensimu menaikkan rank di atas jenjang pendidikan. 💪`
                 : `Buktikan lebih banyak kompetensi (lulus ujian, sertifikat, course) untuk naik rank.`}
             </p>
-            {rank.next && (
+            {rank.next && !rank.cappedByWeight && (
               <p className="mt-1" style={{ color: "var(--text-4)" }}>
                 Menuju <b>{rankName(rank.next.level)}</b>: kumpulkan {rank.next.need} poin kompetensi lagi (≈ {Math.ceil(rank.next.need / 8)} unit lulus / {Math.ceil(rank.next.need / 10)} sertifikat).
               </p>
@@ -262,15 +322,19 @@ function ReadinessCard({ readiness, rankInfo, rank, level }) {
         )}
 
         <div className="flex flex-wrap gap-1 mt-2">
-          {RANKS.filter((x) => x.level >= 3).map((x) => (
-            <span key={x.level} className="text-[10px] px-1.5 py-0.5 rounded-full"
-              style={{ background: x.level === level ? `${x.color}22` : "var(--bg-muted)", color: x.level === level ? x.color : "var(--text-4)", border: x.level === level ? `1px solid ${x.color}66` : "1px solid transparent" }}>
-              {x.name}
-            </span>
-          ))}
+          {RANKS.filter((x) => x.level >= 3).map((x) => {
+            const capped = rank?.weightCap && x.level > rank.weightCap;
+            return (
+              <span key={x.level} className="text-[10px] px-1.5 py-0.5 rounded-full"
+                style={{ background: x.level === level ? `${x.color}22` : "var(--bg-muted)", color: x.level === level ? x.color : "var(--text-4)", border: x.level === level ? `1px solid ${x.color}66` : "1px solid transparent", opacity: capped ? 0.4 : 1 }}
+                title={capped ? "Perlu bukti eksternal untuk mencapai rank ini" : undefined}>
+                {x.name}{capped ? " 🔒" : ""}
+              </span>
+            );
+          })}
         </div>
         <p className="text-[10px] mt-1.5" style={{ color: "var(--text-4)" }}>
-          Rank ditentukan <b>kompetensi yang dibuktikan</b> (ujian, sertifikat, course) — bukan sekadar ijazah. Pendidikan hanya titik awal (maks Platinum); keahlian bisa membawamu hingga <b>Legend</b>.
+          Rank ditentukan <b>kompetensi yang dibuktikan</b> — bukan ijazah. Tiap kompetensi punya <b>bobot berbeda</b> (petani ≠ ahli pertanian): rank via ujian dibatasi bobotnya. Menuju rank ahli butuh <b>bukti eksternal</b> (sertifikasi resmi, portofolio, pengalaman).
         </p>
       </div>
     </div>
@@ -570,5 +634,125 @@ function Field({ label, children }) {
       <span className="text-xs block mb-1" style={{ color: "var(--text-4)" }}>{label}</span>
       {children}
     </label>
+  );
+}
+
+// ── Bukti kompetensi eksternal (#2b): sertifikasi resmi, portofolio, pengalaman, pelatihan ──
+const EV_TYPE = {
+  certification: { label: "Sertifikasi resmi", icon: Award },
+  portfolio:     { label: "Portofolio",        icon: Briefcase },
+  experience:    { label: "Pengalaman kerja",  icon: Building2 },
+  training:      { label: "Pelatihan/Webinar", icon: GraduationCap },
+};
+const EV_STATUS = {
+  verified: { label: "Terverifikasi", cls: "bg-emerald-500/15 text-emerald-500" },
+  rejected: { label: "Ditolak",       cls: "bg-red-500/15 text-red-400" },
+  pending:  { label: "Ditinjau",      cls: "bg-amber-500/15 text-amber-500" },
+};
+
+function EvidenceCard({ rank, onChanged }) {
+  const [items, setItems] = useState(null);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({ type: "certification", title: "", issuer: "", description: "", url: "" });
+
+  const load = useCallback(async () => {
+    try { const d = await api.get("/evidence"); setItems(d.items || []); } catch { setItems([]); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!form.title.trim()) { toast.error("Judul bukti wajib diisi"); return; }
+    setBusy(true);
+    try {
+      const r = await api.post("/evidence", form, { timeout: 60_000 });
+      const st = r.item?.status;
+      if (st === "verified") toast.success("Bukti terverifikasi AI ✓");
+      else if (st === "rejected") toast.error("Bukti belum bisa diverifikasi — lengkapi detail");
+      else toast("Bukti disimpan, menunggu tinjauan", { icon: "🕓" });
+      setForm({ type: "certification", title: "", issuer: "", description: "", url: "" });
+      setOpen(false);
+      await load();
+      onChanged?.();
+    } catch (e2) {
+      toast.error(typeof e2 === "string" ? e2 : "Gagal menambah bukti");
+    } finally { setBusy(false); }
+  }
+
+  async function remove(id) {
+    try { await api.delete(`/evidence/${id}`); await load(); onChanged?.(); toast.success("Bukti dihapus"); }
+    catch { toast.error("Gagal menghapus"); }
+  }
+
+  const verifiedCount = (items || []).filter((i) => i.status === "verified").length;
+
+  return (
+    <div className="card p-5">
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text-base)" }}>
+          <Sparkles className="w-4 h-4 text-brand-600" /> Bukti Kompetensi Eksternal
+        </h2>
+        <button onClick={() => setOpen((o) => !o)} className="text-xs text-brand-600 hover:underline">{open ? "Tutup" : "+ Tambah bukti"}</button>
+      </div>
+      <p className="text-xs mb-3" style={{ color: "var(--text-4)" }}>
+        Sertifikasi resmi (BNSP/nasional/internasional), portofolio, & pengalaman kerja — diverifikasi AI. Ini <b>poin plus</b> yang bisa menembus batas rank dari ujian menuju tingkat <b>ahli</b>{rank?.cappedByWeight ? " — rank ujianmu sedang tercapai batasnya, tambahkan bukti untuk melampaui." : "."}
+      </p>
+
+      {open && (
+        <form onSubmit={submit} className="rounded-xl p-3 mb-3 space-y-2" style={{ background: "var(--bg-raised)", border: "1px solid var(--border)" }}>
+          <div className="grid sm:grid-cols-2 gap-2">
+            <select className="input text-sm" value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}>
+              {Object.entries(EV_TYPE).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+            <input className="input text-sm" placeholder="Judul (mis. Sertifikat BNSP Multimedia)" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
+            <input className="input text-sm" placeholder="Penerbit/Institusi (mis. BNSP)" value={form.issuer} onChange={(e) => setForm((f) => ({ ...f, issuer: e.target.value }))} />
+            <input className="input text-sm" placeholder="Tautan bukti (opsional)" value={form.url} onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))} />
+          </div>
+          <textarea className="input text-sm h-16 resize-none" placeholder="Deskripsi: apa yang dikuasai / lingkup pengalaman…" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
+          <button type="submit" disabled={busy} className="btn-primary text-xs py-1.5 w-full flex items-center justify-center gap-1.5">
+            {busy ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Memverifikasi (AI)…</> : "Kirim & Verifikasi"}
+          </button>
+        </form>
+      )}
+
+      {items === null ? (
+        <p className="text-xs" style={{ color: "var(--text-4)" }}>Memuat…</p>
+      ) : items.length === 0 ? (
+        <p className="text-xs" style={{ color: "var(--text-4)" }}>Belum ada bukti eksternal. {rank?.cappedByWeight ? "Tambahkan untuk naik ke rank ahli." : ""}</p>
+      ) : (
+        <div className="space-y-2">
+          {verifiedCount > 0 && rank?.boostedByEvidence && (
+            <p className="text-[11px] text-emerald-500">Bukti terverifikasi menaikkan rank efektifmu di atas batas ujian. 💪</p>
+          )}
+          {items.map((it) => {
+            const t = EV_TYPE[it.type] || EV_TYPE.certification;
+            const st = EV_STATUS[it.status] || EV_STATUS.pending;
+            const TIcon = t.icon;
+            return (
+              <div key={it.id} className="rounded-lg p-3" style={{ background: "var(--bg-raised)", border: "1px solid var(--border)" }}>
+                <div className="flex items-start gap-2">
+                  <TIcon className="w-4 h-4 mt-0.5 text-brand-500 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-medium truncate" style={{ color: "var(--text-base)" }}>{it.title}</p>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
+                      {it.status === "verified" && it.rankImplied > 0 && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: `${rankOf(it.rankImplied)?.color}22`, color: rankOf(it.rankImplied)?.color }}>
+                          ≈ {rankName(it.rankImplied)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px]" style={{ color: "var(--text-4)" }}>{t.label}{it.issuer ? ` · ${it.issuer}` : ""}{it.status !== "pending" ? ` · kredibilitas ${it.credibility}%` : ""}</p>
+                    {it.verdict && <p className="text-[11px] mt-0.5" style={{ color: "var(--text-3)" }}>{it.verdict}</p>}
+                  </div>
+                  <button onClick={() => remove(it.id)} className="p-1 rounded hover:bg-red-500/10 shrink-0" style={{ color: "var(--text-4)" }} title="Hapus"><X className="w-3.5 h-3.5" /></button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }

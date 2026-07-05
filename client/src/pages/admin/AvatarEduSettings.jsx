@@ -41,7 +41,7 @@ export default function AvatarEduSettings() {
     <div className="space-y-6 max-w-2xl">
       <div>
         <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: "var(--text-base)" }}><GraduationCap className="w-5 h-5 text-brand-600" /> Pengaturan Course AvatarEdu</h2>
-        <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>Atur course yang tampil ke pekerja di Toko & Learning Path.</p>
+        <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>Atur course yang tampil ke talenta di Kelas & Learning Path.</p>
       </div>
 
       <div className="card p-5 space-y-4">
