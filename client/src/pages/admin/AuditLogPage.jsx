@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import api from "../../api/client.js";
+import { useLang, dateLocale } from "../../lib/i18n.jsx";
 
 const ACTION_COLOR = {
   create: "text-emerald-400",
@@ -19,6 +20,7 @@ function getActionColor(action) {
 }
 
 export default function AuditLogPage() {
+  const { t, lang } = useLang();
   const [page, setPage] = useState(1);
 
   const { data } = useQuery({
@@ -35,8 +37,8 @@ export default function AuditLogPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-white">Audit Log</h2>
-          <p className="text-slate-400 text-sm mt-0.5">{total} total aktivitas tercatat</p>
+          <h2 className="text-xl font-bold text-white">{t("Audit Log")}</h2>
+          <p className="text-slate-400 text-sm mt-0.5">{t("{n} total aktivitas tercatat", { n: total })}</p>
         </div>
       </div>
 
@@ -45,17 +47,17 @@ export default function AuditLogPage() {
           <thead className="border-b border-slate-700">
             <tr>
               {["Waktu", "Aktor", "Aksi", "Target"].map((h) => (
-                <th key={h} className="text-left text-xs font-semibold text-slate-500 px-4 py-3">{h}</th>
+                <th key={h} className="text-left text-xs font-semibold text-slate-500 px-4 py-3">{t(h)}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/60">
             {logs.length === 0 ? (
-              <tr><td colSpan={4} className="text-center py-8 text-slate-500">Belum ada log</td></tr>
+              <tr><td colSpan={4} className="text-center py-8 text-slate-500">{t("Belum ada log")}</td></tr>
             ) : logs.map((log) => (
               <tr key={log.id} className="hover:bg-slate-800/20 transition-colors">
                 <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">
-                  {new Date(log.createdAt).toLocaleString("id-ID")}
+                  {new Date(log.createdAt).toLocaleString(dateLocale(lang))}
                 </td>
                 <td className="px-4 py-3 text-slate-300 text-xs">{log.actorEmail || "—"}</td>
                 <td className="px-4 py-3">
@@ -75,7 +77,7 @@ export default function AuditLogPage() {
         <div className="flex items-center justify-center gap-2">
           <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
             className="btn-outline text-sm py-1.5 px-3 disabled:opacity-40">← Prev</button>
-          <span className="text-sm text-slate-400">Halaman {page} / {totalPages}</span>
+          <span className="text-sm text-slate-400">{t("Halaman {a} / {b}", { a: page, b: totalPages })}</span>
           <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
             className="btn-outline text-sm py-1.5 px-3 disabled:opacity-40">Next →</button>
         </div>

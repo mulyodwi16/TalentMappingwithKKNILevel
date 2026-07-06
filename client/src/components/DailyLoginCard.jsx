@@ -3,9 +3,11 @@ import { Gift, Coins, Flame, CheckCircle2, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../api/client.js";
 import { useCoins } from "../hooks/useCoins.js";
+import { useLang } from "../lib/i18n.jsx";
 
 // Kartu Login Harian: klaim bonus Koin sekali per hari, dengan streak beruntun.
 export default function DailyLoginCard() {
+  const { t } = useLang();
   const [daily, setDaily] = useState(null);
   const [claiming, setClaiming] = useState(false);
   const { setBalance, refresh } = useCoins();
@@ -22,14 +24,14 @@ export default function DailyLoginCard() {
       const d = await api.post("/coins/daily-claim");
       if (d.ok) {
         if (typeof d.balance === "number") setBalance(d.balance);
-        toast.success(`+${d.awarded} Koin! Streak ${d.streak} hari 🔥`);
+        toast.success(t("+{n} Koin! Streak {s} hari 🔥", { n: d.awarded, s: d.streak }));
       } else {
-        toast(d.message || "Sudah diklaim hari ini.");
+        toast(d.message || t("Sudah diklaim hari ini."));
       }
       await load();
       refresh();
     } catch (e) {
-      toast.error(typeof e === "string" ? e : "Gagal klaim");
+      toast.error(typeof e === "string" ? e : t("Gagal klaim"));
     } finally {
       setClaiming(false);
     }
@@ -45,21 +47,21 @@ export default function DailyLoginCard() {
           <Gift className="w-5 h-5" />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-bold" style={{ color: "var(--text-base)" }}>Bonus Login Harian</p>
+          <p className="text-sm font-bold" style={{ color: "var(--text-base)" }}>{t("Bonus Login Harian")}</p>
           <p className="text-xs flex items-center gap-1.5" style={{ color: "var(--text-3)" }}>
-            <Flame className="w-3.5 h-3.5 text-orange-500" /> Streak {streak} hari
-            {daily && !claimed && <span className="text-amber-600 font-medium">· +{daily.nextReward} Koin menanti</span>}
+            <Flame className="w-3.5 h-3.5 text-orange-500" /> {t("Streak {n} hari", { n: streak })}
+            {daily && !claimed && <span className="text-amber-600 font-medium">{t("· +{n} Koin menanti", { n: daily.nextReward })}</span>}
           </p>
         </div>
       </div>
       {claimed ? (
         <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-500 shrink-0">
-          <CheckCircle2 className="w-4 h-4" /> Terklaim
+          <CheckCircle2 className="w-4 h-4" /> {t("Terklaim")}
         </span>
       ) : (
         <button onClick={claim} disabled={claiming || !daily} className="btn-primary text-sm py-2 px-4 shrink-0 flex items-center gap-1.5">
           {claiming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Coins className="w-4 h-4" />}
-          Klaim
+          {t("Klaim")}
         </button>
       )}
     </div>

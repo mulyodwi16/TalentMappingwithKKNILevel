@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import api from "../../api/client.js";
 import { useCoins } from "../../hooks/useCoins.js";
+import { useLang } from "../../lib/i18n.jsx";
 
 const UNLOCK_COST = 60;
 
@@ -27,6 +28,7 @@ const AV_LEVEL = {
 
 // ── Modal course AvatarEdu (embed di overlay) ─────────────────────────────────
 function CourseModal({ title, url, onClose }) {
+  const { t } = useLang();
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
@@ -39,7 +41,7 @@ function CourseModal({ title, url, onClose }) {
           <p className="text-sm font-semibold truncate flex items-center gap-2" style={{ color: "var(--text-base)" }}>
             <Sparkles className="w-4 h-4 text-violet-400 shrink-0" /> {title}
           </p>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[var(--bg-muted)] shrink-0" style={{ color: "var(--text-3)" }} aria-label="Tutup">
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[var(--bg-muted)] shrink-0" style={{ color: "var(--text-3)" }} aria-label={t("Tutup")}>
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -51,6 +53,7 @@ function CourseModal({ title, url, onClose }) {
 
 // ── Kursus AvatarEdu terkait unit (pelengkap) ─────────────────────────────────
 function AvatarEduForUnit({ query }) {
+  const { t } = useLang();
   const { setBalance } = useCoins();
   const [modal, setModal] = useState(null);
   const [busy, setBusy] = useState(null);
@@ -68,24 +71,24 @@ function AvatarEduForUnit({ query }) {
     setBusy(c.slug);
     try {
       const r = await api.post("/coins/course-start", { slug: c.slug });
-      if (r.awarded > 0) { toast.success(`+${r.awarded} Koin — selamat belajar!`); if (typeof r.balance === "number") setBalance(r.balance); }
+      if (r.awarded > 0) { toast.success(t("+{n} Koin — selamat belajar!", { n: r.awarded })); if (typeof r.balance === "number") setBalance(r.balance); }
       const d = await api.get(`/avataredu/embed-url/${encodeURIComponent(c.slug)}`);
       setModal({ title: c.title, url: d.url });
     } catch (e) {
-      toast.error(typeof e === "string" ? e : "Gagal membuka kursus");
+      toast.error(typeof e === "string" ? e : t("Gagal membuka kursus"));
     } finally {
       setBusy(null);
     }
   }
 
-  if (isLoading) return <p className="text-xs py-1" style={{ color: "var(--text-4)" }}>Mencari kursus AvatarEdu…</p>;
-  if (courses.length === 0) return <p className="text-xs py-1" style={{ color: "var(--text-4)" }}>Belum ada kursus AvatarEdu cocok.</p>;
+  if (isLoading) return <p className="text-xs py-1" style={{ color: "var(--text-4)" }}>{t("Mencari kursus AvatarEdu…")}</p>;
+  if (courses.length === 0) return <p className="text-xs py-1" style={{ color: "var(--text-4)" }}>{t("Belum ada kursus AvatarEdu cocok.")}</p>;
 
   return (
     <div className="space-y-2">
       {fallback && (
         <p className="text-[11px]" style={{ color: "var(--text-4)" }}>
-          Belum ada kursus AvatarEdu khusus untuk unit ini — menampilkan kursus umum yang tersedia.
+          {t("Belum ada kursus AvatarEdu khusus untuk unit ini — menampilkan kursus umum yang tersedia.")}
         </p>
       )}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -96,20 +99,20 @@ function AvatarEduForUnit({ query }) {
               {c.thumbnail_url && <img src={c.thumbnail_url} alt={c.title} className="w-full h-28 object-cover" loading="lazy" />}
               <div className="p-3 flex flex-col flex-1 gap-1.5">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${lv.cls}`}>{lv.label}</span>
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${lv.cls}`}>{t(lv.label)}</span>
                   {c.category && <span className="text-[10px]" style={{ color: "var(--text-4)" }}>{c.category.name}</span>}
                 </div>
                 <p className="text-xs font-semibold line-clamp-2" style={{ color: "var(--text-base)" }}>{c.title}</p>
                 <div className="flex items-center gap-2 text-[11px]" style={{ color: "var(--text-4)" }}>
                   {c.average_rating > 0 && <span className="flex items-center gap-0.5 text-amber-400"><Star className="w-2.5 h-2.5 fill-amber-400" />{c.average_rating.toFixed(1)}</span>}
-                  {c.duration_hours ? <span>{c.duration_hours} jam</span> : null}
-                  {c.total_lessons ? <span>{c.total_lessons} materi</span> : null}
+                  {c.duration_hours ? <span>{t("{n} jam", { n: c.duration_hours })}</span> : null}
+                  {c.total_lessons ? <span>{t("{n} materi", { n: c.total_lessons })}</span> : null}
                 </div>
-                <p className="text-xs font-bold text-brand-500 mt-auto">{c.formatted_price || "Gratis"}</p>
+                <p className="text-xs font-bold text-brand-500 mt-auto">{c.formatted_price || t("Gratis")}</p>
                 <button onClick={() => follow(c)} disabled={busy === c.slug}
                   className="btn-primary text-xs py-1.5 w-full flex items-center justify-center gap-1.5">
                   {busy === c.slug ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PlayCircle className="w-3.5 h-3.5" />}
-                  Ikuti Kelas
+                  {t("Ikuti Kelas")}
                 </button>
               </div>
             </div>
@@ -122,13 +125,14 @@ function AvatarEduForUnit({ query }) {
 }
 
 function AvatarEduSection({ title, defaultOpen = false }) {
+  const { t } = useLang();
   const [open, setOpen] = useState(defaultOpen);
   const query = (title || "").split(/\s+/).slice(0, 3).join(" ");
   return (
     <div>
       <button onClick={() => setOpen((o) => !o)}
         className="text-xs font-semibold flex items-center gap-1.5 hover:opacity-80" style={{ color: "var(--text-3)" }}>
-        <Sparkles className="w-3.5 h-3.5 text-violet-400" /> Kursus AvatarEdu terkait
+        <Sparkles className="w-3.5 h-3.5 text-violet-400" /> {t("Kursus AvatarEdu terkait")}
         <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && <div className="mt-2"><AvatarEduForUnit query={query} /></div>}
@@ -138,6 +142,7 @@ function AvatarEduSection({ title, defaultOpen = false }) {
 
 // ── Kartu unit (grid ala AvatarEdu: kotak-kotak, banner berwarna status) ──────
 function UnitCard({ unit, balance, busy, onOpen, onUnlock }) {
+  const { t } = useLang();
   const ui = STATE_UI[unit.state] || STATE_UI.locked;
   const locked = unit.state === "locked";
   const canExam = unit.state === "ready" || unit.state === "passed";
@@ -154,7 +159,7 @@ function UnitCard({ unit, balance, busy, onOpen, onUnlock }) {
             : { background: "var(--bg-surface)", color: ui.accent, border: `2px solid ${ui.accent}55` }}>
           {unit.state === "passed" ? "✓" : locked ? <Lock className="w-6 h-6" /> : unit.order}
         </div>
-        <span className={`absolute top-2.5 right-2.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${ui.badge}`}>{ui.label}</span>
+        <span className={`absolute top-2.5 right-2.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${ui.badge}`}>{t(ui.label)}</span>
       </div>
 
       <div className="p-4 flex flex-col flex-1 gap-2">
@@ -163,7 +168,7 @@ function UnitCard({ unit, balance, busy, onOpen, onUnlock }) {
         </p>
         <div className="flex items-center gap-2 text-[11px] flex-wrap" style={{ color: "var(--text-4)" }}>
           <span className="font-mono px-1.5 py-0.5 rounded" style={{ background: "var(--bg-muted)" }}>{unit.code}</span>
-          {unit.score != null && <span className={unit.score >= 60 ? "text-emerald-500" : "text-amber-500"}>skor {unit.score}%</span>}
+          {unit.score != null && <span className={unit.score >= 60 ? "text-emerald-500" : "text-amber-500"}>{t("skor {n}%", { n: unit.score })}</span>}
         </div>
 
         <div className="mt-auto pt-2 space-y-1.5">
@@ -171,22 +176,22 @@ function UnitCard({ unit, balance, busy, onOpen, onUnlock }) {
             <>
               <button onClick={() => onUnlock(unit.code)} disabled={busy || balance < UNLOCK_COST}
                 className="btn-primary text-xs py-2 w-full flex items-center justify-center gap-1.5 disabled:opacity-50">
-                <Coins className="w-3.5 h-3.5" /> Buka dengan {UNLOCK_COST} Koin
+                <Coins className="w-3.5 h-3.5" /> {t("Buka dengan {n} Koin", { n: UNLOCK_COST })}
               </button>
               <p className="text-[10px] text-center" style={{ color: "var(--text-4)" }}>
-                {balance < UNLOCK_COST ? `Koin kurang (saldo ${balance})` : "atau selesaikan unit sebelumnya"}
+                {balance < UNLOCK_COST ? t("Koin kurang (saldo {n})", { n: balance }) : t("atau selesaikan unit sebelumnya")}
               </p>
             </>
           ) : (
             <>
               <button onClick={() => onOpen(unit.code)}
                 className="btn-primary text-xs py-2 w-full flex items-center justify-center gap-1.5">
-                <BookOpen className="w-3.5 h-3.5" /> {unit.state === "passed" ? "Buka Materi" : "Ikuti Kelas"}
+                <BookOpen className="w-3.5 h-3.5" /> {unit.state === "passed" ? t("Buka Materi") : t("Ikuti Kelas")}
               </button>
               {canExam && (
                 <Link to={`/app/exam?unit=${encodeURIComponent(unit.code)}`}
                   className="btn-outline text-xs py-1.5 w-full flex items-center justify-center gap-1.5">
-                  {unit.state === "passed" ? <><RotateCcw className="w-3 h-3" /> Ujian Ulang</> : <><PlayCircle className="w-3 h-3" /> Mulai Ujian</>}
+                  {unit.state === "passed" ? <><RotateCcw className="w-3 h-3" /> {t("Ujian Ulang")}</> : <><PlayCircle className="w-3 h-3" /> {t("Mulai Ujian")}</>}
                 </Link>
               )}
             </>
@@ -199,6 +204,7 @@ function UnitCard({ unit, balance, busy, onOpen, onUnlock }) {
 
 // ── COURSE PLAYER: belajar bertahap ala ujian (1 pelajaran per layar) ─────────
 function CoursePlayer({ code, onBack, onComplete, busyComplete }) {
+  const { t } = useLang();
   const [step, setStep] = useState(0);
 
   const { data: meta } = useQuery({
@@ -226,10 +232,9 @@ function CoursePlayer({ code, onBack, onComplete, busyComplete }) {
     return (
       <div className="max-w-2xl mx-auto card p-10 text-center space-y-3">
         <Loader2 className="w-8 h-8 animate-spin text-brand-500 mx-auto" />
-        <p className="font-semibold" style={{ color: "var(--text-base)" }}>Menyusun materi lengkap…</p>
+        <p className="font-semibold" style={{ color: "var(--text-base)" }}>{t("Menyusun materi lengkap…")}</p>
         <p className="text-xs" style={{ color: "var(--text-4)" }}>
-          Saat pertama kali dibuka, AI menyusun 4-6 pelajaran mendalam untuk unit ini (± 30-60 detik).
-          Setelah itu materi tersimpan permanen dan langsung terbuka.
+          {t("Saat pertama kali dibuka, AI menyusun 4-6 pelajaran mendalam untuk unit ini (± 30-60 detik). Setelah itu materi tersimpan permanen dan langsung terbuka.")}
         </p>
       </div>
     );
@@ -237,8 +242,8 @@ function CoursePlayer({ code, onBack, onComplete, busyComplete }) {
   if (isError) {
     return (
       <div className="max-w-2xl mx-auto card p-8 text-center space-y-3">
-        <p className="text-sm text-red-400">{typeof error === "string" ? error : "Gagal memuat pelajaran."}</p>
-        <button onClick={onBack} className="btn-outline text-sm">← Kembali ke daftar kelas</button>
+        <p className="text-sm text-red-400">{typeof error === "string" ? error : t("Gagal memuat pelajaran.")}</p>
+        <button onClick={onBack} className="btn-outline text-sm">← {t("Kembali ke daftar kelas")}</button>
       </div>
     );
   }
@@ -246,7 +251,7 @@ function CoursePlayer({ code, onBack, onComplete, busyComplete }) {
   return (
     <div className="max-w-2xl mx-auto space-y-4">
       <button onClick={onBack} className="text-xs flex items-center gap-1 hover:underline" style={{ color: "var(--text-4)" }}>
-        <ArrowLeft className="w-3.5 h-3.5" /> Kembali ke daftar kelas
+        <ArrowLeft className="w-3.5 h-3.5" /> {t("Kembali ke daftar kelas")}
       </button>
 
       {/* Header progres ala ujian */}
@@ -254,7 +259,7 @@ function CoursePlayer({ code, onBack, onComplete, busyComplete }) {
         <div className="flex items-center justify-between gap-3 mb-2">
           <p className="text-sm font-semibold truncate" style={{ color: "var(--text-base)" }}>{unit?.title}</p>
           <span className="text-xs shrink-0 font-semibold" style={{ color: "var(--text-3)" }}>
-            {isFinal ? "Penutup" : `Materi ${step + 1}/${lessons.length}`}
+            {isFinal ? t("Penutup") : t("Materi {a}/{b}", { a: step + 1, b: lessons.length })}
           </span>
         </div>
         <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-muted)" }}>
@@ -266,7 +271,7 @@ function CoursePlayer({ code, onBack, onComplete, busyComplete }) {
       {!isFinal ? (
         <div className="card p-6 space-y-4">
           <div>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-brand-500/15 text-brand-500">Pelajaran {step + 1}</span>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-brand-500/15 text-brand-500">{t("Pelajaran {n}", { n: step + 1 })}</span>
             <h2 className="text-lg font-bold mt-2" style={{ color: "var(--text-base)" }}>{lesson.title}</h2>
           </div>
 
@@ -280,7 +285,7 @@ function CoursePlayer({ code, onBack, onComplete, busyComplete }) {
           {lesson.points?.length > 0 && (
             <div className="rounded-xl p-3.5" style={{ background: "var(--bg-raised)", border: "1px solid var(--border)" }}>
               <p className="text-xs font-semibold flex items-center gap-1 mb-2" style={{ color: "var(--text-3)" }}>
-                <Lightbulb className="w-3.5 h-3.5 text-amber-500" /> Poin Penting
+                <Lightbulb className="w-3.5 h-3.5 text-amber-500" /> {t("Poin Penting")}
               </p>
               <ul className="space-y-1">
                 {lesson.points.map((k, i) => (
@@ -292,7 +297,7 @@ function CoursePlayer({ code, onBack, onComplete, busyComplete }) {
 
           {lesson.example && (
             <div className="rounded-lg px-3.5 py-3 border-l-2 border-amber-500" style={{ background: "var(--bg-raised)" }}>
-              <p className="text-xs font-semibold flex items-center gap-1 mb-1 text-amber-500"><Briefcase className="w-3.5 h-3.5" /> Contoh Penerapan Nyata</p>
+              <p className="text-xs font-semibold flex items-center gap-1 mb-1 text-amber-500"><Briefcase className="w-3.5 h-3.5" /> {t("Contoh Penerapan Nyata")}</p>
               <p className="text-sm" style={{ color: "var(--text-2)" }}>{lesson.example}</p>
             </div>
           )}
@@ -301,13 +306,13 @@ function CoursePlayer({ code, onBack, onComplete, busyComplete }) {
           {lesson.ytVideoId && (
             <div>
               <p className="text-xs font-semibold flex items-center gap-1.5 mb-2" style={{ color: "var(--text-3)" }}>
-                <Youtube className="w-3.5 h-3.5 text-red-500" /> Video Pembelajaran
+                <Youtube className="w-3.5 h-3.5 text-red-500" /> {t("Video Pembelajaran")}
               </p>
               <div className="rounded-xl overflow-hidden shadow-lg" style={{ aspectRatio: "16/9", background: "#000" }}>
                 <iframe
                   width="100%" height="100%" style={{ border: 0, display: "block" }}
                   src={`https://www.youtube-nocookie.com/embed/${lesson.ytVideoId}`}
-                  title={lesson.ytTitle || "Video pembelajaran"}
+                  title={lesson.ytTitle || t("Video Pembelajaran")}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen loading="lazy" />
               </div>
@@ -322,7 +327,7 @@ function CoursePlayer({ code, onBack, onComplete, busyComplete }) {
           {/* Sumber tepercaya + cari video lain */}
           {(lesson.sources?.length > 0 || lesson.ytQuery) && (
             <div className="flex items-center gap-2 flex-wrap pt-1">
-              <span className="text-[11px] font-semibold" style={{ color: "var(--text-4)" }}>Pelajari lebih lanjut:</span>
+              <span className="text-[11px] font-semibold" style={{ color: "var(--text-4)" }}>{t("Pelajari lebih lanjut:")}</span>
               {(lesson.sources || []).map((s, i) => (
                 <a key={i} href={s.url} target="_blank" rel="noopener noreferrer"
                   className="text-[11px] inline-flex items-center gap-1 px-2 py-1 rounded-lg hover:border-brand-500/50 transition-colors"
@@ -335,7 +340,7 @@ function CoursePlayer({ code, onBack, onComplete, busyComplete }) {
                   target="_blank" rel="noopener noreferrer"
                   className={`text-[11px] inline-flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${lesson.ytVideoId ? "hover:border-red-400/60" : "text-white bg-red-600 hover:bg-red-700"}`}
                   style={lesson.ytVideoId ? { border: "1px solid var(--border)", color: "var(--text-3)" } : undefined}>
-                  <Youtube className="w-3.5 h-3.5 text-red-500" /> {lesson.ytVideoId ? "Cari video lain" : "Video terkait"}
+                  <Youtube className="w-3.5 h-3.5 text-red-500" /> {lesson.ytVideoId ? t("Cari video lain") : t("Video terkait")}
                 </a>
               )}
             </div>
@@ -348,16 +353,16 @@ function CoursePlayer({ code, onBack, onComplete, busyComplete }) {
             <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 grid place-items-center mx-auto mb-3">
               <Trophy className="w-7 h-7 text-emerald-500" />
             </div>
-            <h2 className="text-lg font-bold" style={{ color: "var(--text-base)" }}>Materi Selesai Dipelajari 🎓</h2>
+            <h2 className="text-lg font-bold" style={{ color: "var(--text-base)" }}>{t("Materi Selesai Dipelajari 🎓")}</h2>
             <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>
-              Kamu telah menyelesaikan {lessons.length} pelajaran unit <b>{unit?.title}</b>.
+              {t("Kamu telah menyelesaikan {n} pelajaran unit", { n: lessons.length })} <b>{unit?.title}</b>.
             </p>
           </div>
 
           {/* Ringkasan takeaway */}
           <div className="rounded-xl p-3.5" style={{ background: "var(--bg-raised)", border: "1px solid var(--border)" }}>
             <p className="text-xs font-semibold flex items-center gap-1 mb-2" style={{ color: "var(--text-3)" }}>
-              <ListChecks className="w-3.5 h-3.5 text-emerald-500" /> Rangkuman Pelajaran
+              <ListChecks className="w-3.5 h-3.5 text-emerald-500" /> {t("Rangkuman Pelajaran")}
             </p>
             <ol className="space-y-1">
               {lessons.map((l, i) => (
@@ -374,16 +379,16 @@ function CoursePlayer({ code, onBack, onComplete, busyComplete }) {
               <button onClick={() => onComplete(code)} disabled={busyComplete}
                 className="btn-primary text-sm inline-flex items-center gap-1.5 disabled:opacity-50">
                 {busyComplete ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                Tandai Selesai Belajar (+15 Koin)
+                {t("Tandai Selesai Belajar (+15 Koin)")}
               </button>
             )}
             {(state?.state === "ready" || state?.state === "passed") && (
               <Link to={`/app/exam?unit=${encodeURIComponent(code)}`} className="btn-primary text-sm inline-flex items-center gap-1.5">
-                {state?.state === "passed" ? <><RotateCcw className="w-4 h-4" /> Ujian Ulang</> : <><PlayCircle className="w-4 h-4" /> Mulai Ujian Unit</>}
+                {state?.state === "passed" ? <><RotateCcw className="w-4 h-4" /> {t("Ujian Ulang")}</> : <><PlayCircle className="w-4 h-4" /> {t("Mulai Ujian Unit")}</>}
               </Link>
             )}
-            {state?.state === "learning" && <span className="text-[11px] w-full text-center" style={{ color: "var(--text-4)" }}>Ujian terbuka setelah kelas ditandai selesai.</span>}
-            {state?.state === "passed" && <span className="text-[11px] text-emerald-500 w-full text-center">Sertifikat unit sudah terbit ✓</span>}
+            {state?.state === "learning" && <span className="text-[11px] w-full text-center" style={{ color: "var(--text-4)" }}>{t("Ujian terbuka setelah kelas ditandai selesai.")}</span>}
+            {state?.state === "passed" && <span className="text-[11px] text-emerald-500 w-full text-center">{t("Sertifikat unit sudah terbit ✓")}</span>}
           </div>
 
           <AvatarEduSection title={unit?.title} defaultOpen={false} />
@@ -394,12 +399,12 @@ function CoursePlayer({ code, onBack, onComplete, busyComplete }) {
       <div className="flex gap-3">
         <button onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}
           className="btn-outline flex-1 flex items-center justify-center gap-1 disabled:opacity-40">
-          <ArrowLeft className="w-4 h-4" /> Sebelumnya
+          <ArrowLeft className="w-4 h-4" /> {t("Sebelumnya")}
         </button>
         {!isFinal && (
           <button onClick={() => setStep((s) => Math.min(total - 1, s + 1))}
             className="btn-primary flex-1 flex items-center justify-center gap-1">
-            Berikutnya <ArrowRight className="w-4 h-4" />
+            {t("Berikutnya")} <ArrowRight className="w-4 h-4" />
           </button>
         )}
       </div>
@@ -413,7 +418,7 @@ function CoursePlayer({ code, onBack, onComplete, busyComplete }) {
               width: i === step ? 22 : 8, height: 8,
               background: i === step ? "rgb(var(--brand-600))" : i < step ? "rgb(var(--brand-600) / 0.5)" : "var(--border-2)",
             }}
-            aria-label={i === total - 1 ? "Penutup" : `Materi ${i + 1}`} />
+            aria-label={i === total - 1 ? t("Penutup") : t("Materi {n}", { n: i + 1 })} />
         ))}
       </div>
     </div>
@@ -422,6 +427,7 @@ function CoursePlayer({ code, onBack, onComplete, busyComplete }) {
 
 // ── Halaman Kelas ─────────────────────────────────────────────────────────────
 export default function Kelas() {
+  const { t } = useLang();
   const qc = useQueryClient();
   const { setBalance } = useCoins();
   const [busy, setBusy] = useState(false);
@@ -444,28 +450,28 @@ export default function Kelas() {
   const complete = useMutation({
     mutationFn: (code) => api.post(`/kelas/unit/${encodeURIComponent(code)}/complete`),
     onMutate: () => setBusy(true),
-    onSuccess: (r) => { refresh(r); if (r.coin?.awarded > 0) { toast.success(`+${r.coin.awarded} Koin — ujian unit terbuka!`); } else toast.success("Kelas selesai — ujian terbuka!"); },
-    onError: (e) => toast.error(typeof e === "string" ? e : "Gagal"),
+    onSuccess: (r) => { refresh(r); if (r.coin?.awarded > 0) { toast.success(t("+{n} Koin — ujian unit terbuka!", { n: r.coin.awarded })); } else toast.success(t("Kelas selesai — ujian terbuka!")); },
+    onError: (e) => toast.error(typeof e === "string" ? e : t("Gagal")),
     onSettled: () => setBusy(false),
   });
 
   const unlock = useMutation({
     mutationFn: (code) => api.post(`/kelas/unit/${encodeURIComponent(code)}/unlock`),
     onMutate: () => setBusy(true),
-    onSuccess: (r) => { refresh(r); if (!r.already) toast.success(`Unit terbuka! −${r.spent} Koin`); },
-    onError: (e) => toast.error(typeof e === "string" ? e : "Gagal membuka unit"),
+    onSuccess: (r) => { refresh(r); if (!r.already) toast.success(t("Unit terbuka! −{n} Koin", { n: r.spent })); },
+    onError: (e) => toast.error(typeof e === "string" ? e : t("Gagal membuka unit")),
     onSettled: () => setBusy(false),
   });
 
-  if (isLoading) return <div className="flex items-center justify-center h-64" style={{ color: "var(--text-4)" }}>Memuat kelas…</div>;
+  if (isLoading) return <div className="flex items-center justify-center h-64" style={{ color: "var(--text-4)" }}>{t("Memuat kelas…")}</div>;
 
   if (!chosen) {
     return (
       <div className="max-w-lg mx-auto card p-10 text-center">
         <GraduationCap className="w-10 h-10 mx-auto mb-3 text-brand-500" />
-        <h2 className="font-bold mb-1" style={{ color: "var(--text-base)" }}>Belum Ada Kelas</h2>
-        <p className="text-sm mb-5" style={{ color: "var(--text-3)" }}>Pilih kompetensi SKKNI dulu agar kami susun kelas per unit kompetensinya.</p>
-        <Link to="/app/profile" className="btn-primary">Pilih Kompetensi →</Link>
+        <h2 className="font-bold mb-1" style={{ color: "var(--text-base)" }}>{t("Belum Ada Kelas")}</h2>
+        <p className="text-sm mb-5" style={{ color: "var(--text-3)" }}>{t("Pilih kompetensi SKKNI dulu agar kami susun kelas per unit kompetensinya.")}</p>
+        <Link to="/app/profile" className="btn-primary">{t("Pilih Kompetensi →")}</Link>
       </div>
     );
   }
@@ -486,15 +492,15 @@ export default function Kelas() {
   return (
     <div className="space-y-5">
       <div className="rounded-2xl bg-gradient-to-br from-brand-600 via-brand-600/90 to-tosca-500 text-white p-6 shadow-lg">
-        <div className="flex items-center gap-2 mb-1"><GraduationCap className="w-5 h-5" /><h1 className="text-xl font-bold text-white">Kelas Kompetensi</h1></div>
+        <div className="flex items-center gap-2 mb-1"><GraduationCap className="w-5 h-5" /><h1 className="text-xl font-bold text-white">{t("Kelas Kompetensi")}</h1></div>
         <p className="text-sm text-white/80 max-w-2xl">
-          Belajar per unit dari <b>{chosen.title}</b> — klik <b>Ikuti Kelas</b> untuk masuk course bertahap (materi mendalam + sumber tepercaya + video). Selesaikan kelas untuk membuka ujian unit; lulus menerbitkan sertifikat.
+          {t("Belajar per unit dari")} <b>{chosen.title}</b> — {t("klik")} <b>{t("Ikuti Kelas")}</b> {t("untuk masuk course bertahap (materi mendalam + sumber tepercaya + video). Selesaikan kelas untuk membuka ujian unit; lulus menerbitkan sertifikat.")}
         </p>
         {s && (
           <div className="flex gap-2 mt-3 flex-wrap text-xs">
-            <span className="px-2 py-1 rounded-full bg-white/15">{s.passed}/{s.total} lulus</span>
-            <span className="px-2 py-1 rounded-full bg-white/15">{s.ready} siap ujian</span>
-            <span className="px-2 py-1 rounded-full bg-white/15">{s.learning} sedang belajar</span>
+            <span className="px-2 py-1 rounded-full bg-white/15">{t("{a}/{b} lulus", { a: s.passed, b: s.total })}</span>
+            <span className="px-2 py-1 rounded-full bg-white/15">{t("{n} siap ujian", { n: s.ready })}</span>
+            <span className="px-2 py-1 rounded-full bg-white/15">{t("{n} sedang belajar", { n: s.learning })}</span>
             <span className="px-2 py-1 rounded-full bg-white/15 flex items-center gap-1"><Coins className="w-3 h-3" /> {balance}</span>
           </div>
         )}
@@ -510,9 +516,9 @@ export default function Kelas() {
       </div>
 
       <p className="text-xs text-center" style={{ color: "var(--text-4)" }}>
-        Materi disusun AI selaras SKKNI (disusun sekali, lalu tersimpan permanen) + rujukan sumber tepercaya & video.
-        Kursus interaktif oleh <a href="https://avataredu.ai" target="_blank" rel="noopener noreferrer" className="text-brand-500 hover:underline">AvatarEdu.ai</a>.
-        {" "}Sertifikat hanya terbit dari <b>lulus ujian</b> — Koin hanya mempercepat akses.
+        {t("Materi disusun AI selaras SKKNI (disusun sekali, lalu tersimpan permanen) + rujukan sumber tepercaya & video.")}
+        {" "}{t("Kursus interaktif oleh")} <a href="https://avataredu.ai" target="_blank" rel="noopener noreferrer" className="text-brand-500 hover:underline">AvatarEdu.ai</a>.
+        {" "}{t("Sertifikat hanya terbit dari")} <b>{t("lulus ujian")}</b> — {t("Koin hanya mempercepat akses.")}
       </p>
     </div>
   );

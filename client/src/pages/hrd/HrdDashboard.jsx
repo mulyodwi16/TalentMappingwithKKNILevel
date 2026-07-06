@@ -10,6 +10,7 @@ import api from "../../api/client.js";
 import RankBadge from "../../components/RankBadge.jsx";
 import { rankName } from "../../lib/rank.js";
 import useAuthStore from "../../store/authStore.js";
+import { useLang } from "../../lib/i18n.jsx";
 
 const STATUS_CONFIG = {
   ready:       { label: "Siap Naik",    cls: "badge-ready",       color: "#10b981" },
@@ -29,6 +30,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 // ── Detail 1 talenta: kompetensi + bukti dari ujian (unit lulus, sertifikat, riwayat) ──
 function WorkerDetailModal({ id, onClose }) {
+  const { t } = useLang();
   const { data, isLoading } = useQuery({ queryKey: ["hrd-worker", id], queryFn: () => api.get(`/hrd/worker/${id}`) });
   const w = data?.worker;
   const passed = data?.assessments?.filter((a) => a.passed).length || 0;
@@ -38,7 +40,7 @@ function WorkerDetailModal({ id, onClose }) {
       <div className="w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col shadow-2xl" style={{ background: "var(--bg-surface)", maxHeight: "90vh" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-3 p-4 border-b" style={{ borderColor: "var(--border)" }}>
           <div className="min-w-0">
-            <p className="text-base font-bold truncate" style={{ color: "var(--text-base)" }}>{w?.name || "Memuat…"}</p>
+            <p className="text-base font-bold truncate" style={{ color: "var(--text-base)" }}>{w?.name || t("Memuat…")}</p>
             {w && <p className="text-xs" style={{ color: "var(--text-4)" }}>{w.email} · {w.academicStatus || w.education || "-"}</p>}
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg shrink-0 hover:bg-[var(--bg-muted)]" style={{ color: "var(--text-3)" }}><X className="w-4 h-4" /></button>
@@ -46,36 +48,36 @@ function WorkerDetailModal({ id, onClose }) {
 
         <div className="p-4 space-y-4 overflow-y-auto">
           {isLoading ? (
-            <p className="text-sm text-center py-8" style={{ color: "var(--text-4)" }}>Memuat detail…</p>
+            <p className="text-sm text-center py-8" style={{ color: "var(--text-4)" }}>{t("Memuat detail…")}</p>
           ) : (
             <>
               {/* Ringkas */}
               <div className="grid grid-cols-3 gap-2">
                 <div className="rounded-xl p-3 text-center" style={{ background: "var(--bg-raised)" }}>
                   <div className="flex justify-center mb-1">{w?.currentKkniLevel ? <RankBadge level={w.currentKkniLevel} /> : <span style={{ color: "var(--text-4)" }}>—</span>}</div>
-                  <p className="text-[11px]" style={{ color: "var(--text-4)" }}>Skill Rank</p>
+                  <p className="text-[11px]" style={{ color: "var(--text-4)" }}>{t("Skill Rank")}</p>
                 </div>
                 <div className="rounded-xl p-3 text-center" style={{ background: "var(--bg-raised)" }}>
                   <p className="text-xl font-black" style={{ color: "var(--text-base)" }}>{passed}/{total}</p>
-                  <p className="text-[11px]" style={{ color: "var(--text-4)" }}>Unit lulus</p>
+                  <p className="text-[11px]" style={{ color: "var(--text-4)" }}>{t("Unit lulus")}</p>
                 </div>
                 <div className="rounded-xl p-3 text-center" style={{ background: "var(--bg-raised)" }}>
                   <p className="text-xl font-black text-emerald-500">{data?.certificates?.length || 0}</p>
-                  <p className="text-[11px]" style={{ color: "var(--text-4)" }}>Sertifikat</p>
+                  <p className="text-[11px]" style={{ color: "var(--text-4)" }}>{t("Sertifikat")}</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2 text-sm">
                 <Target className="w-4 h-4 text-brand-500" />
-                <span style={{ color: "var(--text-3)" }}>Kompetensi:</span>
-                <span className="font-semibold" style={{ color: "var(--text-base)" }}>{data?.competency?.title || "Belum dipilih"}</span>
+                <span style={{ color: "var(--text-3)" }}>{t("Kompetensi:")}</span>
+                <span className="font-semibold" style={{ color: "var(--text-base)" }}>{data?.competency?.title || t("Belum dipilih")}</span>
               </div>
 
               {/* Penilaian per unit (dari ujian) */}
               <div>
-                <p className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: "var(--text-3)" }}><ClipboardCheck className="w-3.5 h-3.5" /> Penilaian Unit (hasil ujian)</p>
+                <p className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: "var(--text-3)" }}><ClipboardCheck className="w-3.5 h-3.5" /> {t("Penilaian Unit (hasil ujian)")}</p>
                 {total === 0 ? (
-                  <p className="text-xs" style={{ color: "var(--text-4)" }}>Belum ada hasil ujian.</p>
+                  <p className="text-xs" style={{ color: "var(--text-4)" }}>{t("Belum ada hasil ujian.")}</p>
                 ) : (
                   <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
                     {data.assessments.map((a) => (
@@ -96,7 +98,7 @@ function WorkerDetailModal({ id, onClose }) {
               {/* Sertifikat */}
               {data?.certificates?.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: "var(--text-3)" }}><Award className="w-3.5 h-3.5 text-emerald-500" /> Sertifikat ({data.certificates.length})</p>
+                  <p className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: "var(--text-3)" }}><Award className="w-3.5 h-3.5 text-emerald-500" /> {t("Sertifikat ({n})", { n: data.certificates.length })}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {data.certificates.map((c) => (
                       <span key={c.id} className="text-[11px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 rounded-lg px-2 py-0.5">{c.name} · {c.score}%</span>
@@ -113,6 +115,7 @@ function WorkerDetailModal({ id, onClose }) {
 }
 
 export default function HrdDashboard() {
+  const { t } = useLang();
   const [filters, setFilters] = useState({ status: "", department: "", level: "" });
   const [showRequest, setShowRequest] = useState(false);
   const [detailId, setDetailId] = useState(null);
@@ -133,8 +136,8 @@ export default function HrdDashboard() {
 
   const sendRequest = useMutation({
     mutationFn: () => api.post("/hrd/requests", reqForm),
-    onSuccess: () => { toast.success("Request terkirim ke Admin"); setShowRequest(false); },
-    onError: (err) => toast.error(err || "Gagal"),
+    onSuccess: () => { toast.success(t("Request terkirim ke Admin")); setShowRequest(false); },
+    onError: (err) => toast.error(err || t("Gagal")),
   });
 
   const exportExcel = async () => {
@@ -145,8 +148,8 @@ export default function HrdDashboard() {
       const a = document.createElement("a");
       a.href = url; a.download = "talent-mapping.xlsx"; a.click();
       URL.revokeObjectURL(url);
-      toast.success("File diunduh");
-    } catch { toast.error("Gagal ekspor"); }
+      toast.success(t("File diunduh"));
+    } catch { toast.error(t("Gagal ekspor")); }
   };
 
   const levelData = Object.entries(analytics?.levelDistribution || {})
@@ -154,7 +157,7 @@ export default function HrdDashboard() {
     .sort((a, b) => a.level.localeCompare(b.level));
 
   const statusPie = Object.entries(analytics?.statusCounts || {}).map(([k, v]) => ({
-    name: STATUS_CONFIG[k]?.label || k, value: v, color: STATUS_CONFIG[k]?.color || "#666",
+    name: STATUS_CONFIG[k] ? t(STATUS_CONFIG[k].label) : k, value: v, color: STATUS_CONFIG[k]?.color || "#666",
   }));
 
   return (
@@ -169,7 +172,7 @@ export default function HrdDashboard() {
         ].map((s) => (
           <div key={s.label} className="card p-5 text-center">
             <p className={`text-3xl font-black ${s.color}`}>{s.value}</p>
-            <p className="text-sm text-slate-400 mt-1">{s.label}</p>
+            <p className="text-sm text-slate-400 mt-1">{t(s.label)}</p>
           </div>
         ))}
       </div>
@@ -177,19 +180,19 @@ export default function HrdDashboard() {
       {/* Charts */}
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="card p-6">
-          <h3 className="font-semibold text-white mb-4">Distribusi Skill Rank</h3>
+          <h3 className="font-semibold text-white mb-4">{t("Distribusi Skill Rank")}</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={levelData}>
               <XAxis dataKey="level" tick={{ fill: "#94a3b8", fontSize: 11 }} />
               <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} allowDecimals={false} />
               <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="count" fill="#2563eb" radius={[6, 6, 0, 0]} name="Jumlah" />
+              <Bar dataKey="count" fill="#2563eb" radius={[6, 6, 0, 0]} name={t("Jumlah")} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         <div className="card p-6">
-          <h3 className="font-semibold text-white mb-4">Status Kesiapan Promosi</h3>
+          <h3 className="font-semibold text-white mb-4">{t("Status Kesiapan Promosi")}</h3>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie data={statusPie} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} paddingAngle={3}>
@@ -205,21 +208,21 @@ export default function HrdDashboard() {
       {/* Talent table */}
       <div className="card p-6">
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <h3 className="font-semibold text-white flex-1">Daftar Talenta</h3>
+          <h3 className="font-semibold text-white flex-1">{t("Daftar Talenta")}</h3>
           <div className="flex gap-2 flex-wrap">
             <select className="input text-sm py-1.5 w-auto" value={filters.status}
               onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}>
-              <option value="">Semua Status</option>
-              {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              <option value="">{t("Semua Status")}</option>
+              {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{t(v.label)}</option>)}
             </select>
             <select className="input text-sm py-1.5 w-auto" value={filters.level}
               onChange={(e) => setFilters((f) => ({ ...f, level: e.target.value }))}>
-              <option value="">Semua Rank</option>
+              <option value="">{t("Semua Rank")}</option>
               {[1,2,3,4,5,6,7,8,9].map((l) => <option key={l} value={l}>{rankName(l)}</option>)}
             </select>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setShowRequest(true)} className="btn-outline text-sm py-1.5 px-3">✉ Request Admin</button>
+            <button onClick={() => setShowRequest(true)} className="btn-outline text-sm py-1.5 px-3">{t("✉ Request Admin")}</button>
             <button onClick={exportExcel} className="btn-primary text-sm py-1.5 px-3">⬇ Excel</button>
           </div>
         </div>
@@ -229,15 +232,15 @@ export default function HrdDashboard() {
             <thead>
               <tr className="border-b border-slate-700">
                 {["Nama", "Kompetensi", "Rank", "Unit Lulus", "Sertifikat", "Readiness", "Status"].map((h) => (
-                  <th key={h} className="text-left text-xs font-semibold text-slate-500 pb-2 pr-4">{h}</th>
+                  <th key={h} className="text-left text-xs font-semibold text-slate-500 pb-2 pr-4">{t(h)}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
               {isLoading ? (
-                <tr><td colSpan={7} className="text-center py-8 text-slate-500">Memuat…</td></tr>
+                <tr><td colSpan={7} className="text-center py-8 text-slate-500">{t("Memuat…")}</td></tr>
               ) : workers.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-8 text-slate-500">Tidak ada data</td></tr>
+                <tr><td colSpan={7} className="text-center py-8 text-slate-500">{t("Tidak ada data")}</td></tr>
               ) : workers.map((w) => {
                 const sc = STATUS_CONFIG[w.status] || STATUS_CONFIG.not_ready;
                 return (
@@ -262,14 +265,14 @@ export default function HrdDashboard() {
                         <span className="text-xs">{w.readinessScore}%</span>
                       </div>
                     </td>
-                    <td className="py-3"><span className={`badge ${sc.cls}`}>{sc.label}</span></td>
+                    <td className="py-3"><span className={`badge ${sc.cls}`}>{t(sc.label)}</span></td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
-        <p className="text-xs text-slate-500 mt-3">Klik baris talenta untuk melihat detail kompetensi, unit lulus, & sertifikat dari hasil ujian.</p>
+        <p className="text-xs text-slate-500 mt-3">{t("Klik baris talenta untuk melihat detail kompetensi, unit lulus, & sertifikat dari hasil ujian.")}</p>
       </div>
 
       {detailId && <WorkerDetailModal id={detailId} onClose={() => setDetailId(null)} />}
@@ -278,26 +281,26 @@ export default function HrdDashboard() {
       {showRequest && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="card p-6 w-full max-w-md">
-            <h3 className="font-semibold text-white mb-4">Ajukan Request ke Admin</h3>
+            <h3 className="font-semibold text-white mb-4">{t("Ajukan Request ke Admin")}</h3>
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-slate-300 mb-1.5 block">Tipe Request</label>
+                <label className="text-sm font-medium text-slate-300 mb-1.5 block">{t("Tipe Request")}</label>
                 <select className="input" value={reqForm.type} onChange={(e) => setReqForm((f) => ({ ...f, type: e.target.value }))}>
-                  <option value="buka_ujian_ulang">Buka Ujian Ulang</option>
-                  <option value="ubah_target_level">Ubah Target Level</option>
-                  <option value="tambah_kompetensi">Tambah Kompetensi</option>
-                  <option value="lainnya">Lainnya</option>
+                  <option value="buka_ujian_ulang">{t("Buka Ujian Ulang")}</option>
+                  <option value="ubah_target_level">{t("Ubah Target Level")}</option>
+                  <option value="tambah_kompetensi">{t("Tambah Kompetensi")}</option>
+                  <option value="lainnya">{t("Lainnya")}</option>
                 </select>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-300 mb-1.5 block">Keterangan</label>
-                <textarea className="input h-24 resize-none" placeholder="Detail request Anda…"
+                <label className="text-sm font-medium text-slate-300 mb-1.5 block">{t("Keterangan")}</label>
+                <textarea className="input h-24 resize-none" placeholder={t("Detail request Anda…")}
                   value={reqForm.payload} onChange={(e) => setReqForm((f) => ({ ...f, payload: e.target.value }))} />
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setShowRequest(false)} className="btn-outline flex-1">Batal</button>
+                <button onClick={() => setShowRequest(false)} className="btn-outline flex-1">{t("Batal")}</button>
                 <button onClick={() => sendRequest.mutate()} disabled={sendRequest.isPending} className="btn-primary flex-1">
-                  {sendRequest.isPending ? "Mengirim…" : "Kirim Request"}
+                  {sendRequest.isPending ? t("Mengirim…") : t("Kirim Request")}
                 </button>
               </div>
             </div>

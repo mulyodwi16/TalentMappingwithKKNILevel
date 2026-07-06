@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import useAuthStore from "../store/authStore.js";
 import Logo from "./Logo.jsx";
+import { useLang } from "../lib/i18n.jsx";
 
 // Item nav (Profil dipindah ke dropdown ikon profil di Topbar — #16).
 const USER_MAIN   = { to: "/app/dashboard", label: "Dashboard", Icon: LayoutDashboard };
@@ -66,15 +67,17 @@ const linkClass = ({ isActive }) =>
 const linkStyle = ({ isActive }) => (isActive ? {} : { color: "var(--text-3)" });
 
 function NavItem({ to, label, Icon, onNavigate }) {
+  const { t } = useLang();
   return (
     <NavLink to={to} end className={linkClass} style={linkStyle} onClick={onNavigate}>
-      {({ isActive }) => (<><Icon size={17} className={isActive ? "text-white" : ""} />{label}</>)}
+      {({ isActive }) => (<><Icon size={17} className={isActive ? "text-white" : ""} />{t(label)}</>)}
     </NavLink>
   );
 }
 
 // Grup nav collapsible (container dropdown).
 function NavGroup({ group, activePath, onNavigate }) {
+  const { t } = useLang();
   const hasActive = group.items.some((i) => activePath === i.to);
   const [open, setOpen] = useState(hasActive || false);
   return (
@@ -84,7 +87,7 @@ function NavGroup({ group, activePath, onNavigate }) {
         className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider hover:opacity-80"
         style={{ color: "var(--text-4)" }}
       >
-        {group.label}
+        {t(group.label)}
         <ChevronDown size={13} className={`transition-transform ${open ? "" : "-rotate-90"}`} />
       </button>
       {open && (
@@ -97,6 +100,7 @@ function NavGroup({ group, activePath, onNavigate }) {
 }
 
 export default function Sidebar({ open, onClose }) {
+  const { t } = useLang();
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -125,9 +129,9 @@ export default function Sidebar({ open, onClose }) {
       {/* User badge */}
       <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
         <div className="glass rounded-xl px-3 py-2.5">
-          <p className="text-xs" style={{ color: "var(--text-3)" }}>Login sebagai</p>
+          <p className="text-xs" style={{ color: "var(--text-3)" }}>{t("Login sebagai")}</p>
           <p className="text-sm font-semibold truncate" style={{ color: "var(--text-base)" }}>{user?.name}</p>
-          <span className="text-xs font-medium text-brand-600">{ROLE_LABEL[role]}</span>
+          <span className="text-xs font-medium text-brand-600">{t(ROLE_LABEL[role])}</span>
         </div>
       </div>
 
@@ -150,7 +154,7 @@ export default function Sidebar({ open, onClose }) {
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-red-50 hover:text-red-500 transition-all duration-200"
           style={{ color: "var(--text-3)" }}
         >
-          <LogOut size={17} /> Keluar
+          <LogOut size={17} /> {t("Keluar")}
         </button>
       </div>
     </aside>

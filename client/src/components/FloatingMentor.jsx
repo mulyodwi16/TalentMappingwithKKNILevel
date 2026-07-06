@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { Bot, Send, X, Loader2, Sparkles, Trash2 } from "lucide-react";
 import { useMentorChat } from "../hooks/useMentorChat.js";
 import useAuthStore from "../store/authStore.js";
+import { useLang } from "../lib/i18n.jsx";
 
 // Label fitur dari path — agar chat "context-aware" (tahu pengguna sedang di mana).
 const PAGE_LABELS = [
@@ -27,6 +28,7 @@ function fmt(text) {
 // Chat AI mengambang (context-aware) — tampil di halaman User. Riwayat DIBAGI & PERSISTEN
 // dengan halaman /app/mentor (useMentorChat) + mengirim konteks halaman aktif.
 export default function FloatingMentor() {
+  const { t } = useLang();
   const { pathname } = useLocation();
   const role = useAuthStore((s) => s.user?.role);
   const { messages, busy, send, clear } = useMentorChat();
@@ -43,10 +45,11 @@ export default function FloatingMentor() {
   if (pathname.startsWith("/app/mentor")) return null;
 
   function submit(text) {
-    const t = (text || "").trim();
-    if (!t || busy) return;
+    // JANGAN beri nama `t` — men-shadow fungsi terjemahan useLang.
+    const q = (text || "").trim();
+    if (!q || busy) return;
     setInput("");
-    send(t, ctx);
+    send(q, ctx);
   }
 
   return (
@@ -56,10 +59,10 @@ export default function FloatingMentor() {
         <button
           onClick={() => setOpen(true)}
           className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-brand-600 text-white shadow-lg hover:shadow-xl hover:bg-brand-700 hover:scale-105 transition-all px-4 py-3"
-          aria-label="Buka AI Mentor"
+          aria-label={t("Buka AI Mentor")}
         >
           <Bot className="w-5 h-5" />
-          <span className="text-sm font-medium hidden sm:inline">Tanya AI Mentor</span>
+          <span className="text-sm font-medium hidden sm:inline">{t("Tanya AI Mentor")}</span>
         </button>
       )}
 
@@ -73,24 +76,24 @@ export default function FloatingMentor() {
             <div className="flex items-center gap-2 min-w-0">
               <div className="rounded-full bg-white/15 p-1.5"><Bot className="w-4 h-4" /></div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold leading-none">AI Mentor</p>
-                <p className="text-[10px] text-white/70 truncate">Konteks: {ctx}</p>
+                <p className="text-sm font-semibold leading-none">{t("AI Mentor")}</p>
+                <p className="text-[10px] text-white/70 truncate">{t("Konteks:")} {ctx}</p>
               </div>
             </div>
             <div className="flex items-center gap-1 shrink-0">
               {messages.length > 0 && (
-                <button onClick={clear} className="text-white/70 hover:text-white" aria-label="Bersihkan riwayat" title="Bersihkan riwayat"><Trash2 className="w-3.5 h-3.5" /></button>
+                <button onClick={clear} className="text-white/70 hover:text-white" aria-label={t("Bersihkan riwayat")} title={t("Bersihkan riwayat")}><Trash2 className="w-3.5 h-3.5" /></button>
               )}
-              <button onClick={() => setOpen(false)} className="text-white/80 hover:text-white" aria-label="Tutup"><X className="w-4 h-4" /></button>
+              <button onClick={() => setOpen(false)} className="text-white/80 hover:text-white" aria-label={t("Tutup")}><X className="w-4 h-4" /></button>
             </div>
           </div>
 
           <div ref={boxRef} className="flex-1 overflow-y-auto p-3 space-y-3 min-h-[200px]">
             {messages.length === 0 && (
               <div className="text-sm" style={{ color: "var(--text-3)" }}>
-                <p className="mb-2">Halo! Tanya apa saja soal Skill Rank & kompetensimu. Saya tahu kamu sedang di <b style={{ color: "var(--text-base)" }}>{ctx}</b>.</p>
+                <p className="mb-2">{t("Halo! Tanya apa saja soal Skill Rank & kompetensimu. Saya tahu kamu sedang di")} <b style={{ color: "var(--text-base)" }}>{ctx}</b>.</p>
                 <div className="flex flex-col gap-1.5">
-                  {["Apa langkah prioritas untuk naik Skill Rank saya?", `Jelaskan fitur ${ctx} ini untuk saya.`].map((c) => (
+                  {[t("Apa langkah prioritas untuk naik Skill Rank saya?"), t("Jelaskan fitur {ctx} ini untuk saya.", { ctx })].map((c) => (
                     <button key={c} onClick={() => submit(c)} className="text-left text-xs rounded-lg px-2.5 py-1.5 transition-colors hover:text-brand-600" style={{ border: "1px solid var(--border-2)" }}>{c}</button>
                   ))}
                 </div>
@@ -98,7 +101,7 @@ export default function FloatingMentor() {
             )}
             {messages.map((m, i) => (
               <div key={i} className={`flex gap-2 items-start ${m.role === "user" ? "flex-row-reverse" : ""}`}>
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${m.role === "user" ? "bg-brand-600 text-white text-[10px]" : "bg-brand-600/10"}`}>{m.role === "user" ? "Aku" : <Bot className="w-3.5 h-3.5 text-brand-600" />}</div>
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${m.role === "user" ? "bg-brand-600 text-white text-[10px]" : "bg-brand-600/10"}`}>{m.role === "user" ? t("Aku") : <Bot className="w-3.5 h-3.5 text-brand-600" />}</div>
                 <div
                   className={`rounded-2xl px-3 py-2 text-sm leading-relaxed max-w-[82%] ${m.role === "user" ? "bg-brand-600 text-white rounded-tr-sm" : "rounded-tl-sm"}`}
                   style={m.role === "user" ? {} : { backgroundColor: "var(--bg-muted)", color: "var(--text-base)" }}
@@ -117,13 +120,13 @@ export default function FloatingMentor() {
           <div className="p-2.5 flex gap-2" style={{ borderTop: "1px solid var(--border)" }}>
             <input
               value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit(input)}
-              placeholder="Ketik pertanyaan…" disabled={busy}
+              placeholder={t("Ketik pertanyaan…")} disabled={busy}
               className="flex-1 px-3 py-2 rounded-lg text-sm outline-none focus:border-brand-500 disabled:opacity-50"
               style={{ backgroundColor: "var(--bg-raised)", border: "1px solid var(--border-2)", color: "var(--text-base)" }}
             />
-            <button onClick={() => submit(input)} disabled={busy || !input.trim()} className="rounded-lg bg-brand-600 hover:bg-brand-700 text-white px-3 disabled:opacity-50" aria-label="Kirim"><Send className="w-4 h-4" /></button>
+            <button onClick={() => submit(input)} disabled={busy || !input.trim()} className="rounded-lg bg-brand-600 hover:bg-brand-700 text-white px-3 disabled:opacity-50" aria-label={t("Kirim")}><Send className="w-4 h-4" /></button>
           </div>
-          <p className="text-[9px] px-3 pb-2 flex items-center gap-1" style={{ color: "var(--text-4)" }}><Sparkles className="w-2.5 h-2.5" /> Riwayat tersimpan & dibagi dgn halaman AI Mentor. Verifikasi info penting ke sumber resmi.</p>
+          <p className="text-[9px] px-3 pb-2 flex items-center gap-1" style={{ color: "var(--text-4)" }}><Sparkles className="w-2.5 h-2.5" /> {t("Riwayat tersimpan & dibagi dgn halaman AI Mentor. Verifikasi info penting ke sumber resmi.")}</p>
         </div>
       )}
     </>

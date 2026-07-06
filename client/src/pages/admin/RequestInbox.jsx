@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import api from "../../api/client.js";
+import { useLang, dateLocale } from "../../lib/i18n.jsx";
 
 const STATUS_CLS = {
   pending:  { cls: "badge-in-progress", label: "Menunggu" },
@@ -10,6 +11,7 @@ const STATUS_CLS = {
 };
 
 export default function RequestInbox() {
+  const { t, lang } = useLang();
   const qc = useQueryClient();
   const [filter, setFilter] = useState("pending");
   const [notes, setNotes] = useState({});
@@ -21,30 +23,30 @@ export default function RequestInbox() {
 
   const handle = useMutation({
     mutationFn: ({ id, status }) => api.put(`/admin/requests/${id}`, { status, notes: notes[id] || "" }),
-    onSuccess: () => { toast.success("Request diperbarui"); qc.invalidateQueries(["admin-requests"]); },
-    onError: (err) => toast.error(err || "Gagal"),
+    onSuccess: () => { toast.success(t("Request diperbarui")); qc.invalidateQueries(["admin-requests"]); },
+    onError: (err) => toast.error(err || t("Gagal")),
   });
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-white">Inbox Request</h2>
+        <h2 className="text-xl font-bold text-white">{t("Inbox Request")}</h2>
         <div className="flex gap-2">
           {Object.entries(STATUS_CLS).map(([k, v]) => (
             <button key={k} onClick={() => setFilter(k)}
               className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${filter === k ? "bg-brand-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>
-              {v.label}
+              {t(v.label)}
             </button>
           ))}
         </div>
       </div>
 
       {isLoading ? (
-        <div className="text-center py-12 text-slate-500">Memuat…</div>
+        <div className="text-center py-12 text-slate-500">{t("Memuat…")}</div>
       ) : requests.length === 0 ? (
         <div className="card p-12 text-center">
           <div className="text-4xl mb-3">✉</div>
-          <p className="text-slate-500">Tidak ada request {STATUS_CLS[filter]?.label.toLowerCase()}</p>
+          <p className="text-slate-500">{t("Tidak ada request {status}", { status: t(STATUS_CLS[filter]?.label || "").toLowerCase() })}</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -57,32 +59,32 @@ export default function RequestInbox() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="font-semibold text-white">{r.fromName || r.fromEmail}</p>
-                    <span className={`badge ${STATUS_CLS[r.status]?.cls}`}>{STATUS_CLS[r.status]?.label}</span>
+                    <span className={`badge ${STATUS_CLS[r.status]?.cls}`}>{STATUS_CLS[r.status] ? t(STATUS_CLS[r.status].label) : ""}</span>
                   </div>
-                  <p className="text-xs text-slate-500 mb-2">{r.fromEmail} · {new Date(r.createdAt).toLocaleString("id-ID")}</p>
+                  <p className="text-xs text-slate-500 mb-2">{r.fromEmail} · {new Date(r.createdAt).toLocaleString(dateLocale(lang))}</p>
                   <div className="bg-slate-900/60 rounded-xl p-3 mb-3">
                     <p className="text-xs text-brand-400 font-semibold mb-1">{r.type.replace(/_/g, " ").toUpperCase()}</p>
                     <p className="text-sm text-slate-300">{typeof r.payload === "string" ? r.payload : JSON.stringify(r.payload, null, 2)}</p>
                   </div>
                   {r.notes && (
-                    <p className="text-xs text-slate-500 mb-3">Catatan Admin: {r.notes}</p>
+                    <p className="text-xs text-slate-500 mb-3">{t("Catatan Admin:")} {r.notes}</p>
                   )}
                   {r.status === "pending" && (
                     <div className="flex gap-3 items-center">
                       <input
                         className="input text-sm py-1.5 flex-1"
-                        placeholder="Catatan (opsional)…"
+                        placeholder={t("Catatan (opsional)…")}
                         value={notes[r.id] || ""}
                         onChange={(e) => setNotes((n) => ({ ...n, [r.id]: e.target.value }))}
                       />
                       <button
                         onClick={() => handle.mutate({ id: r.id, status: "approved" })}
                         className="text-sm px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 font-medium transition-colors"
-                      >✓ Setujui</button>
+                      >{t("✓ Setujui")}</button>
                       <button
                         onClick={() => handle.mutate({ id: r.id, status: "rejected" })}
                         className="text-sm px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 font-medium transition-colors"
-                      >✗ Tolak</button>
+                      >{t("✗ Tolak")}</button>
                     </div>
                   )}
                 </div>

@@ -1,5 +1,6 @@
 import { rankOf, rankName, tierProgress, RANKS } from "../lib/rank.js";
 import RankIcon from "./RankIcon.jsx";
+import { useLang } from "../lib/i18n.jsx";
 
 // Panggung rank ala main-menu game ranked — komponen rank terbesar & tersorot.
 // Dipakai di Dashboard (hero) & Profile (pusat). Selalu panel gelap dramatis;
@@ -17,6 +18,7 @@ import RankIcon from "./RankIcon.jsx";
 export default function RankHero({
   rank, rankInfo, readiness, competency, size = "lg", footer,
 }) {
+  const { t } = useLang();
   const level = rank?.effective || rank?.earned || 1;
   const r = rankOf(level) || RANKS[0];
   const c = r.color;
@@ -73,7 +75,7 @@ export default function RankHero({
           {rank?.boostedByEvidence && (
             <span className="mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
               style={{ background: `${c}22`, color: c, border: `1px solid ${c}55` }}>
-              ✦ Ditingkatkan bukti eksternal
+              ✦ {t("Ditingkatkan bukti eksternal")}
             </span>
           )}
 
@@ -82,11 +84,11 @@ export default function RankHero({
             <div className="mb-1.5 flex items-center justify-between text-[11px]">
               <span className="font-semibold uppercase tracking-wider" style={{ color: c }}>{r.name}</span>
               {prog.atCap ? (
-                <span className="text-amber-400">Batas bobot kompetensi 🔒</span>
+                <span className="text-amber-400">{t("Batas bobot kompetensi 🔒")}</span>
               ) : nextName ? (
-                <span className="text-slate-400">Menuju <b className="text-slate-200">{nextName}</b></span>
+                <span className="text-slate-400">{t("Menuju")} <b className="text-slate-200">{nextName}</b></span>
               ) : (
-                <span className="text-slate-400">Rank tertinggi 👑</span>
+                <span className="text-slate-400">{t("Rank tertinggi 👑")}</span>
               )}
             </div>
             <div className="relative h-3 overflow-hidden rounded-full" style={{ background: "#111a2e", border: `1px solid ${c}33` }}>
@@ -98,10 +100,10 @@ export default function RankHero({
             </div>
             <p className="mt-1.5 text-[11px] text-slate-400">
               {prog.atCap
-                ? "Untuk melampaui, tambahkan bukti eksternal (sertifikasi resmi, portofolio, pengalaman)."
+                ? t("Untuk melampaui, tambahkan bukti eksternal (sertifikasi resmi, portofolio, pengalaman).")
                 : prog.nextLevel
-                  ? <>Kumpulkan <b className="text-slate-200">{prog.need} poin</b> kompetensi lagi (≈ {Math.ceil(prog.need / 8)} unit lulus / {Math.ceil(prog.need / 10)} sertifikat).</>
-                  : "Kamu berada di puncak jenjang kompetensi. 🎉"}
+                  ? <>{t("Kumpulkan")} <b className="text-slate-200">{t("{n} poin", { n: prog.need })}</b> {t("kompetensi lagi (≈ {a} unit lulus / {b} sertifikat).", { a: Math.ceil(prog.need / 8), b: Math.ceil(prog.need / 10) })}</>
+                  : t("Kamu berada di puncak jenjang kompetensi. 🎉")}
             </p>
           </div>
 
@@ -112,7 +114,7 @@ export default function RankHero({
               const passed = x.level < level;
               const locked = x.level > cap;
               return (
-                <span key={x.level} title={`${x.name}${locked ? " · terkunci bobot" : ""}`}
+                <span key={x.level} title={`${x.name}${locked ? t(" · terkunci bobot") : ""}`}
                   className="rounded-full transition-all"
                   style={{
                     width: active ? 26 : 8, height: 8,
@@ -126,19 +128,19 @@ export default function RankHero({
 
           {/* Stat chips */}
           <div className="mt-6 grid w-full max-w-lg grid-cols-2 gap-2.5 sm:grid-cols-4">
-            <Stat label="Unit Lulus" value={rank?.passedUnits ?? 0} color={c} />
-            <Stat label="Sertifikat" value={rank?.certs ?? 0} color={c} />
-            <Stat label="Kelas" value={rank?.courses ?? 0} color={c} />
-            <Stat label="Kesiapan" value={`${readiness ?? 0}%`} color={c} />
+            <Stat label={t("Unit Lulus")} value={rank?.passedUnits ?? 0} color={c} />
+            <Stat label={t("Sertifikat")} value={rank?.certs ?? 0} color={c} />
+            <Stat label={t("Kelas")} value={rank?.courses ?? 0} color={c} />
+            <Stat label={t("Kesiapan")} value={`${readiness ?? 0}%`} color={c} />
           </div>
 
           {competency && (
             <div className="mt-4 max-w-lg rounded-xl px-3.5 py-2 text-xs"
               style={{ background: "#0e1524", border: `1px solid ${c}22`, color: "#cbd5e1" }}>
-              <span className="text-slate-500">Kompetensi target · </span>
+              <span className="text-slate-500">{t("Kompetensi target")} · </span>
               <span className="font-medium text-slate-200">{competency}</span>
               {rank?.weightTier && (
-                <span className="text-slate-500"> · bobot <b style={{ color: rankOf(cap)?.color }}>{rank.weightTier}</b> (maks {rankName(cap)})</span>
+                <span className="text-slate-500"> · {t("bobot")} <b style={{ color: rankOf(cap)?.color }}>{rank.weightTier}</b> ({t("maks")} {rankName(cap)})</span>
               )}
             </div>
           )}

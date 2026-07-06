@@ -7,6 +7,7 @@ import {
   History, XCircle, X, Loader2,
 } from "lucide-react";
 import api from "../../api/client.js";
+import { useLang, getLang, dateLocale } from "../../lib/i18n.jsx";
 
 function Timer({ seconds, onDone }) {
   const [left, setLeft] = useState(seconds);
@@ -46,10 +47,11 @@ const QTYPE = {
 // Soal terjawab: MC bila dipilih; isian/urutan bila teks tak kosong.
 const isAnswered = (q, a) => ((q.type === "mc" || !q.type) ? a !== undefined : typeof a === "string" && a.trim().length > 0);
 
-const fmtDT = (d) => new Date(d).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const fmtDT = (d) => new Date(d).toLocaleString(dateLocale(getLang()), { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
 // ── Review per soal ala Quizizz (#3): jawaban user vs jawaban benar terlihat ──
 function ReviewBreakdown({ breakdown }) {
+  const { t } = useLang();
   return (
     <div className="space-y-3">
       {breakdown.map((b, i) => {
@@ -62,7 +64,7 @@ function ReviewBreakdown({ breakdown }) {
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="text-[10px] font-bold" style={{ color: "var(--text-4)" }}>#{i + 1}</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${QTYPE[b.type]?.cls || QTYPE.mc.cls}`}>{QTYPE[b.type]?.label || "Pilihan Ganda"}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${QTYPE[b.type]?.cls || QTYPE.mc.cls}`}>{t(QTYPE[b.type]?.label || "Pilihan Ganda")}</span>
                   {ok ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> : <XCircle className={`w-3.5 h-3.5 ${partial ? "text-amber-500" : "text-red-400"}`} />}
                 </div>
                 <p className="text-sm mt-1" style={{ color: "var(--text-base)" }}>{b.question}</p>
@@ -85,9 +87,9 @@ function ReviewBreakdown({ breakdown }) {
                     <div key={oi} className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs" style={style}>
                       <span className="font-bold shrink-0">{String.fromCharCode(65 + oi)}.</span>
                       <span className="flex-1">{opt}</span>
-                      {isKey && <span className="text-[10px] font-bold shrink-0">✓ Jawaban benar</span>}
-                      {isUser && !isKey && <span className="text-[10px] font-bold shrink-0">✗ Pilihanmu</span>}
-                      {isUser && isKey && <span className="text-[10px] font-bold shrink-0">Pilihanmu</span>}
+                      {isKey && <span className="text-[10px] font-bold shrink-0">✓ {t("Jawaban benar")}</span>}
+                      {isUser && !isKey && <span className="text-[10px] font-bold shrink-0">✗ {t("Pilihanmu")}</span>}
+                      {isUser && isKey && <span className="text-[10px] font-bold shrink-0">{t("Pilihanmu")}</span>}
                     </div>
                   );
                 })
@@ -95,8 +97,8 @@ function ReviewBreakdown({ breakdown }) {
                 // Isian/urutan: jawaban user + umpan balik AI.
                 <>
                   <div className="rounded-lg px-2.5 py-2 text-xs" style={{ background: "var(--bg-muted)", border: "1px solid var(--border)" }}>
-                    <p className="text-[10px] font-bold mb-0.5" style={{ color: "var(--text-4)" }}>JAWABANMU</p>
-                    <p style={{ color: "var(--text-2)", whiteSpace: "pre-wrap" }}>{b.userAnswer?.trim() ? b.userAnswer : <i style={{ color: "var(--text-4)" }}>(tidak dijawab)</i>}</p>
+                    <p className="text-[10px] font-bold mb-0.5" style={{ color: "var(--text-4)" }}>{t("JAWABANMU")}</p>
+                    <p style={{ color: "var(--text-2)", whiteSpace: "pre-wrap" }}>{b.userAnswer?.trim() ? b.userAnswer : <i style={{ color: "var(--text-4)" }}>{t("(tidak dijawab)")}</i>}</p>
                   </div>
                 </>
               )}
@@ -115,6 +117,7 @@ function ReviewBreakdown({ breakdown }) {
 
 // Modal review riwayat ujian — buka kembali soal + jawaban untuk dipelajari.
 function HistoryReviewModal({ id, onClose }) {
+  const { t } = useLang();
   const { data, isLoading } = useQuery({ queryKey: ["exam-review", id], queryFn: () => api.get(`/skkni/exam-history/${id}`), enabled: !!id });
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
@@ -126,18 +129,18 @@ function HistoryReviewModal({ id, onClose }) {
       <div className="w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col" style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", maxHeight: "90vh" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-3 px-4 py-3 shrink-0" style={{ borderBottom: "1px solid var(--border)" }}>
           <div className="min-w-0">
-            <p className="text-sm font-semibold truncate" style={{ color: "var(--text-base)" }}>{data?.unitTitle || "Review Ujian"}</p>
-            {data && <p className="text-[11px]" style={{ color: "var(--text-4)" }}>{fmtDT(data.createdAt)} · skor <b className={data.passed ? "text-emerald-500" : "text-red-400"}>{data.score}%</b> · {data.passed ? "Lulus" : "Belum lulus"}</p>}
+            <p className="text-sm font-semibold truncate" style={{ color: "var(--text-base)" }}>{data?.unitTitle || t("Review Ujian")}</p>
+            {data && <p className="text-[11px]" style={{ color: "var(--text-4)" }}>{fmtDT(data.createdAt)} · {t("skor")} <b className={data.passed ? "text-emerald-500" : "text-red-400"}>{data.score}%</b> · {data.passed ? t("Lulus") : t("Belum lulus")}</p>}
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-red-500/10 hover:text-red-400 shrink-0" style={{ color: "var(--text-4)" }} aria-label="Tutup"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-red-500/10 hover:text-red-400 shrink-0" style={{ color: "var(--text-4)" }} aria-label={t("Tutup")}><X className="w-4 h-4" /></button>
         </div>
         <div className="p-4 overflow-y-auto">
           {isLoading ? (
-            <p className="text-sm text-center py-8 flex items-center justify-center gap-2" style={{ color: "var(--text-4)" }}><Loader2 className="w-4 h-4 animate-spin" /> Memuat review…</p>
+            <p className="text-sm text-center py-8 flex items-center justify-center gap-2" style={{ color: "var(--text-4)" }}><Loader2 className="w-4 h-4 animate-spin" /> {t("Memuat review…")}</p>
           ) : data?.breakdown ? (
             <ReviewBreakdown breakdown={data.breakdown} />
           ) : (
-            <p className="text-sm text-center py-8" style={{ color: "var(--text-4)" }}>Review tidak ditemukan.</p>
+            <p className="text-sm text-center py-8" style={{ color: "var(--text-4)" }}>{t("Review tidak ditemukan.")}</p>
           )}
         </div>
       </div>
@@ -147,6 +150,7 @@ function HistoryReviewModal({ id, onClose }) {
 
 // Riwayat ujian unit — daftar hasil untuk dibuka kembali (fitur belajar dari kesalahan).
 function ExamHistory() {
+  const { t } = useLang();
   const [viewId, setViewId] = useState(null);
   const { data } = useQuery({ queryKey: ["exam-history"], queryFn: () => api.get("/skkni/exam-history") });
   const items = data?.items || [];
@@ -154,8 +158,8 @@ function ExamHistory() {
   return (
     <div className="card p-5">
       <h3 className="text-sm font-bold flex items-center gap-2 mb-3" style={{ color: "var(--text-base)" }}>
-        <History className="w-4 h-4 text-brand-500" /> Riwayat Ujian Unit
-        <span className="text-[11px] font-normal" style={{ color: "var(--text-4)" }}>klik untuk review soal & jawabanmu</span>
+        <History className="w-4 h-4 text-brand-500" /> {t("Riwayat Ujian Unit")}
+        <span className="text-[11px] font-normal" style={{ color: "var(--text-4)" }}>{t("klik untuk review soal & jawabanmu")}</span>
       </h3>
       <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
         {items.map((it) => (
@@ -165,9 +169,9 @@ function ExamHistory() {
             <span className={`w-9 h-9 rounded-lg grid place-items-center text-xs font-black shrink-0 ${it.passed ? "bg-emerald-500/15 text-emerald-500" : "bg-red-500/10 text-red-400"}`}>{it.score}%</span>
             <span className="min-w-0 flex-1">
               <span className="block text-xs font-medium truncate" style={{ color: "var(--text-base)" }}>{it.unitTitle}</span>
-              <span className="block text-[11px]" style={{ color: "var(--text-4)" }}>{fmtDT(it.createdAt)} · {it.passed ? "Lulus" : "Belum lulus"}</span>
+              <span className="block text-[11px]" style={{ color: "var(--text-4)" }}>{fmtDT(it.createdAt)} · {it.passed ? t("Lulus") : t("Belum lulus")}</span>
             </span>
-            <span className="text-[11px] text-brand-500 shrink-0">Review →</span>
+            <span className="text-[11px] text-brand-500 shrink-0">{t("Review →")}</span>
           </button>
         ))}
       </div>
@@ -178,8 +182,9 @@ function ExamHistory() {
 
 // ── Pemilih unit: ujian kini PER UNIT kompetensi ──────────────────────────────
 function UnitPicker({ chosen, onPick }) {
+  const { t } = useLang();
   const { data, isLoading } = useQuery({ queryKey: ["kelas-units"], queryFn: () => api.get("/kelas/units") });
-  if (isLoading) return <div className="text-center py-10 text-sm" style={{ color: "var(--text-4)" }}>Memuat unit…</div>;
+  if (isLoading) return <div className="text-center py-10 text-sm" style={{ color: "var(--text-4)" }}>{t("Memuat unit…")}</div>;
   const units = data?.units || [];
   const s = data?.summary;
 
@@ -188,18 +193,18 @@ function UnitPicker({ chosen, onPick }) {
       <div className="card p-5">
         <div className="flex items-center gap-2 mb-1">
           <GraduationCap className="w-5 h-5 text-brand-500" />
-          <h2 className="text-lg font-bold" style={{ color: "var(--text-base)" }}>Ujian per Unit Kompetensi</h2>
+          <h2 className="text-lg font-bold" style={{ color: "var(--text-base)" }}>{t("Ujian per Unit Kompetensi")}</h2>
         </div>
         <p className="text-sm mb-1" style={{ color: "var(--text-3)" }}>{chosen.title}</p>
         <p className="text-xs" style={{ color: "var(--text-4)" }}>
-          Tiap unit diuji terpisah dengan jumlah soal berbeda sesuai kompleksitasnya. Selesaikan <b>Kelas</b> unit untuk membuka ujiannya — lulus (≥60%) menerbitkan sertifikat unit.
+          {t("Tiap unit diuji terpisah dengan jumlah soal berbeda sesuai kompleksitasnya. Selesaikan")} <b>{t("Kelas")}</b> {t("unit untuk membuka ujiannya — lulus (≥60%) menerbitkan sertifikat unit.")}
         </p>
         {s && (
           <div className="flex gap-2 mt-3 flex-wrap text-xs">
-            <span className="px-2 py-1 rounded-full bg-emerald-500/15 text-emerald-500">{s.passed} lulus</span>
-            <span className="px-2 py-1 rounded-full bg-brand-500/15 text-brand-500">{s.ready} siap ujian</span>
-            <span className="px-2 py-1 rounded-full bg-amber-500/15 text-amber-500">{s.learning} belajar</span>
-            <span className="px-2 py-1 rounded-full bg-[var(--bg-muted)]" style={{ color: "var(--text-4)" }}>{s.locked} terkunci</span>
+            <span className="px-2 py-1 rounded-full bg-emerald-500/15 text-emerald-500">{t("{n} lulus", { n: s.passed })}</span>
+            <span className="px-2 py-1 rounded-full bg-brand-500/15 text-brand-500">{t("{n} siap ujian", { n: s.ready })}</span>
+            <span className="px-2 py-1 rounded-full bg-amber-500/15 text-amber-500">{t("{n} belajar", { n: s.learning })}</span>
+            <span className="px-2 py-1 rounded-full bg-[var(--bg-muted)]" style={{ color: "var(--text-4)" }}>{t("{n} terkunci", { n: s.locked })}</span>
           </div>
         )}
       </div>
@@ -216,20 +221,20 @@ function UnitPicker({ chosen, onPick }) {
                 <div className={`w-9 h-9 rounded-xl grid place-items-center shrink-0 text-sm font-black ${u.state === "passed" ? "bg-emerald-500 text-white" : "bg-[var(--bg-muted)]"}`} style={u.state === "passed" ? {} : { color: "var(--text-3)" }}>
                   {u.state === "passed" ? "✓" : u.order}
                 </div>
-                <span className={`text-[11px] px-1.5 py-0.5 rounded-full ml-auto shrink-0 ${ui.badge}`}>{ui.label}</span>
+                <span className={`text-[11px] px-1.5 py-0.5 rounded-full ml-auto shrink-0 ${ui.badge}`}>{t(ui.label)}</span>
               </div>
               <p className="text-sm font-semibold leading-snug line-clamp-3 min-h-[3.6em]" style={{ color: "var(--text-base)" }} title={u.title}>{u.title}</p>
               <div className="flex items-center gap-2 text-[11px]" style={{ color: "var(--text-4)" }}>
-                {u.score != null && <span>skor {u.score}%</span>}
-                {u.questionCount ? <span>· {u.questionCount} soal</span> : null}
+                {u.score != null && <span>{t("skor {n}%", { n: u.score })}</span>}
+                {u.questionCount ? <span>· {t("{n} soal", { n: u.questionCount })}</span> : null}
               </div>
               {canExam ? (
                 <button onClick={() => onPick(u.code)} className="btn-primary text-xs py-2 w-full flex items-center justify-center gap-1.5 mt-auto">
-                  {u.state === "passed" ? <><RotateCcw className="w-3.5 h-3.5" /> Ujian Ulang</> : <><PlayCircle className="w-3.5 h-3.5" /> Mulai Ujian</>}
+                  {u.state === "passed" ? <><RotateCcw className="w-3.5 h-3.5" /> {t("Ujian Ulang")}</> : <><PlayCircle className="w-3.5 h-3.5" /> {t("Mulai Ujian")}</>}
                 </button>
               ) : (
                 <Link to="/app/kelas" className="btn-outline text-xs py-2 w-full flex items-center justify-center gap-1.5 mt-auto">
-                  <ui.Icon className="w-3.5 h-3.5" /> {u.state === "locked" ? "Buka di Kelas" : "Belajar Dulu"}
+                  <ui.Icon className="w-3.5 h-3.5" /> {u.state === "locked" ? t("Buka di Kelas") : t("Belajar Dulu")}
                 </Link>
               )}
             </div>
@@ -238,7 +243,7 @@ function UnitPicker({ chosen, onPick }) {
       </div>
       {units.length === 0 && (
         <div className="card p-8 text-center text-sm" style={{ color: "var(--text-4)" }}>
-          Belum ada unit. <Link to="/app/profile" className="text-brand-500 hover:underline">Pilih kompetensi SKKNI</Link> dulu.
+          {t("Belum ada unit.")} <Link to="/app/profile" className="text-brand-500 hover:underline">{t("Pilih kompetensi SKKNI")}</Link> {t("dulu.")}
         </div>
       )}
 
@@ -249,6 +254,7 @@ function UnitPicker({ chosen, onPick }) {
 }
 
 export default function Exam() {
+  const { t } = useLang();
   const qc = useQueryClient();
   const [sp, setSp] = useSearchParams();
   const unitParam = sp.get("unit");
@@ -280,7 +286,7 @@ export default function Exam() {
       setResult(data);
       ["attempts", "assessments", "profile", "overview", "notifications", "skkni-chosen", "kelas-units", "learning-path", "coins", "exam-history"].forEach((k) => qc.invalidateQueries([k]));
     },
-    onError: (err) => toast.error(err || "Gagal submit"),
+    onError: (err) => toast.error(err || t("Gagal submit")),
   });
 
   const questions = examData?.questions || [];
@@ -302,28 +308,28 @@ export default function Exam() {
       <div className="max-w-xl mx-auto space-y-5">
         <div className="card p-8 text-center">
           <div className="text-5xl mb-4">✎</div>
-          <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-base)" }}>Ujian Kompetensi</h2>
-          <p className="text-sm mb-4" style={{ color: "var(--text-3)" }}>Ujian ini menilai kompetensi Anda berdasarkan standar SKKNI.</p>
+          <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-base)" }}>{t("Ujian Kompetensi")}</h2>
+          <p className="text-sm mb-4" style={{ color: "var(--text-3)" }}>{t("Ujian ini menilai kompetensi Anda berdasarkan standar SKKNI.")}</p>
           <div className="rounded-xl p-3 mb-5 text-sm" style={{ background: "var(--bg-muted)", color: "var(--text-3)" }}>
-            Belum memilih kompetensi target. <Link to="/app/profile" className="text-brand-500 font-medium hover:underline">Pilih kompetensi SKKNI</Link> agar ujian menjadi per unit & menerbitkan sertifikat.
+            {t("Belum memilih kompetensi target.")} <Link to="/app/profile" className="text-brand-500 font-medium hover:underline">{t("Pilih kompetensi SKKNI")}</Link> {t("agar ujian menjadi per unit & menerbitkan sertifikat.")}
           </div>
-          <button onClick={() => setStarted(true)} className="btn-primary w-full py-3">Mulai Ujian →</button>
+          <button onClick={() => setStarted(true)} className="btn-primary w-full py-3">{t("Mulai Ujian →")}</button>
         </div>
       </div>
     );
   }
 
-  if (isLoading) return <div className="flex items-center justify-center h-64" style={{ color: "var(--text-4)" }}>{unitMode ? "Menyiapkan soal unit…" : "Memuat soal…"}</div>;
+  if (isLoading) return <div className="flex items-center justify-center h-64" style={{ color: "var(--text-4)" }}>{unitMode ? t("Menyiapkan soal unit…") : t("Memuat soal…")}</div>;
 
   if (examError && !result) {
     return (
       <div className="max-w-xl mx-auto card p-8 text-center">
         <div className="text-5xl mb-4">⚠️</div>
-        <h2 className="text-xl font-bold mb-2" style={{ color: "var(--text-base)" }}>Ujian belum bisa dimulai</h2>
-        <p className="text-sm mb-5" style={{ color: "var(--text-3)" }}>{typeof examError === "string" ? examError : "Gagal memuat soal."}</p>
+        <h2 className="text-xl font-bold mb-2" style={{ color: "var(--text-base)" }}>{t("Ujian belum bisa dimulai")}</h2>
+        <p className="text-sm mb-5" style={{ color: "var(--text-3)" }}>{typeof examError === "string" ? examError : t("Gagal memuat soal.")}</p>
         <div className="flex gap-3">
-          {unitMode ? <Link to="/app/kelas" className="btn-outline flex-1">Ke Kelas</Link> : <Link to="/app/profile" className="btn-outline flex-1">Ke Profil</Link>}
-          <button onClick={unitMode ? backToList : restartLegacy} className="btn-primary flex-1">Kembali</button>
+          {unitMode ? <Link to="/app/kelas" className="btn-outline flex-1">{t("Ke Kelas")}</Link> : <Link to="/app/profile" className="btn-outline flex-1">{t("Ke Profil")}</Link>}
+          <button onClick={unitMode ? backToList : restartLegacy} className="btn-primary flex-1">{t("Kembali")}</button>
         </div>
       </div>
     );
@@ -338,43 +344,43 @@ export default function Exam() {
       <div className="max-w-2xl mx-auto space-y-4">
         <div className="card p-8 text-center">
           <div className="text-6xl mb-4">{good ? "🎉" : mid ? "📈" : "📚"}</div>
-          <h2 className="text-2xl font-bold mb-1" style={{ color: "var(--text-base)" }}>{isUnit ? "Hasil Ujian Unit" : "Hasil Ujian"}</h2>
+          <h2 className="text-2xl font-bold mb-1" style={{ color: "var(--text-base)" }}>{isUnit ? t("Hasil Ujian Unit") : t("Hasil Ujian")}</h2>
           {isUnit && <p className="text-sm mb-1" style={{ color: "var(--text-3)" }}>{result.unitTitle}</p>}
           <p className={`text-4xl font-black mb-2 ${pct >= 80 ? "text-emerald-400" : pct >= 60 ? "text-amber-400" : "text-red-400"}`}>{pct}%</p>
           {isUnit ? (
-            <p style={{ color: "var(--text-3)" }}>{result.passed ? "LULUS — sertifikat unit terbit ✓" : "Belum lulus (butuh ≥60%). Tinjau umpan balik AI di bawah."}</p>
+            <p style={{ color: "var(--text-3)" }}>{result.passed ? t("LULUS — sertifikat unit terbit ✓") : t("Belum lulus (butuh ≥60%). Tinjau umpan balik AI di bawah.")}</p>
           ) : (
-            <p style={{ color: "var(--text-3)" }}>{result.status === "ready" ? "Siap Naik Level ✓" : result.status === "in_progress" ? "Dalam Proses" : "Perlu Peningkatan"}</p>
+            <p style={{ color: "var(--text-3)" }}>{result.status === "ready" ? t("Siap Naik Level ✓") : result.status === "in_progress" ? t("Dalam Proses") : t("Perlu Peningkatan")}</p>
           )}
         </div>
 
         {isUnit && result.certificate && (
           <div className="card p-5" style={{ borderColor: "rgba(16,185,129,0.3)" }}>
-            <p className="text-sm font-semibold text-emerald-500 flex items-center gap-1.5 mb-2"><Award className="w-4 h-4" /> Sertifikat unit terbit</p>
+            <p className="text-sm font-semibold text-emerald-500 flex items-center gap-1.5 mb-2"><Award className="w-4 h-4" /> {t("Sertifikat unit terbit")}</p>
             <span className="text-xs bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 rounded-lg px-2.5 py-1 inline-block">{result.certificate}</span>
-            <Link to="/app/profile" className="block mt-3 text-xs text-brand-500 hover:underline">Lihat & unduh sertifikat di Profil →</Link>
+            <Link to="/app/profile" className="block mt-3 text-xs text-brand-500 hover:underline">{t("Lihat & unduh sertifikat di Profil →")}</Link>
           </div>
         )}
 
         {/* Review per soal ala Quizizz: jawabanmu vs jawaban benar + feedback AI */}
         {isUnit && result.breakdown?.length > 0 && (
           <div className="card p-6">
-            <h3 className="font-semibold mb-1" style={{ color: "var(--text-base)" }}>Review per Soal</h3>
-            <p className="text-xs mb-4" style={{ color: "var(--text-4)" }}>Jawabanmu & jawaban benar ditampilkan agar tahu persis apa yang salah. Review ini tersimpan di <b>Riwayat Ujian</b>.</p>
+            <h3 className="font-semibold mb-1" style={{ color: "var(--text-base)" }}>{t("Review per Soal")}</h3>
+            <p className="text-xs mb-4" style={{ color: "var(--text-4)" }}>{t("Jawabanmu & jawaban benar ditampilkan agar tahu persis apa yang salah. Review ini tersimpan di")} <b>{t("Riwayat Ujian")}</b>.</p>
             <ReviewBreakdown breakdown={result.breakdown} />
           </div>
         )}
 
         {!isUnit && result.certificates?.length > 0 && (
           <div className="card p-5" style={{ borderColor: "rgba(16,185,129,0.3)" }}>
-            <p className="text-sm font-semibold text-emerald-500 mb-2">🎓 Sertifikat terbit ({result.certificates.length})</p>
+            <p className="text-sm font-semibold text-emerald-500 mb-2">{t("🎓 Sertifikat terbit ({n})", { n: result.certificates.length })}</p>
             <div className="flex flex-wrap gap-2">{result.certificates.map((c) => <span key={c} className="text-xs bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 rounded-lg px-2.5 py-1">{c}</span>)}</div>
           </div>
         )}
 
         {!isUnit && result.results?.length > 0 && (
           <div className="card p-6">
-            <h3 className="font-semibold mb-4" style={{ color: "var(--text-base)" }}>Hasil per Kompetensi</h3>
+            <h3 className="font-semibold mb-4" style={{ color: "var(--text-base)" }}>{t("Hasil per Kompetensi")}</h3>
             <div className="space-y-3">
               {result.results.map((r) => (
                 <div key={r.competencyCode}>
@@ -394,13 +400,13 @@ export default function Exam() {
         <div className="flex gap-3">
           {isUnit ? (
             <>
-              <button onClick={backToList} className="btn-outline flex-1 flex items-center justify-center gap-1"><ArrowLeft className="w-4 h-4" /> Daftar Unit</button>
-              <button onClick={retakeUnit} className="btn-primary flex-1 flex items-center justify-center gap-1"><RotateCcw className="w-4 h-4" /> Ujian Ulang</button>
+              <button onClick={backToList} className="btn-outline flex-1 flex items-center justify-center gap-1"><ArrowLeft className="w-4 h-4" /> {t("Daftar Unit")}</button>
+              <button onClick={retakeUnit} className="btn-primary flex-1 flex items-center justify-center gap-1"><RotateCcw className="w-4 h-4" /> {t("Ujian Ulang")}</button>
             </>
           ) : (
             <>
-              <Link to="/app/skill-gap" className="btn-primary flex-1 text-center py-2.5">Lihat Skill Gap →</Link>
-              <button onClick={restartLegacy} className="btn-outline flex-1">Ujian Ulang</button>
+              <Link to="/app/skill-gap" className="btn-primary flex-1 text-center py-2.5">{t("Lihat Skill Gap →")}</Link>
+              <button onClick={restartLegacy} className="btn-outline flex-1">{t("Ujian Ulang")}</button>
             </>
           )}
         </div>
@@ -413,14 +419,14 @@ export default function Exam() {
     <div className="max-w-2xl mx-auto space-y-4">
       {unitMode && (
         <button onClick={backToList} className="text-xs flex items-center gap-1 hover:underline" style={{ color: "var(--text-4)" }}>
-          <ArrowLeft className="w-3.5 h-3.5" /> Kembali ke daftar unit
+          <ArrowLeft className="w-3.5 h-3.5" /> {t("Kembali ke daftar unit")}
         </button>
       )}
       <div className="card p-4 flex items-center gap-4">
         <div className="flex-1">
           <div className="flex justify-between text-xs mb-1.5" style={{ color: "var(--text-4)" }}>
-            <span>{unitMode ? examData?.unitTitle?.slice(0, 40) : `Soal ${current + 1}/${questions.length}`}</span>
-            <span>{answered} dijawab</span>
+            <span>{unitMode ? examData?.unitTitle?.slice(0, 40) : t("Soal {a}/{b}", { a: current + 1, b: questions.length })}</span>
+            <span>{t("{n} dijawab", { n: answered })}</span>
           </div>
           <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--bg-muted)" }}>
             <div className="h-full bg-brand-600 rounded-full transition-all" style={{ width: `${questions.length ? ((current + 1) / questions.length) * 100 : 0}%` }} />
@@ -432,8 +438,8 @@ export default function Exam() {
       {q && (
         <div className="card p-6">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-xs text-brand-500 font-semibold">Unit: {q.competencyName || q.competencyCode}</span>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${QTYPE[q.type]?.cls || QTYPE.mc.cls}`}>{QTYPE[q.type]?.label || "Pilihan Ganda"}</span>
+            <span className="text-xs text-brand-500 font-semibold">{t("Unit:")} {q.competencyName || q.competencyCode}</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${QTYPE[q.type]?.cls || QTYPE.mc.cls}`}>{t(QTYPE[q.type]?.label || "Pilihan Ganda")}</span>
           </div>
           <h3 className="text-lg font-semibold mb-6" style={{ color: "var(--text-base)" }}>{q.question}</h3>
 
@@ -458,28 +464,28 @@ export default function Exam() {
             <div>
               <p className="text-xs mb-2" style={{ color: "var(--text-4)" }}>
                 {q.type === "steporder"
-                  ? "Tuliskan tahapan/urutan pengerjaan yang menurutmu paling efisien. AI menilai logika & efisiensinya."
-                  : "Jawab dengan penjelasanmu sendiri. AI menilai penalaran, ketepatan, & kelengkapan."}
+                  ? t("Tuliskan tahapan/urutan pengerjaan yang menurutmu paling efisien. AI menilai logika & efisiensinya.")
+                  : t("Jawab dengan penjelasanmu sendiri. AI menilai penalaran, ketepatan, & kelengkapan.")}
               </p>
               <textarea
                 value={typeof answers[q.id] === "string" ? answers[q.id] : ""}
                 onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
-                placeholder={q.type === "steporder" ? "1. …\n2. …\n3. …" : "Tulis jawabanmu di sini…"}
+                placeholder={q.type === "steporder" ? "1. …\n2. …\n3. …" : t("Tulis jawabanmu di sini…")}
                 className="input text-sm h-40 resize-y leading-relaxed"
               />
-              <p className="text-[11px] mt-1 text-right" style={{ color: "var(--text-4)" }}>{(typeof answers[q.id] === "string" ? answers[q.id] : "").trim().length} karakter</p>
+              <p className="text-[11px] mt-1 text-right" style={{ color: "var(--text-4)" }}>{t("{n} karakter", { n: (typeof answers[q.id] === "string" ? answers[q.id] : "").trim().length })}</p>
             </div>
           )}
         </div>
       )}
 
       <div className="flex gap-3">
-        <button onClick={() => setCurrent((c) => Math.max(0, c - 1))} disabled={current === 0} className="btn-outline flex-1">← Sebelumnya</button>
+        <button onClick={() => setCurrent((c) => Math.max(0, c - 1))} disabled={current === 0} className="btn-outline flex-1">← {t("Sebelumnya")}</button>
         {current < questions.length - 1 ? (
-          <button onClick={() => setCurrent((c) => c + 1)} className="btn-primary flex-1">Berikutnya →</button>
+          <button onClick={() => setCurrent((c) => c + 1)} className="btn-primary flex-1">{t("Berikutnya")} →</button>
         ) : (
           <button onClick={() => submit.mutate()} disabled={submit.isPending} className="btn-primary flex-1 bg-emerald-600 hover:bg-emerald-700">
-            {submit.isPending ? "Mengirim…" : `Submit (${answered}/${questions.length})`}
+            {submit.isPending ? t("Mengirim…") : t("Submit ({a}/{b})", { a: answered, b: questions.length })}
           </button>
         )}
       </div>

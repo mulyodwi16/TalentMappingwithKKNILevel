@@ -5,6 +5,7 @@ import { applyAccent, getAccent } from "./lib/theme.js";
 applyAccent(getAccent());
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { LangProvider } from "./lib/i18n.jsx";
 import App from "./App.jsx";
 import "./index.css";
 
@@ -15,7 +16,9 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <App />
+      <LangProvider>
+        <App />
+      </LangProvider>
     </QueryClientProvider>
   </StrictMode>
 );

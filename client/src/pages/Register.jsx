@@ -5,21 +5,24 @@ import toast from "react-hot-toast";
 import api from "../api/client.js";
 import useAuthStore from "../store/authStore.js";
 import { ACADEMIC_STATUS } from "../lib/academic.js";
+import LangToggle from "../components/LangToggle.jsx";
+import { useLang } from "../lib/i18n.jsx";
 
 export default function Register() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
+  const { t } = useLang();
   const [form, setForm] = useState({ name: "", email: "", password: "", academicStatus: "" });
 
   const register = useMutation({
     mutationFn: (data) => api.post("/auth/register", data),
     onSuccess: ({ token, user }) => {
       setAuth(token, user);
-      toast.success("Akun dibuat! Sekarang pilih kompetensi targetmu.");
+      toast.success(t("Akun dibuat! Sekarang pilih kompetensi targetmu."));
       // Arahkan ke Profil dengan picker kompetensi terbuka otomatis.
       navigate("/app/profile?welcome=1");
     },
-    onError: (err) => toast.error(err || "Registrasi gagal"),
+    onError: (err) => toast.error(err || t("Registrasi gagal")),
   });
 
   const upd = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -34,16 +37,21 @@ export default function Register() {
         <div className="absolute bottom-0 -left-16 w-80 h-80 bg-indigo-200/30 rounded-full blur-3xl" />
       </div>
 
+      {/* Pemilih bahasa — pojok kanan atas */}
+      <div className="fixed top-4 right-4 z-10">
+        <LangToggle />
+      </div>
+
       <div className="w-full max-w-md relative">
         {/* logo + heading */}
         <div className="text-center mb-8">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-600 to-tosca-500 flex items-center justify-center text-xl font-black text-white mx-auto mb-4">T</div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text-base)" }}>Buat Akun Baru</h1>
-          <p className="mt-1 text-sm" style={{ color: "var(--text-3)" }}>Siapkan diri memenuhi standar kompetensi SKKNI</p>
+          <h1 className="text-2xl font-bold" style={{ color: "var(--text-base)" }}>{t("Buat Akun Baru")}</h1>
+          <p className="mt-1 text-sm" style={{ color: "var(--text-3)" }}>{t("Siapkan diri memenuhi standar kompetensi SKKNI")}</p>
         </div>
 
         <form
-          onSubmit={(e) => { e.preventDefault(); if (!form.academicStatus) return toast.error("Pilih status akademikmu terlebih dahulu"); register.mutate(form); }}
+          onSubmit={(e) => { e.preventDefault(); if (!form.academicStatus) return toast.error(t("Pilih status akademikmu terlebih dahulu")); register.mutate(form); }}
           className="card p-6 sm:p-8 space-y-4"
         >
           {[
@@ -52,14 +60,14 @@ export default function Register() {
             { key: "password", label: "Password",      type: "password", ph: "Min. 6 karakter" },
           ].map(({ key, label, type, ph }) => (
             <div key={key}>
-              <label className="text-sm font-medium mb-1.5 block" style={{ color: "var(--text-2)" }}>{label}</label>
-              <input className="input" type={type} placeholder={ph} value={form[key]} onChange={upd(key)} required />
+              <label className="text-sm font-medium mb-1.5 block" style={{ color: "var(--text-2)" }}>{t(label)}</label>
+              <input className="input" type={type} placeholder={t(ph)} value={form[key]} onChange={upd(key)} required />
             </div>
           ))}
 
           {/* Status akademik/karier → menentukan pendidikan & rank awal */}
           <div>
-            <label className="text-sm font-medium mb-1.5 block" style={{ color: "var(--text-2)" }}>Status kamu saat ini</label>
+            <label className="text-sm font-medium mb-1.5 block" style={{ color: "var(--text-2)" }}>{t("Status kamu saat ini")}</label>
             <div className="grid grid-cols-2 gap-2">
               {ACADEMIC_STATUS.map((s) => {
                 const active = form.academicStatus === s.key;
@@ -67,28 +75,28 @@ export default function Register() {
                   <button type="button" key={s.key} onClick={() => setForm((f) => ({ ...f, academicStatus: s.key }))}
                     className={`text-left rounded-xl p-3 border transition-colors ${active ? "border-brand-500 bg-brand-600/10" : "hover:border-slate-400"}`}
                     style={active ? {} : { borderColor: "var(--border)" }}>
-                    <p className="text-sm font-semibold" style={{ color: "var(--text-base)" }}>{s.label}</p>
-                    <p className="text-[11px]" style={{ color: "var(--text-4)" }}>{s.desc}</p>
+                    <p className="text-sm font-semibold" style={{ color: "var(--text-base)" }}>{t(s.label)}</p>
+                    <p className="text-[11px]" style={{ color: "var(--text-4)" }}>{t(s.desc)}</p>
                   </button>
                 );
               })}
             </div>
-            <p className="text-[11px] mt-1.5" style={{ color: "var(--text-4)" }}>Kompetensi target dipilih setelah ini, dan bisa diganti kapan saja di Profil.</p>
+            <p className="text-[11px] mt-1.5" style={{ color: "var(--text-4)" }}>{t("Kompetensi target dipilih setelah ini, dan bisa diganti kapan saja di Profil.")}</p>
           </div>
 
           <button type="submit" disabled={register.isPending} className="btn-primary w-full py-3 mt-2">
-            {register.isPending ? "Mendaftarkan…" : "Daftar Sekarang →"}
+            {register.isPending ? t("Mendaftarkan…") : t("Daftar Sekarang →")}
           </button>
 
           <p className="text-center text-sm" style={{ color: "var(--text-4)" }}>
-            Sudah punya akun?{" "}
-            <Link to="/login" className="text-brand-600 hover:text-brand-700 font-medium">Masuk</Link>
+            {t("Sudah punya akun?")}{" "}
+            <Link to="/login" className="text-brand-600 hover:text-brand-700 font-medium">{t("Masuk")}</Link>
           </p>
         </form>
 
         <p className="text-center mt-4">
           <Link to="/" className="text-sm hover:text-brand-600 transition-colors" style={{ color: "var(--text-4)" }}>
-            ← Kembali ke Beranda
+            {t("← Kembali ke Beranda")}
           </Link>
         </p>
       </div>

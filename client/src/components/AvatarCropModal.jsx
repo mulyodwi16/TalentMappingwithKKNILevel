@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { X, ZoomIn, ZoomOut, Check, Loader2, Move } from "lucide-react";
+import { useLang } from "../lib/i18n.jsx";
 
 // Editor foto profil (#2): user bisa MENGATUR posisi (drag) & ukuran (zoom)
 // sebelum foto tersimpan — tidak langsung terunggah begitu saja.
@@ -8,6 +9,7 @@ const VIEW = 280;   // sisi area pratinjau (px)
 const OUT = 320;    // sisi output (px) — cukup tajam untuk panel identitas besar
 
 export default function AvatarCropModal({ file, onSave, onClose, saving = false }) {
+  const { t } = useLang();
   const [img, setImg] = useState(null);       // HTMLImageElement
   const [scale, setScale] = useState(1);      // 1 = cover penuh
   const [pos, setPos] = useState({ x: 0, y: 0 }); // offset px pada viewport
@@ -85,8 +87,8 @@ export default function AvatarCropModal({ file, onSave, onClose, saving = false 
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
       <div className="rounded-2xl overflow-hidden w-full max-w-sm" style={{ background: "var(--bg-surface)", border: "1px solid var(--border)" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
-          <p className="text-sm font-semibold" style={{ color: "var(--text-base)" }}>Atur Foto Profil</p>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-red-500/10 hover:text-red-400" style={{ color: "var(--text-4)" }} aria-label="Tutup"><X className="w-4 h-4" /></button>
+          <p className="text-sm font-semibold" style={{ color: "var(--text-base)" }}>{t("Atur Foto Profil")}</p>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-red-500/10 hover:text-red-400" style={{ color: "var(--text-4)" }} aria-label={t("Tutup")}><X className="w-4 h-4" /></button>
         </div>
 
         <div className="p-5 flex flex-col items-center gap-4">
@@ -103,20 +105,20 @@ export default function AvatarCropModal({ file, onSave, onClose, saving = false 
               <div className="pointer-events-none absolute inset-0" aria-hidden
                 style={{ background: "linear-gradient(transparent calc(33% - 1px), rgba(255,255,255,0.18) 33%, transparent calc(33% + 1px), transparent calc(66% - 1px), rgba(255,255,255,0.18) 66%, transparent calc(66% + 1px)), linear-gradient(90deg, transparent calc(33% - 1px), rgba(255,255,255,0.18) 33%, transparent calc(33% + 1px), transparent calc(66% - 1px), rgba(255,255,255,0.18) 66%, transparent calc(66% + 1px))" }} />
               <span className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] px-2 py-0.5 rounded-full bg-black/55 text-white flex items-center gap-1">
-                <Move className="w-3 h-3" /> geser untuk atur posisi
+                <Move className="w-3 h-3" /> {t("geser untuk atur posisi")}
               </span>
             </div>
           )}
 
           {/* Zoom */}
           <div className="flex items-center gap-3 w-full px-1">
-            <button onClick={() => setZoom(scale - 0.2)} className="p-1.5 rounded-lg hover:bg-[var(--bg-muted)]" style={{ color: "var(--text-3)" }} aria-label="Perkecil"><ZoomOut className="w-4 h-4" /></button>
+            <button onClick={() => setZoom(scale - 0.2)} className="p-1.5 rounded-lg hover:bg-[var(--bg-muted)]" style={{ color: "var(--text-3)" }} aria-label={t("Perkecil")}><ZoomOut className="w-4 h-4" /></button>
             <input type="range" min="1" max="3" step="0.05" value={scale} onChange={(e) => setZoom(Number(e.target.value))} className="flex-1 accent-[rgb(var(--brand-600))]" aria-label="Zoom" />
-            <button onClick={() => setZoom(scale + 0.2)} className="p-1.5 rounded-lg hover:bg-[var(--bg-muted)]" style={{ color: "var(--text-3)" }} aria-label="Perbesar"><ZoomIn className="w-4 h-4" /></button>
+            <button onClick={() => setZoom(scale + 0.2)} className="p-1.5 rounded-lg hover:bg-[var(--bg-muted)]" style={{ color: "var(--text-3)" }} aria-label={t("Perbesar")}><ZoomIn className="w-4 h-4" /></button>
           </div>
 
           <button onClick={save} disabled={!img || saving} className="btn-primary w-full text-sm py-2.5 flex items-center justify-center gap-1.5 disabled:opacity-60">
-            {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan…</> : <><Check className="w-4 h-4" /> Simpan Foto</>}
+            {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> {t("Menyimpan…")}</> : <><Check className="w-4 h-4" /> {t("Simpan Foto")}</>}
           </button>
         </div>
       </div>

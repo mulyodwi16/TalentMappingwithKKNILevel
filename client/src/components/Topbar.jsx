@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bell, Sun, Moon, Menu, UserCircle, LogOut, Palette, Check } from "lucide-react";
+import { Bell, Sun, Moon, Menu, UserCircle, LogOut, Palette, Check, Languages } from "lucide-react";
 import api from "../api/client.js";
 import useAuthStore from "../store/authStore.js";
 import CoinPill from "./CoinPill.jsx";
 import HelpButton from "./HelpButton.jsx";
 import { ACCENTS, getAccent, applyAccent } from "../lib/theme.js";
+import { useLang, LANGS, dateLocale } from "../lib/i18n.jsx";
 
 const ROLE_LABEL = { user: "Talenta", hrd: "HRD", admin: "Admin" };
 
@@ -33,6 +34,7 @@ const TITLES = {
 export default function Topbar({ onBurger }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const { lang, t, setLang } = useLang();
   const { user, logout } = useAuthStore();
   const [showNotif, setShowNotif] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -81,14 +83,14 @@ export default function Topbar({ onBurger }) {
         onClick={onBurger}
         className={`lg:hidden ${iconBtn}`}
         style={{ color: "var(--text-3)" }}
-        aria-label="Buka menu"
+        aria-label={t("Buka menu")}
       >
         <Menu size={20} />
       </button>
 
       {/* Page title */}
       <h1 className="flex-1 text-sm font-semibold truncate" style={{ color: "var(--text-base)" }}>
-        {TITLES[pathname] || "TalentaAI"}
+        {TITLES[pathname] ? t(TITLES[pathname]) : "TalentaAI"}
       </h1>
 
       {/* Koin (khusus User) */}
@@ -100,7 +102,7 @@ export default function Topbar({ onBurger }) {
       {/* Theme toggle */}
       <button
         onClick={() => setDark((d) => !d)}
-        title={dark ? "Mode terang" : "Mode gelap"}
+        title={dark ? t("Mode terang") : t("Mode gelap")}
         className={iconBtn}
         style={{ color: "var(--text-3)" }}
       >
@@ -113,7 +115,7 @@ export default function Topbar({ onBurger }) {
           onClick={() => setShowNotif((v) => !v)}
           className={`${iconBtn} relative`}
           style={{ color: "var(--text-3)" }}
-          aria-label="Notifikasi"
+          aria-label={t("Notifikasi")}
         >
           <Bell size={18} />
           {unread > 0 && (
@@ -126,22 +128,22 @@ export default function Topbar({ onBurger }) {
         {showNotif && (
           <div className="absolute right-0 top-12 w-80 card z-50 overflow-hidden" style={{ padding: 0 }}>
             <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
-              <p className="text-sm font-semibold" style={{ color: "var(--text-base)" }}>Notifikasi</p>
+              <p className="text-sm font-semibold" style={{ color: "var(--text-base)" }}>{t("Notifikasi")}</p>
               {unread > 0 && (
                 <button onClick={() => markAll.mutate()} className="text-xs text-brand-600 hover:text-brand-700">
-                  Tandai semua dibaca
+                  {t("Tandai semua dibaca")}
                 </button>
               )}
             </div>
             <div className="max-h-72 overflow-y-auto">
               {notifs.length === 0 ? (
-                <p className="text-sm p-4 text-center" style={{ color: "var(--text-4)" }}>Tidak ada notifikasi</p>
+                <p className="text-sm p-4 text-center" style={{ color: "var(--text-4)" }}>{t("Tidak ada notifikasi")}</p>
               ) : (
                 notifs.slice(0, 10).map((n) => (
                   <div key={n.id} className="px-4 py-3 text-sm" style={{ borderBottom: "1px solid var(--border)", opacity: n.read ? 0.6 : 1 }}>
                     <p className="font-medium mb-0.5 text-brand-600 capitalize">{n.type.replace(/_/g, " ")}</p>
                     <p className="text-xs" style={{ color: "var(--text-2)" }}>{n.message}</p>
-                    <p className="text-xs mt-1" style={{ color: "var(--text-4)" }}>{new Date(n.createdAt).toLocaleString("id-ID")}</p>
+                    <p className="text-xs mt-1" style={{ color: "var(--text-4)" }}>{new Date(n.createdAt).toLocaleString(dateLocale(lang))}</p>
                   </div>
                 ))
               )}
@@ -156,7 +158,7 @@ export default function Topbar({ onBurger }) {
           onClick={() => { setShowProfile((v) => !v); setShowNotif(false); }}
           className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-600 to-tosca-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0 hover:ring-2 hover:ring-brand-400/50 transition-shadow"
           title={user?.name}
-          aria-label="Menu profil"
+          aria-label={t("Menu profil")}
         >
           {user?.name?.[0]?.toUpperCase() || "?"}
         </button>
@@ -170,7 +172,7 @@ export default function Topbar({ onBurger }) {
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold truncate" style={{ color: "var(--text-base)" }}>{user?.name}</p>
-                <p className="text-xs text-brand-600">{ROLE_LABEL[user?.role] || user?.role}</p>
+                <p className="text-xs text-brand-600">{t(ROLE_LABEL[user?.role] || user?.role)}</p>
               </div>
             </div>
 
@@ -182,14 +184,35 @@ export default function Topbar({ onBurger }) {
                 className="flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-brand-50 transition-colors"
                 style={{ color: "var(--text-2)" }}
               >
-                <UserCircle size={16} /> Profil Saya
+                <UserCircle size={16} /> {t("Profil Saya")}
               </Link>
+            </div>
+
+            {/* Pilihan bahasa UI (ID/EN) — juga menentukan bahasa jawaban AI */}
+            <div className="px-4 py-3" style={{ borderTop: "1px solid var(--border)" }}>
+              <p className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: "var(--text-3)" }}>
+                <Languages size={13} /> {t("Bahasa")}
+              </p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {LANGS.map((l) => (
+                  <button
+                    key={l.key}
+                    onClick={() => setLang(l.key)}
+                    className={`text-xs font-medium rounded-lg px-2 py-1.5 border transition-colors ${
+                      lang === l.key ? "border-brand-500 bg-brand-600/10 text-brand-600" : "hover:border-slate-400"
+                    }`}
+                    style={lang === l.key ? {} : { borderColor: "var(--border)", color: "var(--text-3)" }}
+                  >
+                    {l.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Kustomisasi warna aksen */}
             <div className="px-4 py-3" style={{ borderTop: "1px solid var(--border)" }}>
               <p className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: "var(--text-3)" }}>
-                <Palette size={13} /> Warna Tampilan
+                <Palette size={13} /> {t("Warna Tampilan")}
               </p>
               <div className="flex items-center gap-2">
                 {ACCENTS.map((a) => (
@@ -199,7 +222,7 @@ export default function Topbar({ onBurger }) {
                     title={a.label}
                     className="w-6 h-6 rounded-full flex items-center justify-center transition-transform hover:scale-110"
                     style={{ background: a.color, outline: accent === a.key ? "2px solid var(--text-base)" : "none", outlineOffset: "1px" }}
-                    aria-label={`Warna ${a.label}`}
+                    aria-label={t("Warna {label}", { label: a.label })}
                   >
                     {accent === a.key && <Check size={13} className="text-white" strokeWidth={3} />}
                   </button>
@@ -214,7 +237,7 @@ export default function Topbar({ onBurger }) {
                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-red-50 hover:text-red-500 transition-colors"
                 style={{ color: "var(--text-3)" }}
               >
-                <LogOut size={16} /> Keluar
+                <LogOut size={16} /> {t("Keluar")}
               </button>
             </div>
           </div>

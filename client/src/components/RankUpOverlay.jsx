@@ -1,10 +1,12 @@
 import { useEffect, useMemo } from "react";
 import { rankOf, rankName } from "../lib/rank.js";
 import RankIcon from "./RankIcon.jsx";
+import { useLang } from "../lib/i18n.jsx";
 
 // Overlay perayaan saat user NAIK RANK — "feel of accomplishment".
 // Ditrigger Dashboard saat rank efektif > rank terakhir yang dilihat (localStorage).
 export default function RankUpOverlay({ from, to, onClose }) {
+  const { t } = useLang();
   const r = rankOf(to);
   const c = r?.color || "#38bdf8";
 
@@ -28,7 +30,7 @@ export default function RankUpOverlay({ from, to, onClose }) {
   return (
     <div className="rank-dark rankup-backdrop fixed inset-0 z-[100] flex items-center justify-center px-4"
       style={{ background: "radial-gradient(circle at 50% 40%, rgba(10,16,30,0.86), rgba(3,6,12,0.96))", backdropFilter: "blur(4px)" }}
-      onClick={onClose} role="dialog" aria-label="Naik rank">
+      onClick={onClose} role="dialog" aria-label={t("Naik rank")}>
       {/* Konfeti */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
         {confetti.map((f, i) => (
@@ -40,7 +42,7 @@ export default function RankUpOverlay({ from, to, onClose }) {
 
       <div className="relative flex flex-col items-center text-center" onClick={(e) => e.stopPropagation()}>
         <p className="rankup-text text-xs font-bold uppercase tracking-[0.4em] text-slate-400" style={{ animationDelay: "0.15s" }}>
-          Naik Rank!
+          {t("Naik Rank!")}
         </p>
 
         {/* Emblem baru dengan burst */}
@@ -63,13 +65,13 @@ export default function RankUpOverlay({ from, to, onClose }) {
           </p>
         ) : null}
         <p className="rankup-text mt-1 text-xs text-slate-500" style={{ animationDelay: "0.55s" }}>
-          Kompetensimu terbukti naik. Terus buktikan untuk mencapai tier berikutnya.
+          {t("Kompetensimu terbukti naik. Terus buktikan untuk mencapai tier berikutnya.")}
         </p>
 
         <button onClick={onClose}
           className="rankup-text mt-6 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition-transform hover:scale-105"
           style={{ background: `linear-gradient(135deg, ${c}, ${c}cc)`, boxShadow: `0 10px 30px -10px ${c}`, animationDelay: "0.7s" }}>
-          Lanjutkan
+          {t("Lanjutkan")}
         </button>
       </div>
     </div>

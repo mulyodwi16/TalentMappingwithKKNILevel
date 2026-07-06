@@ -12,6 +12,18 @@ import { getDocWithUnits } from "../skkni.js";
 const router = express.Router();
 router.use(requireAuth);
 
+// ============================================================
+// DUA PROMPT PER BAHASA (pola sama dgn get_system_prompt(key, lang)
+// di proyek MBTI Game): klien mengirim header `X-Lang` (id|en) dari
+// pilihan bahasa UI → persona + KB dipilih sesuai bahasa.
+// Blok DATA pengguna (buildContext) tetap Bahasa Indonesia (data
+// grounding, bukan gaya bicara) — prompt EN diberi tahu soal ini.
+// ============================================================
+function uiLang(req) {
+  const l = req.headers["x-lang"] || req.body?.lang;
+  return l === "en" ? "en" : "id";
+}
+
 // Knowledge base statis yang diinject ke system prompt (fakta deterministik, bukan untuk
 // "dilatih" — hanya grounding). Ringkas biar hemat token.
 const KB = `PENGETAHUAN PLATFORM (TalentaAI):
@@ -30,6 +42,42 @@ const KB = `PENGETAHUAN PLATFORM (TalentaAI):
   Ujian Kompetensi (/app/exam), Skill Gap (/app/skill-gap), Learning Path (/app/learning-path).
 - Kompetensi & soal diturunkan dari dokumen SKKNI (mis. Video Editing SKKNI 2014-118). Untuk naik Skill Rank,
   tutup gap kompetensi lalu ambil ujian ulang.`;
+
+const KB_EN = `PLATFORM KNOWLEDGE (TalentaAI):
+- "Skill Rank" system: 9 gamified tiers (aligned with the 9 KKNI levels, Presidential Regulation No. 8/2012). ALWAYS refer to the user's level by its TIER NAME (not "Level 6"):
+  Rank 1 Bronze (elementary) · 2 Silver (junior high) · 3 Gold (senior/vocational high) · 4 Platinum (D1) · 5 Emerald (D2/D3) ·
+  6 Diamond (D4/Bachelor) · 7 Master (Professional) · 8 Grandmaster (Master's) · 9 Legend (Doctorate).
+  IMPORTANT: rank is EARNED through PROVEN COMPETENCY (passing exam units, certificates, completed courses), NOT just a diploma.
+  Education only provides a capped starting "seed" (max Platinum). A skilled vocational graduate can therefore match or surpass a PhD holder.
+  To rank up: prove more competencies (exams & courses at the appropriate difficulty), don't wait for a diploma.
+- System flow: (1) Upload CV → automatic initial Skill Rank prediction from education+certificates+experience,
+  (2) SKKNI-standardized competency exams, (3) Skill Gap Analyzer (radar of actual vs target competency),
+  (4) Learning Path + AvatarEdu courses to close gaps, (5) automatic promotion-readiness status.
+- Competency passing threshold: score >= 60% per competency. Readiness score = % of competencies passed.
+  Status: >=80% "Ready", >=50% "In Progress", <50% "Needs Improvement".
+- Features you can direct users to (app routes): Dashboard (/app/dashboard), Upload CV (/app/cv-upload),
+  Competency Exams (/app/exam), Skill Gap (/app/skill-gap), Learning Path (/app/learning-path).
+- Competencies & questions are derived from SKKNI documents (e.g. Video Editing SKKNI 2014-118). To raise the Skill Rank,
+  close competency gaps then retake the exam.`;
+
+// Persona AI Mentor per bahasa — dipilih via uiLang(req).
+const PERSONA = {
+  id:
+    `Kamu adalah "AI Mentor Karier" pada platform TalentaAI. ` +
+    `Tugasmu: membantu pengguna memahami Skill Rank-nya (sistem tier gamifikasi Bronze→Legend, selaras KKNI), menutup gap kompetensi, mempersiapkan ujian, ` +
+    `dan menyusun langkah agar naik Skill Rank. Selalu sebut level dengan NAMA TIER-nya (mis. "Diamond"), bukan "Level 6". Jawab dalam Bahasa Indonesia, ringkas, ramah, ` +
+    `dan actionable (pakai poin/langkah bila perlu). Prioritaskan menutup GAP kompetensi pengguna dan arahkan ke ` +
+    `fitur platform yang tepat (Skill Gap, Learning Path, Ujian). Jangan mengarang angka/regulasi di luar pengetahuan ` +
+    `yang diberikan; jika tidak yakin, katakan dan sarankan verifikasi ke sumber resmi (Perpres 8/2012, SKKNI Kemnaker).`,
+  en:
+    `You are the "AI Career Mentor" on the TalentaAI platform. ` +
+    `Your job: help the user understand their Skill Rank (a gamified Bronze→Legend tier system aligned with Indonesia's KKNI framework), close competency gaps, prepare for exams, ` +
+    `and plan concrete steps to rank up. Always refer to levels by their TIER NAME (e.g. "Diamond"), never "Level 6". Answer in ENGLISH, concise, friendly, ` +
+    `and actionable (use bullet points/steps where helpful). Prioritize closing the user's competency GAPS and direct them to ` +
+    `the right platform features (Skill Gap, Learning Path, Exams). Never invent numbers/regulations beyond the provided knowledge; ` +
+    `if unsure, say so and suggest verifying with official sources (Presidential Regulation 8/2012, SKKNI by the Ministry of Manpower).\n` +
+    `NOTE: the user data block below is written in Indonesian (raw platform data) — read it as-is, but ALWAYS reply in English.`,
+};
 
 // Rangkai konteks data KKNI milik pengguna → dipakai untuk personalisasi & analisis gap.
 async function buildContext(userId) {
@@ -114,18 +162,22 @@ router.post("/chat", async (req, res) => {
     console.error("mentor context:", e.message);
   }
 
+  const lang = uiLang(req);
   const system = {
     role: "system",
     content:
-      `Kamu adalah "AI Mentor Karier" pada platform TalentaAI. ` +
-      `Tugasmu: membantu pengguna memahami Skill Rank-nya (sistem tier gamifikasi Bronze→Legend, selaras KKNI), menutup gap kompetensi, mempersiapkan ujian, ` +
-      `dan menyusun langkah agar naik Skill Rank. Selalu sebut level dengan NAMA TIER-nya (mis. "Diamond"), bukan "Level 6". Jawab dalam Bahasa Indonesia, ringkas, ramah, ` +
-      `dan actionable (pakai poin/langkah bila perlu). Prioritaskan menutup GAP kompetensi pengguna dan arahkan ke ` +
-      `fitur platform yang tepat (Skill Gap, Learning Path, Ujian). Jangan mengarang angka/regulasi di luar pengetahuan ` +
-      `yang diberikan; jika tidak yakin, katakan dan sarankan verifikasi ke sumber resmi (Perpres 8/2012, SKKNI Kemnaker).\n\n` +
-      KB + "\n\n" + context +
-      (convoSummary ? `\n\nRINGKASAN PERCAKAPAN SEBELUMNYA (poin penting untuk konteks):\n${convoSummary}` : "") +
-      (pageContext ? `\n\nKONTEKS SAAT INI: pengguna sedang membuka halaman/fitur "${pageContext}". Bila relevan, kaitkan jawaban dengan fitur ini.` : ""),
+      PERSONA[lang] + "\n\n" +
+      (lang === "en" ? KB_EN : KB) + "\n\n" + context +
+      (convoSummary
+        ? (lang === "en"
+          ? `\n\nSUMMARY OF PREVIOUS CONVERSATION (key points for context):\n${convoSummary}`
+          : `\n\nRINGKASAN PERCAKAPAN SEBELUMNYA (poin penting untuk konteks):\n${convoSummary}`)
+        : "") +
+      (pageContext
+        ? (lang === "en"
+          ? `\n\nCURRENT CONTEXT: the user is currently on the "${pageContext}" page/feature. Relate your answer to it when relevant.`
+          : `\n\nKONTEKS SAAT INI: pengguna sedang membuka halaman/fitur "${pageContext}". Bila relevan, kaitkan jawaban dengan fitur ini.`)
+        : ""),
   };
 
   try {
@@ -149,11 +201,16 @@ router.post("/summarize", async (req, res) => {
   const prev = typeof body.prevSummary === "string" ? body.prevSummary.slice(0, 2000) : "";
   if (!msgs) return res.json({ summary: prev });
 
+  const lang = uiLang(req);
   const system = {
     role: "system",
-    content: `Ringkas percakapan konsultasi karier berikut menjadi POIN-POIN singkat (maks 8 butir): ` +
-      `konteks pengguna (Skill Rank, target, gap), pertanyaan utama, saran yang sudah diberikan, dan hal yang masih perlu ditindaklanjuti. ` +
-      `Bahasa Indonesia, padat. ${prev ? "Gabungkan dengan ringkasan sebelumnya:\n" + prev : ""}`,
+    content: lang === "en"
+      ? `Summarize the following career-consultation conversation into SHORT bullet points (max 8): ` +
+        `user context (Skill Rank, target, gaps), main questions, advice already given, and open follow-ups. ` +
+        `In English, concise. ${prev ? "Merge with the previous summary:\n" + prev : ""}`
+      : `Ringkas percakapan konsultasi karier berikut menjadi POIN-POIN singkat (maks 8 butir): ` +
+        `konteks pengguna (Skill Rank, target, gap), pertanyaan utama, saran yang sudah diberikan, dan hal yang masih perlu ditindaklanjuti. ` +
+        `Bahasa Indonesia, padat. ${prev ? "Gabungkan dengan ringkasan sebelumnya:\n" + prev : ""}`,
   };
   try {
     const result = await chatComplete([system, { role: "user", content: msgs }], { temperature: 0.2, maxTokens: 400 });

@@ -5,6 +5,7 @@ import { Bot, Send, Sparkles, Loader2, Target, ArrowRight, Trash2 } from "lucide
 import api from "../../api/client.js";
 import useAuthStore from "../../store/authStore.js";
 import { useMentorChat } from "../../hooks/useMentorChat.js";
+import { useLang } from "../../lib/i18n.jsx";
 
 const CHIPS = [
   "Apa langkah prioritas untuk naik Skill Rank saya?",
@@ -29,6 +30,7 @@ function fmt(text) {
 }
 
 export default function Mentor() {
+  const { t } = useLang();
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const { messages, busy, send, clear } = useMentorChat();
@@ -52,10 +54,11 @@ export default function Mentor() {
   }, [messages, busy]);
 
   function submit(text) {
-    const t = (text || "").trim();
-    if (!t || busy) return;
+    // JANGAN beri nama `t` — men-shadow fungsi terjemahan useLang.
+    const q = (text || "").trim();
+    if (!q || busy) return;
     setInput("");
-    send(t, "AI Mentor");
+    send(q, "AI Mentor");
   }
 
   return (
@@ -63,15 +66,15 @@ export default function Mentor() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Bot className="w-6 h-6 text-brand-600" /> AI Mentor Karier
+            <Bot className="w-6 h-6 text-brand-600" /> {t("AI Mentor Karier")}
           </h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-3)" }}>
-            Konsultasi yang memahami data pemetaan skill-mu — fokus menutup gap kompetensi & naik Skill Rank.
+            {t("Konsultasi yang memahami data pemetaan skill-mu — fokus menutup gap kompetensi & naik Skill Rank.")}
           </p>
         </div>
         {messages.length > 0 && (
           <button onClick={clear} className="btn-outline text-xs gap-1.5 flex items-center shrink-0 px-3 py-2">
-            <Trash2 className="w-3.5 h-3.5" /> Bersihkan
+            <Trash2 className="w-3.5 h-3.5" /> {t("Bersihkan")}
           </button>
         )}
       </div>
@@ -79,7 +82,7 @@ export default function Mentor() {
       {suggestions.length > 0 && (
         <div className="card p-3.5">
           <p className="text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5" style={{ color: "var(--text-3)" }}>
-            <Sparkles className="w-3.5 h-3.5 text-brand-600" /> Prioritas untuk Anda (gap terbesar)
+            <Sparkles className="w-3.5 h-3.5 text-brand-600" /> {t("Prioritas untuk Anda (gap terbesar)")}
           </p>
           <div className="grid sm:grid-cols-2 gap-2">
             {suggestions.map((s) => (
@@ -92,7 +95,7 @@ export default function Mentor() {
                 <div className="rounded-md bg-amber-500/10 p-1.5 text-amber-600 shrink-0"><Target className="w-4 h-4" /></div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium truncate">{s.competencyName}</p>
-                  <p className="text-[11px]" style={{ color: "var(--text-4)" }}>Skor {s.currentScore}% · gap -{s.gap}%</p>
+                  <p className="text-[11px]" style={{ color: "var(--text-4)" }}>{t("Skor")} {s.currentScore}% · gap -{s.gap}%</p>
                 </div>
                 <ArrowRight className="w-4 h-4 shrink-0" style={{ color: "var(--text-4)" }} />
               </button>
@@ -102,17 +105,20 @@ export default function Mentor() {
       )}
 
       <div className="flex flex-wrap gap-2">
-        {CHIPS.map((c) => (
-          <button
-            key={c}
-            onClick={() => submit(c)}
-            disabled={busy}
-            className="px-3 py-1.5 rounded-full text-xs transition-colors hover:text-brand-600 disabled:opacity-50"
-            style={{ border: "1px solid var(--border-2)", color: "var(--text-3)" }}
-          >
-            {c.length > 42 ? c.slice(0, 40) + "…" : c}
-          </button>
-        ))}
+        {CHIPS.map((c) => {
+          const label = t(c); // pertanyaan cepat ikut bahasa aktif — teks terkirim ke AI juga versi terjemahan
+          return (
+            <button
+              key={c}
+              onClick={() => submit(label)}
+              disabled={busy}
+              className="px-3 py-1.5 rounded-full text-xs transition-colors hover:text-brand-600 disabled:opacity-50"
+              style={{ border: "1px solid var(--border-2)", color: "var(--text-3)" }}
+            >
+              {label.length > 42 ? label.slice(0, 40) + "…" : label}
+            </button>
+          );
+        })}
       </div>
 
       <div className="card p-3">
@@ -121,7 +127,7 @@ export default function Mentor() {
           {messages.length === 0 && (
             <div className="flex gap-2 items-start">
               <div className="w-8 h-8 rounded-full bg-brand-600/10 flex items-center justify-center shrink-0"><Bot className="w-4 h-4 text-brand-600" /></div>
-              <div className="rounded-2xl rounded-tl-sm px-3.5 py-2.5 text-sm leading-relaxed max-w-[82%]" style={{ backgroundColor: "var(--bg-muted)", color: "var(--text-base)" }} dangerouslySetInnerHTML={fmt(GREETING)} />
+              <div className="rounded-2xl rounded-tl-sm px-3.5 py-2.5 text-sm leading-relaxed max-w-[82%]" style={{ backgroundColor: "var(--bg-muted)", color: "var(--text-base)" }} dangerouslySetInnerHTML={fmt(t(GREETING))} />
             </div>
           )}
           {messages.map((m, i) => (
@@ -151,7 +157,7 @@ export default function Mentor() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && submit(input)}
-            placeholder="Ketik pertanyaan tentang Skill Rank & kompetensimu…"
+            placeholder={t("Ketik pertanyaan tentang Skill Rank & kompetensimu…")}
             disabled={busy}
             className="input flex-1"
           />
@@ -162,7 +168,7 @@ export default function Mentor() {
       </div>
 
       <p className="text-[11px] flex items-center gap-1" style={{ color: "var(--text-4)" }}>
-        <Sparkles className="w-3 h-3" /> Riwayat tersimpan otomatis di perangkat ini. Jawaban AI memakai data pemetaan skill-mu — verifikasi info penting ke sumber resmi (Perpres 8/2012, SKKNI Kemnaker).
+        <Sparkles className="w-3 h-3" /> {t("Riwayat tersimpan otomatis di perangkat ini. Jawaban AI memakai data pemetaan skill-mu — verifikasi info penting ke sumber resmi (Perpres 8/2012, SKKNI Kemnaker).")}
       </p>
     </div>
   );

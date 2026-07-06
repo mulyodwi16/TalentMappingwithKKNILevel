@@ -7,85 +7,87 @@ import {
 } from "lucide-react";
 import useAuthStore from "../store/authStore.js";
 import TourArt from "./TourArt.jsx";
+import { useLang } from "../lib/i18n.jsx";
 
 const SEEN_KEY = "kkni-tour-seen";
 
-function steps(name) {
+// Terima `t` agar seluruh teks tur ikut bahasa aktif (dipanggil dari TourView).
+function steps(name, t) {
   return [
     {
       art: "welcome", Icon: PartyPopper, color: "from-brand-600 to-tosca-500",
-      title: `Selamat datang, ${name || "Talenta"}! 🎉`,
-      body: "Akunmu sudah aktif. Mari kenali semua fitur TalentaAI dalam satu menit agar kariermu cepat naik rank.",
-      tip: "Panduan ini bisa dibuka kapan saja lewat tombol ? di kanan atas. Ada juga tab \"Cara Kerja Sistem\" untuk penjelasan skoring, rank, & AI.",
+      title: t("Selamat datang, {name}! 🎉", { name: name || t("Talenta") }),
+      body: t("Akunmu sudah aktif. Mari kenali semua fitur TalentaAI dalam satu menit agar kariermu cepat naik rank."),
+      tip: t("Panduan ini bisa dibuka kapan saja lewat tombol ? di kanan atas. Ada juga tab \"Cara Kerja Sistem\" untuk penjelasan skoring, rank, & AI."),
     },
     {
       art: "dashboard", Icon: LayoutDashboard, color: "from-brand-600 to-brand-400",
-      title: "Dashboard — Panggung Rank",
-      body: "Skill Rank kamu ditonjolkan ala main-menu game ranked: emblem, progres menuju rank berikutnya, ladder 9 tier, dan statistik (unit lulus, sertifikat, kesiapan). Saat kamu naik rank, ada animasi perayaan.",
-      tip: "Klaim Bonus Login Harian & kerjakan Course Harian di sini untuk kumpulkan Koin.",
-      href: "/app/dashboard", hrefLabel: "Buka Dashboard",
+      title: t("Dashboard — Panggung Rank"),
+      body: t("Skill Rank kamu ditonjolkan ala main-menu game ranked: emblem, progres menuju rank berikutnya, ladder 9 tier, dan statistik (unit lulus, sertifikat, kesiapan). Saat kamu naik rank, ada animasi perayaan."),
+      tip: t("Klaim Bonus Login Harian & kerjakan Course Harian di sini untuk kumpulkan Koin."),
+      href: "/app/dashboard", hrefLabel: t("Buka Dashboard"),
     },
     {
       art: "cv", Icon: Upload, color: "from-amber-500 to-orange-500",
-      title: "Upload CV & Data Validasi",
-      body: "Unggah CV (PDF) — sistem mengekstrak pendidikan, keahlian, & pengalaman lalu memprediksi seed rank. Lengkapi juga portofolio, LinkedIn/medsos, & sertifikat sebagai data pendukung validasi.",
-      tip: "CV cuma jadi bahan pembanding & seed — kompetensi sebenarnya divalidasi lewat ujian.",
-      href: "/app/cv-upload", hrefLabel: "Unggah CV",
+      title: t("Upload CV & Data Validasi"),
+      body: t("Unggah CV (PDF) — sistem mengekstrak pendidikan, keahlian, & pengalaman lalu memprediksi seed rank. Lengkapi juga portofolio, LinkedIn/medsos, & sertifikat sebagai data pendukung validasi."),
+      tip: t("CV cuma jadi bahan pembanding & seed — kompetensi sebenarnya divalidasi lewat ujian."),
+      href: "/app/cv-upload", hrefLabel: t("Unggah CV"),
     },
     {
       art: "path", Icon: GraduationCap, color: "from-emerald-500 to-teal-500",
-      title: "Kelas per Unit Kompetensi",
-      body: "Tiap unit SKKNI punya materi belajar (disusun AI) + kursus AvatarEdu. Selesaikan kelas untuk membuka ujian unitnya. Koin bisa membuka unit lebih cepat, tapi tak memberi sertifikat.",
-      tip: "Belajar berurutan, atau lompati dengan Koin bila ingin cepat.",
-      href: "/app/kelas", hrefLabel: "Buka Kelas",
+      title: t("Kelas per Unit Kompetensi"),
+      body: t("Tiap unit SKKNI punya materi belajar (disusun AI) + kursus AvatarEdu. Selesaikan kelas untuk membuka ujian unitnya. Koin bisa membuka unit lebih cepat, tapi tak memberi sertifikat."),
+      tip: t("Belajar berurutan, atau lompati dengan Koin bila ingin cepat."),
+      href: "/app/kelas", hrefLabel: t("Buka Kelas"),
     },
     {
       art: "exam", Icon: ClipboardCheck, color: "from-brand-500 to-indigo-500",
-      title: "Ujian Kompetensi per Unit",
-      body: "Ujian dibuka per unit (10–15 soal) dengan 3 tipe: pilihan ganda, studi kasus situasional, & urutan langkah. Isian dinilai AI. Lulus (≥60%) menerbitkan sertifikat unit & menaikkan rank.",
-      tip: "Soal diacak tiap percobaan — menguji pemahaman, bukan keberuntungan.",
-      href: "/app/exam", hrefLabel: "Mulai Ujian",
+      title: t("Ujian Kompetensi per Unit"),
+      body: t("Ujian dibuka per unit (10–15 soal) dengan 3 tipe: pilihan ganda, studi kasus situasional, & urutan langkah. Isian dinilai AI. Lulus (≥60%) menerbitkan sertifikat unit & menaikkan rank."),
+      tip: t("Soal diacak tiap percobaan — menguji pemahaman, bukan keberuntungan."),
+      href: "/app/exam", hrefLabel: t("Mulai Ujian"),
     },
     {
       art: "gap", Icon: Target, color: "from-rose-500 to-red-500",
-      title: "Skill Gap Analyzer",
-      body: "Radar kompetensi 'dimiliki' vs 'target', daftar gap terurut prioritas, dan langkah menutup tiap gap yang ditarik langsung dari Learning Path-mu.",
-      href: "/app/skill-gap", hrefLabel: "Lihat Skill Gap",
+      title: t("Skill Gap Analyzer"),
+      body: t("Radar kompetensi 'dimiliki' vs 'target', daftar gap terurut prioritas, dan langkah menutup tiap gap yang ditarik langsung dari Learning Path-mu."),
+      href: "/app/skill-gap", hrefLabel: t("Lihat Skill Gap"),
     },
     {
       art: "path", Icon: BookOpen, color: "from-blue-500 to-sky-500",
-      title: "Learning Path Personal",
-      body: "AI menyusun rencana bertahap dari SELURUH datamu (CV, kelas, ujian, unit lulus, keahlian, bukti). Progres tiap langkah dilacak OTOMATIS dari aktivitasmu — tak perlu centang manual.",
-      tip: "Tiap langkah punya tautan ke fitur untuk mengerjakannya (Kelas/Ujian/Bukti).",
-      href: "/app/learning-path", hrefLabel: "Buka Learning Path",
+      title: t("Learning Path Personal"),
+      body: t("AI menyusun rencana bertahap dari SELURUH datamu (CV, kelas, ujian, unit lulus, keahlian, bukti). Progres tiap langkah dilacak OTOMATIS dari aktivitasmu — tak perlu centang manual."),
+      tip: t("Tiap langkah punya tautan ke fitur untuk mengerjakannya (Kelas/Ujian/Bukti)."),
+      href: "/app/learning-path", hrefLabel: t("Buka Learning Path"),
     },
     {
       art: "gap", Icon: Compass, color: "from-cyan-500 to-brand-500",
-      title: "Peta Posisi & Kesiapan",
-      body: "Posisi target dari HRD + langkah konkret memenuhinya. Skill dipilah: tervalidasi (lulus ujian), terdeteksi CV/portofolio (menunggu ujian), atau belum ada bukti.",
-      tip: "CV/portofolio bisa dideteksi AI sebagai klaim — tapi kompetensi sah hanya setelah lulus ujian.",
-      href: "/app/jobs", hrefLabel: "Buka Peta Posisi",
+      title: t("Peta Posisi & Kesiapan"),
+      body: t("Posisi target dari HRD + langkah konkret memenuhinya. Skill dipilah: tervalidasi (lulus ujian), terdeteksi CV/portofolio (menunggu ujian), atau belum ada bukti."),
+      tip: t("CV/portofolio bisa dideteksi AI sebagai klaim — tapi kompetensi sah hanya setelah lulus ujian."),
+      href: "/app/jobs", hrefLabel: t("Buka Peta Posisi"),
     },
     {
       art: "mentor", Icon: Bot, color: "from-slate-700 to-brand-600",
-      title: "AI Mentor Karier",
-      body: "Tanya apa saja soal Skill Rank & kompetensimu — AI Mentor memahami data pemetaanmu dan memberi langkah konkret. Tombol chat cepat tersedia di pojok kanan bawah semua halaman.",
-      tip: "Coba tanya: 'Kompetensi apa yang jadi gap saya?'",
-      href: "/app/mentor", hrefLabel: "Tanya AI Mentor",
+      title: t("AI Mentor Karier"),
+      body: t("Tanya apa saja soal Skill Rank & kompetensimu — AI Mentor memahami data pemetaanmu dan memberi langkah konkret. Tombol chat cepat tersedia di pojok kanan bawah semua halaman."),
+      tip: t("Coba tanya: 'Kompetensi apa yang jadi gap saya?'"),
+      href: "/app/mentor", hrefLabel: t("Tanya AI Mentor"),
     },
     {
       art: "coins", Icon: Coins, color: "from-amber-400 to-amber-600",
-      title: "Koin Talenta & Toko",
-      body: "Kumpulkan Koin dari login harian (streak!), memetakan CV, menyelesaikan ujian & kelas. Tukar Koin untuk membuka akses kelas/ujian lebih cepat.",
-      tip: "Penting: Koin membeli AKSES, bukan BUKTI — sertifikat & rank tetap hanya dari lulus ujian.",
-      href: "/app/toko", hrefLabel: "Buka Toko",
+      title: t("Koin Talenta & Toko"),
+      body: t("Kumpulkan Koin dari login harian (streak!), memetakan CV, menyelesaikan ujian & kelas. Tukar Koin untuk membuka akses kelas/ujian lebih cepat."),
+      tip: t("Penting: Koin membeli AKSES, bukan BUKTI — sertifikat & rank tetap hanya dari lulus ujian."),
+      href: "/app/toko", hrefLabel: t("Buka Toko"),
     },
     {
       art: "start", Icon: Sparkles, color: "from-brand-600 to-emerald-500",
-      title: "Siap mulai!",
-      body: "Langkah paling berdampak: Upload CV → pilih kompetensi target → belajar di Kelas → buktikan lewat Ujian. Ingin paham cara skoring & rank? Buka tab 'Cara Kerja Sistem'.",
-      tip: "Butuh bantuan? AI Mentor siap 24/7 di pojok kanan bawah.",
-      href: "/app/cv-upload", hrefLabel: "Mulai dari Upload CV",
+      title: t("Siap mulai!"),
+      body: t("Langkah paling berdampak: Upload CV → pilih kompetensi target → belajar di Kelas → buktikan lewat Ujian. Ingin paham cara skoring & rank? Buka tab 'Cara Kerja Sistem'."),
+      tip: t("Butuh bantuan? AI Mentor siap 24/7 di pojok kanan bawah."),
+      href: "/app/cv-upload", hrefLabel: t("Mulai dari Upload CV"),
     },
   ];
 }
@@ -167,9 +169,10 @@ const SYSTEMS = [
 ];
 
 function TourView({ name, onClose, onSwitch }) {
+  const { t } = useLang();
   const navigate = useNavigate();
   const [i, setI] = useState(0);
-  const all = steps(name);
+  const all = steps(name, t);
   const s = all[i];
   const Icon = s.Icon;
   const last = i === all.length - 1;
@@ -179,7 +182,7 @@ function TourView({ name, onClose, onSwitch }) {
     <>
       <div className={`relative bg-gradient-to-br ${s.color} text-white px-6 pt-5 pb-5 overflow-hidden`}>
         <div className="absolute -right-8 -top-10 w-40 h-40 rounded-full bg-white/10 pointer-events-none" />
-        <button onClick={onClose} className="absolute top-3 right-3 z-10 text-white/80 hover:text-white" aria-label="Tutup"><X className="w-5 h-5" /></button>
+        <button onClick={onClose} className="absolute top-3 right-3 z-10 text-white/80 hover:text-white" aria-label={t("Tutup")}><X className="w-5 h-5" /></button>
         <div className="relative h-24 sm:h-28 mb-2"><TourArt kind={s.art} /></div>
         <div className="relative flex items-center gap-2.5">
           <div className="rounded-lg bg-white/15 w-9 h-9 flex items-center justify-center shrink-0"><Icon className="w-5 h-5" /></div>
@@ -201,7 +204,7 @@ function TourView({ name, onClose, onSwitch }) {
           </button>
         )}
         <button onClick={onSwitch} className="flex items-center gap-2 text-xs font-medium hover:underline" style={{ color: "var(--text-4)" }}>
-          <ListChecks className="w-3.5 h-3.5" /> Pelajari cara kerja sistem (skor, rank, AI) →
+          <ListChecks className="w-3.5 h-3.5" /> {t("Pelajari cara kerja sistem (skor, rank, AI) →")}
         </button>
       </div>
 
@@ -212,10 +215,10 @@ function TourView({ name, onClose, onSwitch }) {
           ))}
         </div>
         <div className="flex gap-2 ml-auto order-1 sm:order-2">
-          {i > 0 && <button className="btn-outline text-sm py-1.5 px-3 flex items-center gap-1" onClick={() => setI((n) => n - 1)}><ArrowLeft className="w-4 h-4" /> Kembali</button>}
+          {i > 0 && <button className="btn-outline text-sm py-1.5 px-3 flex items-center gap-1" onClick={() => setI((n) => n - 1)}><ArrowLeft className="w-4 h-4" /> {t("Kembali")}</button>}
           {last
-            ? <button className="btn-primary text-sm py-1.5 px-4" onClick={onClose}>Selesai</button>
-            : <button className="btn-primary text-sm py-1.5 px-4 flex items-center gap-1" onClick={() => setI((n) => n + 1)}>Lanjut <ArrowRight className="w-4 h-4" /></button>}
+            ? <button className="btn-primary text-sm py-1.5 px-4" onClick={onClose}>{t("Selesai")}</button>
+            : <button className="btn-primary text-sm py-1.5 px-4 flex items-center gap-1" onClick={() => setI((n) => n + 1)}>{t("Lanjut")} <ArrowRight className="w-4 h-4" /></button>}
         </div>
       </div>
     </>
@@ -223,16 +226,17 @@ function TourView({ name, onClose, onSwitch }) {
 }
 
 function SystemsView({ onClose, onSwitch }) {
+  const { t } = useLang();
   return (
     <>
       <div className="relative bg-gradient-to-br from-brand-600 to-tosca-500 text-white px-6 pt-5 pb-5 overflow-hidden">
         <div className="absolute -right-8 -top-10 w-40 h-40 rounded-full bg-white/10 pointer-events-none" />
-        <button onClick={onClose} className="absolute top-3 right-3 z-10 text-white/80 hover:text-white" aria-label="Tutup"><X className="w-5 h-5" /></button>
+        <button onClick={onClose} className="absolute top-3 right-3 z-10 text-white/80 hover:text-white" aria-label={t("Tutup")}><X className="w-5 h-5" /></button>
         <div className="relative flex items-center gap-2.5">
           <div className="rounded-lg bg-white/15 w-9 h-9 flex items-center justify-center shrink-0"><ListChecks className="w-5 h-5" /></div>
           <div>
-            <h2 className="text-lg font-bold leading-snug text-white">Cara Kerja Sistem</h2>
-            <p className="text-xs text-white/80">Skoring, ranking, ujian, validasi & AI — bagaimana semuanya bekerja.</p>
+            <h2 className="text-lg font-bold leading-snug text-white">{t("Cara Kerja Sistem")}</h2>
+            <p className="text-xs text-white/80">{t("Skoring, ranking, ujian, validasi & AI — bagaimana semuanya bekerja.")}</p>
           </div>
         </div>
       </div>
@@ -244,12 +248,12 @@ function SystemsView({ onClose, onSwitch }) {
               <div className="w-8 h-8 rounded-lg grid place-items-center shrink-0" style={{ background: `${sys.color}22`, color: sys.color }}>
                 <sys.Icon className="w-4 h-4" />
               </div>
-              <h3 className="text-sm font-bold" style={{ color: "var(--text-base)" }}>{sys.title}</h3>
+              <h3 className="text-sm font-bold" style={{ color: "var(--text-base)" }}>{t(sys.title)}</h3>
             </div>
             <ul className="space-y-1.5">
               {sys.points.map((p, i) => (
                 <li key={i} className="text-xs leading-relaxed flex gap-2" style={{ color: "var(--text-3)" }}>
-                  <span className="mt-1 w-1 h-1 rounded-full shrink-0" style={{ background: sys.color }} />{p}
+                  <span className="mt-1 w-1 h-1 rounded-full shrink-0" style={{ background: sys.color }} />{t(p)}
                 </li>
               ))}
             </ul>
@@ -258,8 +262,8 @@ function SystemsView({ onClose, onSwitch }) {
       </div>
 
       <div className="flex items-center justify-between gap-2 px-4 sm:px-6 py-4" style={{ borderTop: "1px solid var(--border)" }}>
-        <button onClick={onSwitch} className="btn-outline text-sm py-1.5 px-3 flex items-center gap-1"><ArrowLeft className="w-4 h-4" /> Panduan Fitur</button>
-        <button onClick={onClose} className="btn-primary text-sm py-1.5 px-4">Selesai</button>
+        <button onClick={onSwitch} className="btn-outline text-sm py-1.5 px-3 flex items-center gap-1"><ArrowLeft className="w-4 h-4" /> {t("Panduan Fitur")}</button>
+        <button onClick={onClose} className="btn-primary text-sm py-1.5 px-4">{t("Selesai")}</button>
       </div>
     </>
   );
@@ -280,6 +284,7 @@ function HelpModal({ name, onClose }) {
 
 // Tombol bantuan (?) di topbar + tur fitur. Auto-tampil sekali saat pertama login (User).
 export default function HelpButton() {
+  const { t } = useLang();
   const user = useAuthStore((s) => s.user);
   const [open, setOpen] = useState(false);
 
@@ -294,8 +299,8 @@ export default function HelpButton() {
 
   return (
     <>
-      <button onClick={() => setOpen(true)} title="Panduan fitur & cara kerja sistem"
-        className="p-2 rounded-xl transition-colors hover:bg-brand-50" style={{ color: "var(--text-3)" }} aria-label="Bantuan">
+      <button onClick={() => setOpen(true)} title={t("Panduan fitur & cara kerja sistem")}
+        className="p-2 rounded-xl transition-colors hover:bg-brand-50" style={{ color: "var(--text-3)" }} aria-label={t("Bantuan")}>
         <HelpCircle size={18} />
       </button>
       {open && <HelpModal name={user?.name} onClose={() => setOpen(false)} />}

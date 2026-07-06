@@ -4,9 +4,11 @@ import { Target, CheckCircle2, Circle, Coins, Loader2, ArrowRight } from "lucide
 import toast from "react-hot-toast";
 import api from "../api/client.js";
 import { useCoins } from "../hooks/useCoins.js";
+import { useLang } from "../lib/i18n.jsx";
 
 // Panel Misi Harian: 3 tugas → klaim bonus Koin.
 export default function DailyMissions() {
+  const { t } = useLang();
   const [daily, setDaily] = useState(null);
   const [claiming, setClaiming] = useState(false);
   const { setBalance, refresh } = useCoins();
@@ -21,10 +23,10 @@ export default function DailyMissions() {
     setClaiming(true);
     try {
       const d = await api.post("/missions/daily/claim");
-      if (d.ok) { if (typeof d.balance === "number") setBalance(d.balance); toast.success(`+${d.awarded} Koin — misi harian lengkap!`); }
+      if (d.ok) { if (typeof d.balance === "number") setBalance(d.balance); toast.success(t("+{n} Koin — misi harian lengkap!", { n: d.awarded })); }
       await load(); refresh();
     } catch (e) {
-      toast.error(typeof e === "string" ? e : "Gagal klaim");
+      toast.error(typeof e === "string" ? e : t("Gagal klaim"));
     } finally { setClaiming(false); }
   }
 
@@ -35,7 +37,7 @@ export default function DailyMissions() {
     <div className="card p-5">
       <div className="flex items-center justify-between mb-3">
         <p className="text-sm font-bold flex items-center gap-2" style={{ color: "var(--text-base)" }}>
-          <Target className="w-4 h-4 text-brand-600" /> Misi Harian
+          <Target className="w-4 h-4 text-brand-600" /> {t("Misi Harian")}
         </p>
         <span className="flex items-center gap-1 text-xs font-medium text-amber-600">
           <Coins className="w-3.5 h-3.5" /> +{daily.reward}
@@ -56,6 +58,7 @@ export default function DailyMissions() {
               {t.done ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" /> : <Circle className="w-4 h-4 shrink-0" style={{ color: "var(--text-4)" }} />}
               <span className={`text-sm flex-1 ${t.done ? "line-through" : ""}`} style={{ color: t.done ? "var(--text-4)" : "var(--text-2)" }}>{t.label}</span>
               {!t.done && <ArrowRight className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-4)" }} />}
+              {/* label misi berasal dari server (lib/missions) — terjemahan menyusul saat konten server dwibahasa */}
             </div>
           </Link>
         ))}
@@ -63,12 +66,12 @@ export default function DailyMissions() {
 
       {daily.claimed ? (
         <div className="flex items-center justify-center gap-2 rounded-lg bg-emerald-500/10 text-emerald-500 text-sm py-2 mt-3">
-          <CheckCircle2 className="w-4 h-4" /> Bonus misi hari ini sudah diklaim
+          <CheckCircle2 className="w-4 h-4" /> {t("Bonus misi hari ini sudah diklaim")}
         </div>
       ) : (
         <button onClick={claim} disabled={!daily.allDone || claiming} className="btn-primary w-full mt-3 text-sm py-2 flex items-center justify-center gap-1.5 disabled:opacity-50">
           {claiming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Coins className="w-4 h-4" />}
-          {daily.allDone ? `Klaim ${daily.reward} Koin` : `Selesaikan semua misi (${doneCount}/${daily.tasks.length})`}
+          {daily.allDone ? t("Klaim {n} Koin", { n: daily.reward }) : t("Selesaikan semua misi ({a}/{b})", { a: doneCount, b: daily.tasks.length })}
         </button>
       )}
     </div>

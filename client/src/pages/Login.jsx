@@ -4,6 +4,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import api from "../api/client.js";
 import useAuthStore from "../store/authStore.js";
+import LangToggle from "../components/LangToggle.jsx";
+import { useLang } from "../lib/i18n.jsx";
 
 // Muat script Google Identity Services sekali (idempoten).
 function loadGis() {
@@ -24,6 +26,7 @@ export default function Login() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
   const queryClient = useQueryClient();
+  const { lang, t } = useLang();
   const [form, setForm] = useState({ email: "", password: "" });
   const gBtnRef = useRef(null);
   const [gReady, setGReady] = useState(false);
@@ -31,17 +34,17 @@ export default function Login() {
   const onLoggedIn = useCallback(({ token, user, isNew }) => {
     queryClient.clear();
     setAuth(token, user);
-    toast.success(`Selamat datang, ${user.name}!`);
+    toast.success(t("Selamat datang, {name}!", { name: user.name }));
     // Akun Google baru → onboarding: pilih kompetensi target dulu.
     if (isNew) return navigate("/app/profile?welcome=1");
     const dest = user.role === "hrd" ? "/app/hrd" : user.role === "admin" ? "/app/admin" : "/app/dashboard";
     navigate(dest);
-  }, [navigate, queryClient, setAuth]);
+  }, [navigate, queryClient, setAuth, t]);
 
   const login = useMutation({
     mutationFn: (data) => api.post("/auth/login", data),
     onSuccess: onLoggedIn,
-    onError: (err) => toast.error(err || "Login gagal"),
+    onError: (err) => toast.error(err || t("Login gagal")),
   });
 
   // Tombol "Masuk dengan Google" (GIS): ambil client ID publik → render tombol resmi.
@@ -60,18 +63,20 @@ export default function Login() {
               const r = await api.post("/auth/google", { credential: resp.credential }, { timeout: 20_000 });
               onLoggedIn(r);
             } catch (e) {
-              toast.error(typeof e === "string" ? e : "Login Google gagal");
+              toast.error(typeof e === "string" ? e : t("Login Google gagal"));
             }
           },
         });
+        // Kosongkan kontainer dulu — efek re-run saat ganti bahasa, GIS jangan menumpuk tombol.
+        gBtnRef.current.innerHTML = "";
         window.google.accounts.id.renderButton(gBtnRef.current, {
-          theme: "outline", size: "large", text: "signin_with", shape: "pill", locale: "id", width: 320,
+          theme: "outline", size: "large", text: "signin_with", shape: "pill", locale: lang, width: 320,
         });
         setGReady(true);
       } catch { /* Google login opsional — form biasa tetap jalan */ }
     })();
     return () => { cancelled = true; };
-  }, [onLoggedIn]);
+  }, [onLoggedIn, lang, t]);
 
   const submit = (e) => { e.preventDefault(); login.mutate(form); };
 
@@ -85,12 +90,17 @@ export default function Login() {
         <div className="absolute bottom-0 right-0 w-80 h-80 bg-violet-200/30 rounded-full blur-3xl" />
       </div>
 
+      {/* Pemilih bahasa — pojok kanan atas */}
+      <div className="fixed top-4 right-4 z-10">
+        <LangToggle />
+      </div>
+
       <div className="w-full max-w-md relative">
         {/* logo + heading */}
         <div className="text-center mb-8">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-600 to-tosca-500 flex items-center justify-center text-xl font-black text-white mx-auto mb-4">T</div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text-base)" }}>Masuk ke TalentaAI</h1>
-          <p className="mt-1 text-sm" style={{ color: "var(--text-3)" }}>Masukkan email & password Anda</p>
+          <h1 className="text-2xl font-bold" style={{ color: "var(--text-base)" }}>{t("Masuk ke TalentaAI")}</h1>
+          <p className="mt-1 text-sm" style={{ color: "var(--text-3)" }}>{t("Masukkan email & password Anda")}</p>
         </div>
 
         <form onSubmit={submit} className="card p-6 sm:p-8 space-y-5">
@@ -106,7 +116,7 @@ export default function Login() {
             />
           </div>
           <div>
-            <label className="text-sm font-medium mb-1.5 block" style={{ color: "var(--text-2)" }}>Password</label>
+            <label className="text-sm font-medium mb-1.5 block" style={{ color: "var(--text-2)" }}>{t("Password")}</label>
             <input
               className="input"
               type="password"
@@ -118,7 +128,7 @@ export default function Login() {
           </div>
 
           <button type="submit" disabled={login.isPending} className="btn-primary w-full py-3">
-            {login.isPending ? "Masuk…" : "Masuk →"}
+            {login.isPending ? t("Masuk…") : t("Masuk →")}
           </button>
 
           {/* Login Google (muncul bila dikonfigurasi). Kontainer ref selalu ter-mount
@@ -127,7 +137,7 @@ export default function Login() {
             {gReady && (
               <div className="flex items-center gap-3">
                 <span className="h-px flex-1" style={{ background: "var(--border)" }} />
-                <span className="text-xs" style={{ color: "var(--text-4)" }}>atau</span>
+                <span className="text-xs" style={{ color: "var(--text-4)" }}>{t("atau")}</span>
                 <span className="h-px flex-1" style={{ background: "var(--border)" }} />
               </div>
             )}
@@ -135,14 +145,14 @@ export default function Login() {
           </div>
 
           <div className="text-center text-sm" style={{ color: "var(--text-4)" }}>
-            Belum punya akun?{" "}
-            <Link to="/register" className="text-brand-600 hover:text-brand-700 font-medium">Daftar</Link>
+            {t("Belum punya akun?")}{" "}
+            <Link to="/register" className="text-brand-600 hover:text-brand-700 font-medium">{t("Daftar")}</Link>
           </div>
         </form>
 
         {/* demo accounts */}
         <div className="card mt-4 p-4">
-          <p className="text-xs font-medium mb-2" style={{ color: "var(--text-4)" }}>Demo login:</p>
+          <p className="text-xs font-medium mb-2" style={{ color: "var(--text-4)" }}>{t("Demo login:")}</p>
           {[
             { email: "user@demo.id", role: "User" },
             { email: "hrd@demo.id", role: "HRD" },
@@ -164,7 +174,7 @@ export default function Login() {
 
         <p className="text-center mt-6">
           <Link to="/" className="text-sm hover:text-brand-600 transition-colors" style={{ color: "var(--text-4)" }}>
-            ← Kembali ke Beranda
+            {t("← Kembali ke Beranda")}
           </Link>
         </p>
       </div>

@@ -1,5 +1,6 @@
 import { rankOf, RANKS } from "../lib/rank.js";
 import RankIcon from "./RankIcon.jsx";
+import { useLang } from "../lib/i18n.jsx";
 
 // Kartu identitas ala profil game — DI LUAR frame rank, kolom kanan.
 // Foto BESAR di atas, informasi data diri tepat di bawahnya.
@@ -7,6 +8,7 @@ import RankIcon from "./RankIcon.jsx";
 //  level    : rank efektif (untuk warna tier + emblem mini)
 //  identity : { name, email, subtitle, targetLabel, photoUrl, onPhotoClick, onPhotoRemove, uploading }
 export default function RankIdentityCard({ level, identity }) {
+  const { t } = useLang();
   const r = rankOf(level) || RANKS[0];
   const color = r.color;
   const { name, email, subtitle, targetLabel, photoUrl, onPhotoClick, onPhotoRemove, uploading } = identity || {};
@@ -32,10 +34,10 @@ export default function RankIdentityCard({ level, identity }) {
         {clickable ? (
           <button onClick={() => !uploading && onPhotoClick()} className="group relative block overflow-hidden"
             style={{ width: 168, height: 168, borderRadius: 24, border: `3px solid ${color}`, boxShadow: `0 0 30px ${color}55` }}
-            title="Atur foto profil">
+            title={t("Atur foto profil")}>
             {photo}
             <span className="absolute inset-x-0 bottom-0 hidden justify-center bg-black/60 py-1.5 text-[11px] font-semibold text-white group-hover:flex">
-              {uploading ? "Mengunggah…" : photoUrl ? "Ganti / atur foto" : "Upload foto"}
+              {uploading ? t("Mengunggah…") : photoUrl ? t("Ganti / atur foto") : t("Upload foto")}
             </span>
           </button>
         ) : (
@@ -66,10 +68,10 @@ export default function RankIdentityCard({ level, identity }) {
           <div className="mt-2.5 flex items-center justify-center gap-3">
             <button onClick={() => !uploading && onPhotoClick()} disabled={uploading}
               className="text-[11px] font-semibold text-brand-400 hover:underline disabled:opacity-60">
-              {uploading ? "Mengunggah…" : photoUrl ? "Ganti foto" : "Upload foto"}
+              {uploading ? t("Mengunggah…") : photoUrl ? t("Ganti foto") : t("Upload foto")}
             </button>
             {photoUrl && !uploading && onPhotoRemove && (
-              <button onClick={onPhotoRemove} className="text-[11px] text-slate-500 hover:text-red-400">Hapus</button>
+              <button onClick={onPhotoRemove} className="text-[11px] text-slate-500 hover:text-red-400">{t("Hapus")}</button>
             )}
           </div>
         )}

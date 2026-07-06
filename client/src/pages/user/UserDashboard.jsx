@@ -11,6 +11,7 @@ import RankHero from "../../components/RankHero.jsx";
 import RankIdentityCard from "../../components/RankIdentityCard.jsx";
 import RankUpOverlay from "../../components/RankUpOverlay.jsx";
 import { rankName } from "../../lib/rank.js";
+import { useLang, dateLocale } from "../../lib/i18n.jsx";
 
 const STATUS_CONFIG = {
   ready:       { label: "Siap Naik",    cls: "badge-ready" },
@@ -21,6 +22,7 @@ const STATUS_CONFIG = {
 const LAST_RANK_KEY = (id) => `talenta:lastRank:${id}`;
 
 export default function UserDashboard() {
+  const { lang, t } = useLang();
   const { user } = useAuthStore();
   const { data: overview } = useQuery({ queryKey: ["overview"], queryFn: () => api.get("/user/overview") });
   const { data: attempts = [] } = useQuery({ queryKey: ["attempts"], queryFn: () => api.get("/user/attempts") });
@@ -48,10 +50,10 @@ export default function UserDashboard() {
   const topGaps = assessments.filter((a) => a.gap > 0).sort((a, b) => b.gap - a.gap).slice(0, 3);
 
   const actions = [
-    { to: "/app/cv-upload",     icon: FileText, label: "Upload CV",     desc: "Auto-klasifikasi Rank",        color: "#2563eb" },
-    { to: "/app/exam",          icon: PenLine,  label: "Ikut Ujian",    desc: `${attempts.length} percobaan`,  color: "#12a594" },
-    { to: "/app/skill-gap",     icon: Target,   label: "Skill Gap",     desc: `${topGaps.length} gap terdeteksi`, color: "#f59e0b" },
-    { to: "/app/learning-path", icon: Route,    label: "Learning Path", desc: "Rekomendasi personal",          color: "#10b981" },
+    { to: "/app/cv-upload",     icon: FileText, label: t("Upload CV"),     desc: t("Auto-klasifikasi Rank"),        color: "#2563eb" },
+    { to: "/app/exam",          icon: PenLine,  label: t("Ikut Ujian"),    desc: t("{n} percobaan", { n: attempts.length }),  color: "#12a594" },
+    { to: "/app/skill-gap",     icon: Target,   label: t("Skill Gap"),     desc: t("{n} gap terdeteksi", { n: topGaps.length }), color: "#f59e0b" },
+    { to: "/app/learning-path", icon: Route,    label: t("Learning Path"), desc: t("Rekomendasi personal"),          color: "#10b981" },
   ];
 
   return (
@@ -68,9 +70,9 @@ export default function UserDashboard() {
             competency={overview?.chosenSkkni?.title}
             footer={
               <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-                <span className={`badge ${sc.cls}`}>{sc.label}</span>
+                <span className={`badge ${sc.cls}`}>{t(sc.label)}</span>
                 {!overview?.chosenSkkni && (
-                  <Link to="/app/profile" className="text-xs font-semibold text-brand-400 hover:underline">Pilih kompetensi target →</Link>
+                  <Link to="/app/profile" className="text-xs font-semibold text-brand-400 hover:underline">{t("Pilih kompetensi target →")}</Link>
                 )}
               </div>
             }
@@ -81,18 +83,18 @@ export default function UserDashboard() {
               identity={{
                 name: p?.name,
                 email: p?.email,
-                subtitle: p?.position || p?.academicStatus || "Talenta",
-                targetLabel: p?.targetKkniLevel ? `Target: ${rankName(p.targetKkniLevel)}` : null,
+                subtitle: p?.position || p?.academicStatus || t("Talenta"),
+                targetLabel: p?.targetKkniLevel ? t("Target: {rank}", { rank: rankName(p.targetKkniLevel) }) : null,
                 photoUrl: p?.avatarUrl,
               }}
             />
             <Link to="/app/profile" className="card p-3 block text-center text-xs font-semibold text-brand-500 hover:underline">
-              Kelola profil & foto →
+              {t("Kelola profil & foto →")}
             </Link>
           </div>
         </div>
       ) : (
-        <div className="card p-8 text-center text-sm" style={{ color: "var(--text-4)" }}>Memuat rank…</div>
+        <div className="card p-8 text-center text-sm" style={{ color: "var(--text-4)" }}>{t("Memuat rank…")}</div>
       )}
 
       {/* Gamifikasi harian — Course Harian di bawah bonus login (mengisi ruang kosong) */}
@@ -122,12 +124,12 @@ export default function UserDashboard() {
         {/* Riwayat ujian */}
         <div className="card p-6">
           <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-base)" }}>
-            <Trophy className="w-4 h-4 text-brand-600" /> Riwayat Ujian
+            <Trophy className="w-4 h-4 text-brand-600" /> {t("Riwayat Ujian")}
           </h3>
           {attempts.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-sm" style={{ color: "var(--text-4)" }}>Belum ada riwayat ujian</p>
-              <Link to="/app/exam" className="btn-primary text-sm py-2 px-4 mt-3 inline-block">Mulai Ujian</Link>
+              <p className="text-sm" style={{ color: "var(--text-4)" }}>{t("Belum ada riwayat ujian")}</p>
+              <Link to="/app/exam" className="btn-primary text-sm py-2 px-4 mt-3 inline-block">{t("Mulai Ujian")}</Link>
             </div>
           ) : (
             <div className="space-y-3">
@@ -139,9 +141,9 @@ export default function UserDashboard() {
                   }`}>{a.readinessScore}%</div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium" style={{ color: "var(--text-base)" }}>Rank {rankName(a.kkniLevel)}</p>
-                    <p className="text-xs" style={{ color: "var(--text-4)" }}>{new Date(a.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</p>
+                    <p className="text-xs" style={{ color: "var(--text-4)" }}>{new Date(a.createdAt).toLocaleDateString(dateLocale(lang), { day: "numeric", month: "short", year: "numeric" })}</p>
                   </div>
-                  <span className={`badge ${STATUS_CONFIG[a.status]?.cls || "badge-not-ready"}`}>{STATUS_CONFIG[a.status]?.label}</span>
+                  <span className={`badge ${STATUS_CONFIG[a.status]?.cls || "badge-not-ready"}`}>{t(STATUS_CONFIG[a.status]?.label || "")}</span>
                 </div>
               ))}
             </div>
@@ -151,12 +153,12 @@ export default function UserDashboard() {
         {/* Gap kompetensi */}
         <div className="card p-6">
           <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-base)" }}>
-            <Award className="w-4 h-4 text-brand-600" /> Gap Kompetensi Teratas
+            <Award className="w-4 h-4 text-brand-600" /> {t("Gap Kompetensi Teratas")}
           </h3>
           {topGaps.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-sm" style={{ color: "var(--text-4)" }}>
-                {assessments.length === 0 ? "Ikuti ujian untuk melihat gap" : "Semua kompetensi terpenuhi 🎉"}
+                {assessments.length === 0 ? t("Ikuti ujian untuk melihat gap") : t("Semua kompetensi terpenuhi 🎉")}
               </p>
             </div>
           ) : (
@@ -171,12 +173,12 @@ export default function UserDashboard() {
                     <div className="h-full bg-brand-600 rounded-full transition-all" style={{ width: `${a.currentScore}%` }} />
                   </div>
                   <div className="flex justify-between text-xs mt-0.5" style={{ color: "var(--text-4)" }}>
-                    <span>Saat ini: {a.currentScore}%</span>
-                    <span>Target: {a.requiredScore}%</span>
+                    <span>{t("Saat ini:")} {a.currentScore}%</span>
+                    <span>{t("Target:")} {a.requiredScore}%</span>
                   </div>
                 </div>
               ))}
-              <Link to="/app/skill-gap" className="text-sm text-brand-400 hover:text-brand-300 block mt-2">Lihat semua →</Link>
+              <Link to="/app/skill-gap" className="text-sm text-brand-400 hover:text-brand-300 block mt-2">{t("Lihat semua →")}</Link>
             </div>
           )}
         </div>

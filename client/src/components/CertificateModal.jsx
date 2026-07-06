@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { X, Download } from "lucide-react";
 import CertificateArt from "./CertificateArt.jsx";
+import { useLang } from "../lib/i18n.jsx";
 
 const codeOf = (id) => "TAI-" + String(id || "").replace(/[^a-z0-9]/gi, "").slice(-8).toUpperCase();
 
@@ -25,6 +26,7 @@ function downloadPng(svg, filename) {
 }
 
 export default function CertificateModal({ cert, holder, onClose }) {
+  const { t } = useLang();
   const svgRef = useRef(null);
   if (!cert) return null;
   const code = codeOf(cert.id);
@@ -33,10 +35,10 @@ export default function CertificateModal({ cert, holder, onClose }) {
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div className="w-full max-w-3xl rounded-2xl overflow-hidden" style={{ background: "var(--bg-surface)", border: "1px solid var(--border)" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
-          <p className="text-sm font-semibold" style={{ color: "var(--text-base)" }}>Sertifikat Kompetensi</p>
+          <p className="text-sm font-semibold" style={{ color: "var(--text-base)" }}>{t("Sertifikat Kompetensi")}</p>
           <div className="flex items-center gap-2">
             <button onClick={() => downloadPng(svgRef.current, `Sertifikat-${(holder || "peserta").replace(/\s+/g, "_")}-${code}.png`)}
-              className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5"><Download className="w-3.5 h-3.5" /> Unduh PNG</button>
+              className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5"><Download className="w-3.5 h-3.5" /> {t("Unduh PNG")}</button>
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-red-50 hover:text-red-500" style={{ color: "var(--text-4)" }}><X className="w-4 h-4" /></button>
           </div>
         </div>

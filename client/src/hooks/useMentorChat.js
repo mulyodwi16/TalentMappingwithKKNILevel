@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import useAuthStore from "../store/authStore.js";
+import { getLang } from "../lib/i18n.jsx";
 
 // Riwayat AI Mentor yang PERSISTEN (localStorage) & DIBAGI antara halaman /app/mentor dan
 // chat mengambang. Konteks panjang dijaga: setelah >100 pesan, pesan lama diringkas jadi poin
@@ -24,7 +25,8 @@ async function postJson(url, body) {
   const token = useAuthStore.getState().token;
   const r = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    // X-Lang: server memilih prompt AI Mentor versi ID/EN sesuai bahasa UI.
+    headers: { "Content-Type": "application/json", "X-Lang": getLang(), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify(body),
   });
   let data = {};
