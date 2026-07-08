@@ -9,7 +9,10 @@ import useAuthStore from "../store/authStore.js";
 import TourArt from "./TourArt.jsx";
 import { useLang } from "../lib/i18n.jsx";
 
-const SEEN_KEY = "kkni-tour-seen";
+// Flag "sudah lihat tur" DI-KUNCI PER-AKUN (bukan global per-browser) — agar TIAP pengguna baru
+// (mis. usai daftar akun) tetap mendapat tur sekali, walau browser yang sama pernah memicunya.
+const SEEN_PREFIX = "kkni-tour-seen:";
+const seenKey = (email) => SEEN_PREFIX + (email || "anon");
 
 // Terima `t` agar seluruh teks tur ikut bahasa aktif (dipanggil dari TourView).
 function steps(name, t) {
@@ -289,11 +292,13 @@ export default function HelpButton() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (user?.role === "user" && !localStorage.getItem(SEEN_KEY)) {
-      localStorage.setItem(SEEN_KEY, "1");
+    if (user?.role !== "user" || !user?.email) return;
+    const key = seenKey(user.email);
+    if (!localStorage.getItem(key)) {
+      localStorage.setItem(key, "1");
       setOpen(true);
     }
-  }, [user?.role]);
+  }, [user?.role, user?.email]);
 
   if (user?.role !== "user") return null;
 
