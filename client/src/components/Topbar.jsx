@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bell, Sun, Moon, Menu, UserCircle, LogOut, Palette, Check, Languages } from "lucide-react";
+import { Bell, Sun, Moon, Menu, UserCircle, LogOut, Palette, Check } from "lucide-react";
 import api from "../api/client.js";
 import useAuthStore from "../store/authStore.js";
 import CoinPill from "./CoinPill.jsx";
 import HelpButton from "./HelpButton.jsx";
-import { ACCENTS, getAccent, applyAccent } from "../lib/theme.js";
+import { ACCENTS, applyAccent, applyTheme, DEFAULT_ACCENT, DEFAULT_THEME } from "../lib/theme.js";
 import { useLang, LANGS, dateLocale } from "../lib/i18n.jsx";
 
 const ROLE_LABEL = { user: "Talenta", hrd: "HRD", admin: "Admin" };
@@ -35,19 +35,27 @@ export default function Topbar({ onBurger }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { lang, t, setLang } = useLang();
-  const { user, logout } = useAuthStore();
+  const { user, logout, updateUser } = useAuthStore();
   const [showNotif, setShowNotif] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [accent, setAccent] = useState(getAccent);
-  const [dark, setDark] = useState(() => localStorage.getItem("theme") === "dark");
+  // Sumber tema = preferensi AKUN (#9), bukan localStorage global. Kustomisasi tak bocor antar-akun.
+  const [accent, setAccent] = useState(() => user?.accent || DEFAULT_ACCENT);
+  const [dark, setDark] = useState(() => (user?.themeMode || DEFAULT_THEME) === "dark");
   const qc = useQueryClient();
 
-  const pickAccent = (key) => { applyAccent(key); setAccent(key); };
+  // Simpan preferensi tampilan ke AKUN (#9) — best-effort, tak boleh memblok UI.
+  const persistPrefs = (patch) => {
+    updateUser(patch);
+    api.put("/user/prefs", patch).catch(() => {});
+  };
 
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
-    localStorage.setItem("theme", dark ? "dark" : "light");
-  }, [dark]);
+  const pickAccent = (key) => { applyAccent(key); setAccent(key); persistPrefs({ accent: key }); };
+  const toggleTheme = () => {
+    const next = !dark;
+    setDark(next);
+    applyTheme(next ? "dark" : "light");
+    persistPrefs({ themeMode: next ? "dark" : "light" });
+  };
 
   const { data: notifs = [] } = useQuery({
     queryKey: ["notifications"],
@@ -71,7 +79,7 @@ export default function Topbar({ onBurger }) {
 
   const doLogout = () => { qc.clear(); logout(); navigate("/login"); };
 
-  const iconBtn = "p-2 rounded-xl transition-colors hover:bg-brand-50";
+  const iconBtn = "icon-btn";
 
   return (
     <header
@@ -82,7 +90,6 @@ export default function Topbar({ onBurger }) {
       <button
         onClick={onBurger}
         className={`lg:hidden ${iconBtn}`}
-        style={{ color: "var(--text-3)" }}
         aria-label={t("Buka menu")}
       >
         <Menu size={20} />
@@ -99,12 +106,27 @@ export default function Topbar({ onBurger }) {
       {/* Bantuan / tur fitur (khusus User) */}
       <HelpButton />
 
+      {/* Pilihan bahasa UI (ID|EN) — juga menentukan bahasa jawaban AI (#8: keluar dari dropdown) */}
+      <div className="flex items-center rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }} role="group" aria-label={t("Bahasa")}>
+        {LANGS.map((l) => (
+          <button
+            key={l.key}
+            onClick={() => setLang(l.key)}
+            className={`px-2 py-1 text-[11px] font-bold transition-colors ${lang === l.key ? "bg-brand-600 text-white" : "hover:bg-brand-50"}`}
+            style={lang === l.key ? {} : { color: "var(--text-3)" }}
+            aria-pressed={lang === l.key}
+            title={l.label}
+          >
+            {l.short}
+          </button>
+        ))}
+      </div>
+
       {/* Theme toggle */}
       <button
-        onClick={() => setDark((d) => !d)}
+        onClick={toggleTheme}
         title={dark ? t("Mode terang") : t("Mode gelap")}
         className={iconBtn}
-        style={{ color: "var(--text-3)" }}
       >
         {dark ? <Sun size={18} /> : <Moon size={18} />}
       </button>
@@ -114,7 +136,6 @@ export default function Topbar({ onBurger }) {
         <button
           onClick={() => setShowNotif((v) => !v)}
           className={`${iconBtn} relative`}
-          style={{ color: "var(--text-3)" }}
           aria-label={t("Notifikasi")}
         >
           <Bell size={18} />
@@ -186,27 +207,6 @@ export default function Topbar({ onBurger }) {
               >
                 <UserCircle size={16} /> {t("Profil Saya")}
               </Link>
-            </div>
-
-            {/* Pilihan bahasa UI (ID/EN) — juga menentukan bahasa jawaban AI */}
-            <div className="px-4 py-3" style={{ borderTop: "1px solid var(--border)" }}>
-              <p className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: "var(--text-3)" }}>
-                <Languages size={13} /> {t("Bahasa")}
-              </p>
-              <div className="grid grid-cols-2 gap-1.5">
-                {LANGS.map((l) => (
-                  <button
-                    key={l.key}
-                    onClick={() => setLang(l.key)}
-                    className={`text-xs font-medium rounded-lg px-2 py-1.5 border transition-colors ${
-                      lang === l.key ? "border-brand-500 bg-brand-600/10 text-brand-600" : "hover:border-slate-400"
-                    }`}
-                    style={lang === l.key ? {} : { borderColor: "var(--border)", color: "var(--text-3)" }}
-                  >
-                    {l.label}
-                  </button>
-                ))}
-              </div>
             </div>
 
             {/* Kustomisasi warna aksen */}

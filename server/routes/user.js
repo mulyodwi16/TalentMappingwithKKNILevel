@@ -6,6 +6,7 @@ import { awardOnce, COIN } from "../gamification.js";
 import { clampRank } from "../onboarding.js";
 import { computeReadiness, refreshReadiness } from "../readiness.js";
 import { refreshRank, computeRank } from "../rankcalc.js";
+import { chosenUnitCodeSet } from "../competencyScope.js";
 
 const router = express.Router();
 router.use(requireAuth);
@@ -71,6 +72,27 @@ router.put("/avatar", async (req, res) => {
   }
   await prisma.user.update({ where: { id: req.user.id }, data: { avatarUrl: avatarUrl || null } });
   res.json({ avatarUrl: avatarUrl || null });
+});
+
+// ── Preferensi tampilan per-akun (#9): mode gelap/terang + warna aksen ──────────
+// Disimpan agar tema mengikuti AKUN (bukan cuma browser). NULL = kembali ke default klien.
+// ACCENT_KEYS WAJIB sinkron dengan ACCENTS di client/src/lib/theme.js.
+const THEME_MODES = new Set(["light", "dark"]);
+const ACCENT_KEYS = new Set(["blue", "indigo", "sky", "emerald", "amber", "rose"]);
+router.put("/prefs", async (req, res) => {
+  const { themeMode, accent } = req.body || {};
+  const data = {};
+  if (themeMode !== undefined) {
+    if (themeMode !== null && !THEME_MODES.has(themeMode)) return res.status(400).json({ error: "themeMode tidak valid." });
+    data.themeMode = themeMode || null;
+  }
+  if (accent !== undefined) {
+    if (accent !== null && !ACCENT_KEYS.has(accent)) return res.status(400).json({ error: "accent tidak valid." });
+    data.accent = accent || null;
+  }
+  if (!Object.keys(data).length) return res.status(400).json({ error: "Tidak ada preferensi untuk disimpan." });
+  const u = await prisma.user.update({ where: { id: req.user.id }, data });
+  res.json({ themeMode: u.themeMode ?? null, accent: u.accent ?? null });
 });
 
 // ── CV Parse ──────────────────────────────────────────────────────────────────
@@ -330,7 +352,11 @@ router.get("/attempts", async (req, res) => {
 
 // ── Skill assessments ─────────────────────────────────────────────────────────
 router.get("/skill-assessments", async (req, res) => {
-  const assessments = await prisma.skillAssessment.findMany({ where: { userId: req.user.id } });
+  const all = await prisma.skillAssessment.findMany({ where: { userId: req.user.id } });
+  // Batasi ke kompetensi AKTIF → skill gap ikut berganti saat ganti kompetensi (kompetensi baru = kosong).
+  // Tanpa kompetensi target (jalur legacy) → tampilkan semua seperti semula.
+  const codes = await chosenUnitCodeSet(req.user.id);
+  const assessments = codes ? all.filter((a) => codes.has(a.competencyCode)) : all;
   res.json(assessments);
 });
 

@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar.jsx";
 import Topbar from "./Topbar.jsx";
-import FloatingMentor from "./FloatingMentor.jsx";
+import CompanionAvatar from "./CompanionAvatar.jsx";
 
 export default function Layout() {
   const { pathname } = useLocation();
@@ -35,7 +35,8 @@ export default function Layout() {
         </main>
       </div>
 
-      <FloatingMentor />
+      {/* AI Companion Onyen (#14/#15) — avatar kiri-bawah, menggantikan tombol mentor kanan-bawah */}
+      <CompanionAvatar />
     </div>
   );
 }

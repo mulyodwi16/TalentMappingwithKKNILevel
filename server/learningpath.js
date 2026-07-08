@@ -3,7 +3,8 @@ import { chatComplete, isLlmConfigured, LlmError } from "./llm.js";
 import { rankName } from "./rank.js";
 import { computeRank } from "./rankcalc.js";
 import { computeReadiness } from "./readiness.js";
-import { getDocWithUnits } from "./skkni.js";
+import { getDocWithUnits, cleanTitle } from "./skkni.js";
+import { chosenUnitCodeSet } from "./competencyScope.js";
 
 // ── Learning Path AI ──────────────────────────────────────────────────────────
 // Menyusun rencana belajar personal & terurut dari 3 masukan (permintaan #4):
@@ -44,14 +45,22 @@ export async function buildInputs(userId) {
   ]);
   if (!u) return null;
 
-  const gaps = assessments
+  // Isolasi per kompetensi: analisa (gap/unit lulus/sertifikat) HANYA dari kompetensi yang
+  // SEDANG dipilih → ganti kompetensi = rencana ikut berganti, kompetensi baru mulai dari 0.
+  // (CV & bukti eksternal tetap global, konsisten dengan rankcalc/readiness.)
+  const codes = await chosenUnitCodeSet(userId, u.chosenSkkniId || null);
+  const inScope = (code) => (codes ? codes.has(code) : false);
+  const scopedAssess = codes ? assessments.filter((a) => inScope(a.competencyCode)) : [];
+  const scopedCerts = codes ? certs.filter((c) => inScope(c.competencyCode)) : [];
+
+  const gaps = scopedAssess
     .filter((a) => a.gap > 0)
     .sort((a, b) => b.gap - a.gap)
     .map((a) => ({ name: a.competencyName, code: a.competencyCode, score: a.currentScore, gap: a.gap }));
-  const strong = assessments
+  const strong = scopedAssess
     .filter((a) => a.gap === 0 && a.currentScore >= 60)
     .map((a) => a.competencyName);
-  const passedUnits = assessments
+  const passedUnits = scopedAssess
     .filter((a) => a.currentScore >= 60)
     .map((a) => ({ name: a.competencyName, code: a.competencyCode, score: a.currentScore }));
 
@@ -63,7 +72,7 @@ export async function buildInputs(userId) {
       if (doc) {
         competency = {
           id: doc.id,
-          title: doc.title,
+          title: cleanTitle(doc.title),
           number: doc.numberKepmen || null,
           unitCount: doc.unitCount,
           units: doc.units.map((x) => ({ code: x.code, title: x.title })),
@@ -84,7 +93,8 @@ export async function buildInputs(userId) {
       name: u.name,
       education: u.education || cv.education || null,
       academicStatus: u.academicStatus || null,
-      targetRole: u.targetRole || null,
+      // Profesi target DITURUNKAN OTOMATIS dari kompetensi SKKNI (bukan input manual lagi).
+      targetRole: competency?.title || u.targetRole || null,
       experienceYears: u.experienceYears ?? cv.experienceYears ?? 0,
     },
     cv: {
@@ -109,12 +119,12 @@ export async function buildInputs(userId) {
     strong,
     passedUnits,
     classes,
-    certificates: certs.map((c) => ({ name: c.name, score: c.score })),
+    certificates: scopedCerts.map((c) => ({ name: c.name, score: c.score })),
     evidence: evidence.map((e) => ({ title: e.title, type: e.type, rankImplied: e.rankImplied })),
     activity: {
       examAttempts: attempts,
       classesTaken: classes.length,
-      certCount: certs.length,
+      certCount: scopedCerts.length,
       unitsLearned: unitProg.filter((p) => p.learned).length,
       evidenceCount: evidence.length,
     },
@@ -129,18 +139,24 @@ function normalizeTitle(s) { return String(s || "").toLowerCase().replace(/[^a-z
 
 export async function deriveStepProgress(userId, steps) {
   if (!Array.isArray(steps) || !steps.length) return steps || [];
-  const [assessments, unitProg, u, certs, classesRedeem, courseTx, evidence, attempts] = await Promise.all([
+  const [assessments, unitProgAll, u, certRows, classesRedeem, courseTx, evidence, attempts] = await Promise.all([
     prisma.skillAssessment.findMany({ where: { userId } }),
     prisma.unitProgress.findMany({ where: { userId } }).catch(() => []),
-    prisma.user.findUnique({ where: { id: userId }, select: { cvMeta: true } }),
-    prisma.certificate.count({ where: { userId } }).catch(() => 0),
+    prisma.user.findUnique({ where: { id: userId }, select: { cvMeta: true, chosenSkkniId: true } }),
+    prisma.certificate.findMany({ where: { userId }, select: { competencyCode: true } }).catch(() => []),
     prisma.shopRedemption.count({ where: { userId } }).catch(() => 0),
     prisma.coinTransaction.count({ where: { userId, refType: "course" } }).catch(() => 0),
     prisma.externalEvidence.count({ where: { userId, status: "verified" } }).catch(() => 0),
     prisma.examAttempt.count({ where: { userId } }).catch(() => 0),
   ]);
-  const byCode = new Map(assessments.map((a) => [a.competencyCode, a]));
-  const byTitle = new Map(assessments.map((a) => [normalizeTitle(a.competencyName), a]));
+  // Isolasi per kompetensi (sama seperti buildInputs): unit lulus, sertifikat & materi kelas
+  // yang dihitung hanya milik kompetensi aktif → progres langkah ikut berganti saat kompetensi diganti.
+  const codes = await chosenUnitCodeSet(userId, u?.chosenSkkniId || null);
+  const scoped = codes ? assessments.filter((a) => codes.has(a.competencyCode)) : [];
+  const unitProg = u?.chosenSkkniId ? unitProgAll.filter((p) => p.docId === u.chosenSkkniId) : [];
+  const certs = codes ? certRows.filter((c) => codes.has(c.competencyCode)).length : 0;
+  const byCode = new Map(scoped.map((a) => [a.competencyCode, a]));
+  const byTitle = new Map(scoped.map((a) => [normalizeTitle(a.competencyName), a]));
   const learnedCodes = new Set(unitProg.filter((p) => p.learned).map((p) => p.unitCode));
   const learningCodes = new Set(unitProg.map((p) => p.unitCode));
   const hasCv = !!safe(u?.cvMeta, {}).parsedAt || !!safe(u?.cvMeta, {}).education;
@@ -375,13 +391,16 @@ function generateFallback(inputs) {
   };
 }
 
-// Susun rencana baru & simpan (upsert satu rencana aktif per user).
-export async function generatePlan(userId, targetRole) {
-  if (typeof targetRole === "string") {
-    await prisma.user.update({ where: { id: userId }, data: { targetRole: targetRole.trim().slice(0, 120) || null } });
-  }
+// Susun rencana baru & simpan. Rencana dibedakan PER KOMPETENSI (docId): ganti kompetensi =
+// rencana baru. Profesi target DITURUNKAN OTOMATIS dari kompetensi (tanpa input manual, permintaan #6).
+export async function generatePlan(userId) {
   const inputs = await buildInputs(userId);
   if (!inputs) throw new LlmError("Pengguna tidak ditemukan.", 404);
+  const docId = inputs.competency?.id || null;
+  // Simpan targetRole turunan (nama kompetensi) ke user agar konsisten dengan tampilan lain.
+  if (inputs.user.targetRole) {
+    await prisma.user.update({ where: { id: userId }, data: { targetRole: inputs.user.targetRole.slice(0, 120) } }).catch(() => {});
+  }
 
   let plan, source;
   if (isLlmConfigured()) {
@@ -391,20 +410,23 @@ export async function generatePlan(userId, targetRole) {
     plan = generateFallback(inputs); source = "fallback";
   }
 
-  const saved = await prisma.learningPlan.upsert({
-    where: { userId },
-    create: { userId, targetRole: inputs.user.targetRole, plan: JSON.stringify(plan), source },
-    update: { targetRole: inputs.user.targetRole, plan: JSON.stringify(plan), source, generatedAt: new Date() },
-  });
+  // Upsert manual per (userId, docId) — findFirst aman untuk docId null di unique majemuk.
+  const existing = await prisma.learningPlan.findFirst({ where: { userId, docId } });
+  const data = { targetRole: inputs.user.targetRole, plan: JSON.stringify(plan), source };
+  const saved = existing
+    ? await prisma.learningPlan.update({ where: { id: existing.id }, data: { ...data, generatedAt: new Date() } })
+    : await prisma.learningPlan.create({ data: { userId, docId, ...data } });
   // Progres dilacak OTOMATIS dari aktivitas nyata (bukan manual).
   const steps = await deriveStepProgress(userId, plan.steps);
   return { plan: { ...plan, steps }, source, targetRole: inputs.user.targetRole, generatedAt: saved.generatedAt, inputs };
 }
 
-// Ambil rencana tersimpan (tanpa regenerasi). Progres selalu dihitung ULANG dari aktivitas terbaru.
+// Ambil rencana tersimpan untuk kompetensi AKTIF (tanpa regenerasi). Progres selalu dihitung
+// ULANG dari aktivitas terbaru. Kompetensi tanpa rencana → plan null (belum disusun).
 export async function getPlan(userId) {
-  const row = await prisma.learningPlan.findUnique({ where: { userId } });
   const inputs = await buildInputs(userId);
+  const docId = inputs?.competency?.id || null;
+  const row = await prisma.learningPlan.findFirst({ where: { userId, docId } });
   if (!row) return { plan: null, targetRole: inputs?.user.targetRole || null, inputs, llmAvailable: isLlmConfigured() };
   let plan = null;
   try { plan = JSON.parse(row.plan); } catch { /* corrupt */ }

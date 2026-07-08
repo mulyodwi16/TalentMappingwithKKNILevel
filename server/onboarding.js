@@ -13,16 +13,24 @@ export const ACADEMIC_STATUS = {
   mahasiswa:   { label: "Mahasiswa",                education: "Kuliah", seed: 3 }, // Gold
   lulusan_smk: { label: "Lulusan SMA/SMK",          education: "SMK",    seed: 3 }, // Gold
   lulusan_s1:  { label: "Lulusan Kuliah (D3–S1)",   education: "S1",     seed: 4 }, // Platinum
+  lulusan_s2:  { label: "Lulusan S2 (Magister)",    education: "S2",     seed: 4 }, // Platinum
+  lulusan_s3:  { label: "Lulusan S3 (Doktor)",      education: "S3",     seed: 4 }, // Platinum
 };
 
 export function statusInfo(key) { return ACADEMIC_STATUS[key] || null; }
 
-// Seed rank awal dari pendidikan (dibatasi SEED_CAP). Bukan penentu akhir — hanya titik mulai.
+// Seed rank AWAL = bukti kompetensi SEMENTARA dari CV (dibatasi SEED_CAP), yang tetap harus
+// dibuktikan lewat kelas & ujian. TANPA CV → rank TERENDAH (RANK_FLOOR): user dianggap belum
+// punya pengalaman terbukti di kompetensi itu. Ijazah/pendidikan TIDAK lagi menaikkan rank —
+// hanya kompetensi terbukti (CV sementara → ujian) yang bisa. Lihat rankcalc.computeRank.
 export function educationSeed(u) {
-  const fromStatus = ACADEMIC_STATUS[u?.academicStatus]?.seed;
-  if (fromStatus) return clampRank(fromStatus);
-  const tertiary = /^(D1|D2|D3|D4|S1|S2|S3|Profesi|Kuliah)$/i.test(u?.education || "");
-  return clampRank(tertiary ? SEED_CAP : RANK_FLOOR);
+  let predicted = null;
+  try {
+    const meta = u?.cvMeta ? (typeof u.cvMeta === "string" ? JSON.parse(u.cvMeta) : u.cvMeta) : null;
+    predicted = meta?.predictedLevel ?? null;
+  } catch { /* cvMeta rusak → abaikan */ }
+  if (predicted != null) return clampRank(Math.min(SEED_CAP, Number(predicted) || RANK_FLOOR));
+  return RANK_FLOOR;
 }
 
 // Terapkan lantai & atap rank (Gold..Legend).

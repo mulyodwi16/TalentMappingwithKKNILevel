@@ -2,8 +2,8 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
-  User, Target, FileText, GraduationCap, Award, Search, Loader2, CheckCircle2,
-  Pencil, Save, X, Briefcase, Building2, Clock, ListChecks, Sparkles, RefreshCw,
+  User, Target, FileText, GraduationCap, Award, Search, Loader2,
+  Pencil, Save, X, Briefcase, Building2, Clock, ListChecks, Sparkles,
 } from "lucide-react";
 import api from "../../api/client.js";
 import useAuthStore from "../../store/authStore.js";
@@ -12,6 +12,7 @@ import RankHero from "../../components/RankHero.jsx";
 import RankIdentityCard from "../../components/RankIdentityCard.jsx";
 import CertificateModal from "../../components/CertificateModal.jsx";
 import AvatarCropModal from "../../components/AvatarCropModal.jsx";
+import SkkniPicker from "../../components/SkkniPicker.jsx";
 import { RANKS, rankName, rankOf } from "../../lib/rank.js";
 import { useLang, getLang, dateLocale } from "../../lib/i18n.jsx";
 
@@ -29,6 +30,20 @@ export default function Profile() {
   const fileRef = useRef(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [cropFile, setCropFile] = useState(null); // File → buka editor posisi/zoom (#2)
+  // Aksi cepat mengontrol modal/form di kartu detail (action-first, #2).
+  const [skkniPicking, setSkkniPicking] = useState(false);
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
+
+  const openEvidence = useCallback(() => {
+    setEvidenceOpen(true);
+    setTimeout(() => document.getElementById("evidence-card")?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+  }, []);
+
+  // Deep-link dari Dashboard (aksi cepat): ?welcome/pick → buka picker kompetensi; ?evidence → buka form bukti.
+  const pickParam = welcome || sp.get("pick") === "1";
+  const evidenceParam = sp.get("evidence") === "1";
+  useEffect(() => { if (pickParam && ov && !(welcome && ov.chosenSkkni)) setSkkniPicking(true); }, [pickParam, welcome, ov]);
+  useEffect(() => { if (evidenceParam && ov) openEvidence(); }, [evidenceParam, ov, openEvidence]);
 
   function onAvatarPick(e) {
     const file = e.target.files?.[0];
@@ -102,8 +117,9 @@ export default function Profile() {
           onSave={saveCroppedAvatar} onClose={() => !uploadingAvatar && setCropFile(null)} />
       )}
 
-      {/* Baris atas: frame rank (kiri) + kartu identitas & Data Diri DI LUAR frame (kanan) */}
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-4 items-start">
+      {/* Baris atas: frame rank (kiri) + kartu identitas & Data Diri DI LUAR frame (kanan).
+          items-stretch → tinggi frame rank menyejajarkan kolom kanan (tak ada sisa ruang). */}
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-4 items-stretch">
         <RankHero
           rank={ov.rank}
           rankInfo={ov.rankInfo}
@@ -129,79 +145,21 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Rincian Skor Kesiapan + penjelasan Rank */}
-      <ReadinessCard readiness={ov.readiness} rankInfo={ov.rankInfo} rank={ov.rank} level={ov.rank?.effective ?? p.currentKkniLevel} />
-
-      {/* Bukti kompetensi eksternal — poin plus menembus cap bobot kompetensi */}
-      <EvidenceCard rank={ov.rank} onChanged={load} />
-
-      {/* Kompetensi SKKNI target — patokan semua fitur */}
-      <SkkniSection chosen={ov.chosenSkkni} doc={chosenDoc} onChanged={load} autoOpen={welcome && !ov.chosenSkkni} />
-
-      {/* Ringkasan CV */}
-      <div className="card p-5">
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text-base)" }}>
-            <FileText className="w-4 h-4 text-brand-600" /> {t("Ringkasan CV")}
-          </h2>
-          <Link to="/app/cv-upload" className="text-xs text-brand-600 hover:underline">{hasCv ? t("Perbarui CV") : t("Upload CV")}</Link>
-        </div>
-        {!hasCv ? (
-          <p className="text-sm" style={{ color: "var(--text-4)" }}>{t("Belum ada CV. Upload CV agar datamu bisa dibandingkan dengan standar SKKNI.")}</p>
-        ) : (
-          <div className="space-y-3">
-            <div className="grid sm:grid-cols-3 gap-3">
-              <MiniStat icon={GraduationCap} label={t("Pendidikan")} value={cv.education || p.education || "—"} />
-              <MiniStat icon={Clock} label={t("Pengalaman")} value={t("{n} tahun", { n: cv.experienceYears ?? p.experienceYears ?? 0 })} />
-              <MiniStat icon={Sparkles} label={t("Keahlian terdeteksi")} value={t("{n} item", { n: [...new Set([...(cv.skills || []), ...(cv.certifications || [])])].length })} />
-            </div>
-            {(cv.skills?.length > 0 || cv.certifications?.length > 0) && (
-              <div>
-                <p className="text-xs mb-1.5" style={{ color: "var(--text-4)" }}>{t("Keahlian/Sertifikasi terdeteksi")}</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {[...new Set([...(cv.skills || []), ...(cv.certifications || [])])].map((s) => (
-                    <span key={s} className="text-xs rounded-lg px-2 py-0.5" style={{ background: "var(--bg-muted)", color: "var(--text-3)" }}>{s}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-            <p className="text-[11px]" style={{ color: "var(--text-4)" }}>
-              {cv.fileName ? `${cv.fileName} · ` : ""}{t("diperbarui")} {fmtDate(cv.parsedAt)}
-            </p>
+      {/* ── Detail ringkas — 2 kolom agar tak memanjang penuh ke bawah (#1/#3).
+          Aksi interaktif (upload CV, ganti kompetensi, tambah bukti, ujian) ada di Dashboard;
+          di sini fokus MELIHAT data & pencapaian. Picker/form tetap bisa dibuka via deep-link. ── */}
+      <div className="grid lg:grid-cols-2 gap-4 items-start">
+        {/* Sertifikat terbaru */}
+        <div className="card p-5">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text-base)" }}>
+              <Award className="w-4 h-4 text-brand-600" /> {t("Sertifikat Terbaru")}
+            </h2>
+            <Link to="/app/exam" className="text-xs text-brand-600 hover:underline">{t("Ikut ujian →")}</Link>
           </div>
-        )}
-      </div>
-
-      {/* Kelas yang diikuti + Sertifikat */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <div className="card p-5">
-          <h2 className="text-sm font-semibold flex items-center gap-2 mb-3" style={{ color: "var(--text-base)" }}>
-            <GraduationCap className="w-4 h-4 text-brand-600" /> {t("Kelas yang Diikuti")}
-          </h2>
-          {ov.classes?.length ? (
-            <div className="space-y-2">
-              {ov.classes.map((c, i) => (
-                <div key={i} className="flex items-center justify-between gap-2 rounded-lg p-2.5" style={{ border: "1px solid var(--border)" }}>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate" style={{ color: "var(--text-base)" }}>{c.name}</p>
-                    <p className="text-[11px]" style={{ color: "var(--text-4)" }}>{c.kind === "avataredu" ? "AvatarEdu" : t("Kelas Premium")} · {fmtDate(c.at)}</p>
-                  </div>
-                  <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-500 shrink-0">{c.status}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm" style={{ color: "var(--text-4)" }}>{t("Belum mengikuti kelas. Kunjungi")} <Link to="/app/toko" className="text-brand-600 hover:underline">{t("Toko & Kelas")}</Link>.</p>
-          )}
-        </div>
-
-        <div className="card p-5">
-          <h2 className="text-sm font-semibold flex items-center gap-2 mb-3" style={{ color: "var(--text-base)" }}>
-            <Award className="w-4 h-4 text-brand-600" /> {t("Sertifikat Kompetensi")}
-          </h2>
           {ov.certificates?.length ? (
             <div className="space-y-2">
-              {ov.certificates.map((c) => (
+              {ov.certificates.slice(0, 4).map((c) => (
                 <button key={c.id} onClick={() => setViewCert(c)}
                   className="w-full text-left flex items-center gap-2 rounded-lg p-2.5 transition-colors hover:bg-[var(--bg-muted)]" style={{ border: "1px solid var(--border)" }}>
                   <Award className="w-4 h-4 text-amber-500 shrink-0" />
@@ -212,11 +170,85 @@ export default function Profile() {
                   {c.kkniLevel ? <RankBadge level={c.kkniLevel} showNum={false} /> : null}
                 </button>
               ))}
+              {ov.certificates.length > 4 && (
+                <p className="text-[11px] text-center pt-1" style={{ color: "var(--text-4)" }}>{t("+{n} sertifikat lainnya", { n: ov.certificates.length - 4 })}</p>
+              )}
             </div>
           ) : (
             <p className="text-sm" style={{ color: "var(--text-4)" }}>{t("Belum ada sertifikat. Lulus")} <Link to="/app/exam" className="text-brand-600 hover:underline">{t("Ujian Kompetensi")}</Link> {t("untuk menerbitkannya.")}</p>
           )}
         </div>
+
+        {/* Kelas yang diikuti */}
+        <div className="card p-5">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text-base)" }}>
+              <GraduationCap className="w-4 h-4 text-brand-600" /> {t("Kelas yang Diikuti")}
+            </h2>
+            <Link to="/app/kelas" className="text-xs text-brand-600 hover:underline">{t("Buka Kelas →")}</Link>
+          </div>
+          {ov.classes?.length ? (
+            <div className="space-y-2">
+              {ov.classes.slice(0, 4).map((c, i) => (
+                <div key={i} className="flex items-center justify-between gap-2 rounded-lg p-2.5" style={{ border: "1px solid var(--border)" }}>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: "var(--text-base)" }}>{c.name}</p>
+                    <p className="text-[11px]" style={{ color: "var(--text-4)" }}>{c.kind === "avataredu" ? "AvatarEdu" : t("Kelas Premium")} · {fmtDate(c.at)}</p>
+                  </div>
+                  <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-500 shrink-0">{c.status}</span>
+                </div>
+              ))}
+              {ov.classes.length > 4 && (
+                <p className="text-[11px] text-center pt-1" style={{ color: "var(--text-4)" }}>{t("+{n} kelas lainnya", { n: ov.classes.length - 4 })}</p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm" style={{ color: "var(--text-4)" }}>{t("Belum mengikuti kelas. Kunjungi")} <Link to="/app/kelas" className="text-brand-600 hover:underline">{t("Kelas")}</Link>.</p>
+          )}
+        </div>
+
+        {/* Kompetensi SKKNI target — patokan semua fitur */}
+        <SkkniSection chosen={ov.chosenSkkni} doc={chosenDoc} onChanged={load} picking={skkniPicking} setPicking={setSkkniPicking} />
+
+        {/* Ringkasan CV */}
+        <div className="card p-5">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text-base)" }}>
+              <FileText className="w-4 h-4 text-brand-600" /> {t("Ringkasan CV")}
+            </h2>
+            <Link to="/app/cv-upload" className="text-xs text-brand-600 hover:underline">{hasCv ? t("Perbarui CV") : t("Upload CV")}</Link>
+          </div>
+          {!hasCv ? (
+            <p className="text-sm" style={{ color: "var(--text-4)" }}>{t("Belum ada CV. Upload CV agar datamu bisa dibandingkan dengan standar SKKNI.")}</p>
+          ) : (
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-2">
+                <MiniStat icon={GraduationCap} label={t("Pendidikan")} value={cv.education || p.education || "—"} />
+                <MiniStat icon={Clock} label={t("Pengalaman")} value={t("{n} tahun", { n: cv.experienceYears ?? p.experienceYears ?? 0 })} />
+                <MiniStat icon={Sparkles} label={t("Keahlian")} value={t("{n} item", { n: [...new Set([...(cv.skills || []), ...(cv.certifications || [])])].length })} />
+              </div>
+              {(cv.skills?.length > 0 || cv.certifications?.length > 0) && (
+                <div>
+                  <p className="text-xs mb-1.5" style={{ color: "var(--text-4)" }}>{t("Keahlian/Sertifikasi terdeteksi")}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[...new Set([...(cv.skills || []), ...(cv.certifications || [])])].slice(0, 12).map((s) => (
+                      <span key={s} className="text-xs rounded-lg px-2 py-0.5" style={{ background: "var(--bg-muted)", color: "var(--text-3)" }}>{s}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <p className="text-[11px]" style={{ color: "var(--text-4)" }}>
+                {cv.fileName ? `${cv.fileName} · ` : ""}{t("diperbarui")} {fmtDate(cv.parsedAt)}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Rincian panjang (Kesiapan/Rank + Bukti) — 2 kolom ── */}
+      <div className="grid lg:grid-cols-2 gap-4 items-start">
+        <ReadinessCard readiness={ov.readiness} rankInfo={ov.rankInfo} rank={ov.rank} level={ov.rank?.effective ?? p.currentKkniLevel} />
+        <EvidenceCard rank={ov.rank} onChanged={load} open={evidenceOpen} setOpen={setEvidenceOpen} />
       </div>
 
       {viewCert && <CertificateModal cert={viewCert} holder={p.name} onClose={() => setViewCert(null)} />}
@@ -332,15 +364,14 @@ function MiniStat({ icon: Icon, label, value }) {
   return (
     <div className="rounded-xl p-3" style={{ background: "var(--bg-muted)" }}>
       <p className="text-xs flex items-center gap-1 mb-0.5" style={{ color: "var(--text-4)" }}><Icon className="w-3 h-3" /> {label}</p>
-      <p className="font-semibold text-sm" style={{ color: "var(--text-base)" }}>{value}</p>
+      <p className="font-semibold text-sm truncate" style={{ color: "var(--text-base)" }}>{value}</p>
     </div>
   );
 }
 
 // ── Bagian kompetensi SKKNI (target + pencarian + unit) ──────────────────────
-function SkkniSection({ chosen, doc, onChanged, autoOpen = false }) {
+function SkkniSection({ chosen, doc, onChanged, picking, setPicking }) {
   const { t } = useLang();
-  const [picking, setPicking] = useState(autoOpen);
 
   return (
     <div className="card p-5" style={{ borderColor: "var(--brand-600, #2563eb)" }}>
@@ -396,141 +427,6 @@ function SkkniSection({ chosen, doc, onChanged, autoOpen = false }) {
   );
 }
 
-// Modal pencarian & pemilihan kompetensi SKKNI — kategori + infinite scroll (muat per 100,
-// item di luar layar di-hide via content-visibility agar hemat, scroll tetap jalan sampai habis).
-const PAGE = 100;
-function SkkniPicker({ onClose, onChosen }) {
-  const { t } = useLang();
-  const [q, setQ] = useState("");
-  const [cats, setCats] = useState([]);
-  const [activeCat, setActiveCat] = useState("all");
-  const [items, setItems] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [searching, setSearching] = useState(false);   // pencarian/replace awal
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [choosing, setChoosing] = useState(null);
-  const listRef = useRef(null);
-  // Simpan q/kategori terbaru untuk loadMore tanpa stale closure.
-  const stateRef = useRef({ q: "", cat: "all", len: 0, total: 0, loading: false });
-  stateRef.current = { q, cat: activeCat, len: items.length, total, loading: searching || loadingMore };
-
-  const fetchPage = (term, category, offset) =>
-    api.get(`/skkni/search?q=${encodeURIComponent(term || "")}&category=${encodeURIComponent(category || "all")}&offset=${offset}`);
-
-  const search = useCallback(async (term, category) => {
-    setSearching(true);
-    try {
-      const d = await fetchPage(term, category, 0);
-      setItems(d.items || []);
-      setTotal(d.total ?? (d.items?.length || 0));
-      if (listRef.current) listRef.current.scrollTop = 0;
-    } catch (e) {
-      toast.error(typeof e === "string" ? e : "Gagal mencari"); // di luar scope t (useCallback tanpa dep) — fallback ID
-    } finally {
-      setSearching(false);
-    }
-  }, []);
-
-  const loadMore = useCallback(async () => {
-    const st = stateRef.current;
-    if (st.loading || st.len >= st.total) return;
-    setLoadingMore(true);
-    try {
-      const d = await fetchPage(st.q, st.cat, st.len);
-      setItems((prev) => [...prev, ...(d.items || [])]);
-      if (typeof d.total === "number") setTotal(d.total);
-    } catch { /* diam */ } finally {
-      setLoadingMore(false);
-    }
-  }, []);
-
-  function onScroll(e) {
-    const el = e.currentTarget;
-    if (el.scrollHeight - el.scrollTop - el.clientHeight < 240) loadMore();
-  }
-
-  useEffect(() => {
-    api.get("/skkni/categories").then((d) => setCats(d.categories || [])).catch(() => {});
-    search("", "all");
-  }, [search]);
-
-  function pickCat(key) { setActiveCat(key); search(q, key); }
-
-  async function choose(item) {
-    if (choosing) return;
-    setChoosing(item.id);
-    try {
-      const r = await api.post("/skkni/choose", { docId: item.id });
-      if (r.ready) toast.success(t("Kompetensi target: {title} ({n} skill)", { title: r.chosen?.title, n: r.chosen?.unitCount }));
-      else toast.success(t("Kompetensi dipilih: {title}. Menyiapkan skill dari Kemnaker…", { title: r.chosen?.title }));
-      onChosen();
-    } catch (e) {
-      toast.error(typeof e === "string" ? e : t("Gagal menetapkan kompetensi"));
-    } finally {
-      setChoosing(null);
-    }
-  }
-
-  const chip = (key, label, count) => (
-    <button key={key} onClick={() => pickCat(key)}
-      className={`text-xs px-2.5 py-1 rounded-full whitespace-nowrap transition-colors ${activeCat === key ? "bg-brand-600 text-white" : "hover:bg-[var(--bg-muted)]"}`}
-      style={activeCat === key ? {} : { border: "1px solid var(--border)", color: "var(--text-3)" }}>
-      {label}{count != null ? ` · ${count}` : ""}
-    </button>
-  );
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.5)" }} onClick={onClose}>
-      <div className="w-full max-w-lg rounded-2xl p-5 max-h-[85vh] flex flex-col" style={{ background: "var(--bg-surface)", border: "1px solid var(--border)" }} onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h3 className="font-semibold flex items-center gap-2" style={{ color: "var(--text-base)" }}><Search className="w-4 h-4 text-brand-600" /> {t("Pilih Kompetensi Target")}</h3>
-            <p className="text-[11px] mt-0.5" style={{ color: "var(--text-4)" }}>{t("Pilih bidang/profesi sesuai tujuan kariermu — jadi acuan semua fitur.")}</p>
-          </div>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-red-50 hover:text-red-500" style={{ color: "var(--text-4)" }}><X className="w-4 h-4" /></button>
-        </div>
-
-        <form onSubmit={(e) => { e.preventDefault(); search(q, activeCat); }} className="flex gap-2 mb-3">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Cari profesi (mis. perawat, akuntansi, desain)…")} className="input text-sm flex-1" autoFocus />
-          <button type="submit" className="btn-primary text-sm px-3" disabled={searching}>{searching ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Cari")}</button>
-        </form>
-
-        {/* Chip kategori (wrap, tanpa scrollbar) */}
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {chip("all", t("Semua"))}
-          {cats.map((c) => chip(c.key, c.label, c.count))}
-        </div>
-
-        <div ref={listRef} onScroll={onScroll} className="flex-1 overflow-y-auto space-y-1.5 -mx-1 px-1">
-          {searching ? (
-            <p className="text-sm text-center py-8" style={{ color: "var(--text-4)" }}>{t("Memuat…")}</p>
-          ) : items.length === 0 ? (
-            <p className="text-sm text-center py-8" style={{ color: "var(--text-4)" }}>{t("Tidak ada hasil di kategori ini. Coba kata kunci atau kategori lain.")}</p>
-          ) : items.map((it) => (
-            <button key={it.id} onClick={() => choose(it)} disabled={!!choosing}
-              className="w-full text-left rounded-xl p-3 transition-colors hover:bg-[var(--bg-muted)] disabled:opacity-60 flex items-start gap-2"
-              style={{ border: "1px solid var(--border)", contentVisibility: "auto", containIntrinsicSize: "auto 68px" }}>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium" style={{ color: "var(--text-base)" }}>{it.title}</p>
-                <p className="text-[11px] flex items-center gap-1.5" style={{ color: "var(--text-4)" }}>
-                  <span className="px-1.5 py-0.5 rounded" style={{ background: "var(--bg-muted)" }}>{it.category}</span>
-                  {it.unitsCached ? <span className="text-emerald-500">{t("{n} skill siap", { n: it.unitCount })}</span> : <span>{t("Standar SKKNI")}</span>}
-                </p>
-              </div>
-              {choosing === it.id ? <Loader2 className="w-4 h-4 animate-spin text-brand-600 shrink-0 mt-0.5" />
-                : it.unitsCached ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /> : null}
-            </button>
-          ))}
-          {!searching && items.length > 0 && (
-            <p className="text-[11px] text-center pt-2 pb-1" style={{ color: "var(--text-4)" }}>
-              {loadingMore ? t("Memuat lagi…") : items.length >= total ? t("{n} kompetensi (semua ditampilkan)", { n: total }) : t("{a} dari {b} — scroll untuk memuat lagi", { a: items.length, b: total })}
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── Data diri editable ───────────────────────────────────────────────────────
 // `compact` = tampilan 1 kolom untuk kolom sempit (di bawah kartu identitas, kanan frame rank).
@@ -641,10 +537,9 @@ const EV_STATUS = {
   pending:  { label: "Ditinjau",      cls: "bg-amber-500/15 text-amber-500" },
 };
 
-function EvidenceCard({ rank, onChanged }) {
+function EvidenceCard({ rank, onChanged, open, setOpen }) {
   const { t } = useLang();
   const [items, setItems] = useState(null);
-  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ type: "certification", title: "", issuer: "", description: "", url: "" });
 
@@ -680,12 +575,12 @@ function EvidenceCard({ rank, onChanged }) {
   const verifiedCount = (items || []).filter((i) => i.status === "verified").length;
 
   return (
-    <div className="card p-5">
+    <div id="evidence-card" className="card p-5">
       <div className="flex items-center justify-between gap-2 mb-1">
         <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text-base)" }}>
           <Sparkles className="w-4 h-4 text-brand-600" /> {t("Bukti Kompetensi Eksternal")}
         </h2>
-        <button onClick={() => setOpen((o) => !o)} className="text-xs text-brand-600 hover:underline">{open ? t("Tutup") : t("+ Tambah bukti")}</button>
+        <button onClick={() => setOpen(!open)} className="text-xs text-brand-600 hover:underline">{open ? t("Tutup") : t("+ Tambah bukti")}</button>
       </div>
       <p className="text-xs mb-3" style={{ color: "var(--text-4)" }}>
         {t("Sertifikasi resmi (BNSP/nasional/internasional), portofolio, & pengalaman kerja — diverifikasi AI. Ini")} <b>{t("poin plus")}</b> {t("yang bisa menembus batas rank dari ujian menuju tingkat")} <b>{t("ahli")}</b>{rank?.cappedByWeight ? t(" — rank ujianmu sedang tercapai batasnya, tambahkan bukti untuk melampaui.") : "."}

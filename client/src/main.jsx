@@ -1,8 +1,13 @@
 import { StrictMode } from "react";
-// init theme before first render — default light + warna aksen tersimpan
-if (localStorage.getItem("theme") === "dark") document.documentElement.classList.add("dark");
-import { applyAccent, getAccent } from "./lib/theme.js";
-applyAccent(getAccent());
+// Terapkan tema SEBELUM render pertama (anti-flash). #9: tema ikut AKUN — bila ada sesi login
+// terpersist, pakai preferensinya; bila belum login (pra-login) → default BIRU NAVY. Aksen custom
+// TIDAK disimpan di key global, jadi tak bocor ke beranda/login/daftar maupun antar-akun.
+import { applyUserPrefs, applyDefaultTheme } from "./lib/theme.js";
+try {
+  const bootUser = JSON.parse(localStorage.getItem("kkni-auth"))?.state?.user;
+  if (bootUser) applyUserPrefs(bootUser);
+  else applyDefaultTheme();
+} catch { applyDefaultTheme(); }
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LangProvider } from "./lib/i18n.jsx";

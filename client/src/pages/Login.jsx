@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import api from "../api/client.js";
 import useAuthStore from "../store/authStore.js";
 import LangToggle from "../components/LangToggle.jsx";
+import ThemeToggle from "../components/ThemeToggle.jsx";
 import { useLang } from "../lib/i18n.jsx";
 
 // Muat script Google Identity Services sekali (idempoten).
@@ -81,17 +82,17 @@ export default function Login() {
   const submit = (e) => { e.preventDefault(); login.mutate(form); };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4"
-      style={{ background: "linear-gradient(135deg, #eef2ff 0%, #f5f7ff 55%, #ede9fe 100%)" }}>
+    <div className="auth-bg min-h-screen flex items-center justify-center p-4">
 
       {/* decorative blobs */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-32 -left-32 w-96 h-96 bg-indigo-200/40 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-80 h-80 bg-violet-200/30 rounded-full blur-3xl" />
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full blur-3xl" style={{ background: "rgb(var(--brand-400) / 0.22)" }} />
+        <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full blur-3xl" style={{ background: "rgb(var(--tosca-500) / 0.16)" }} />
       </div>
 
-      {/* Pemilih bahasa — pojok kanan atas */}
-      <div className="fixed top-4 right-4 z-10">
+      {/* Pemilih tema + bahasa — pojok kanan atas */}
+      <div className="fixed top-4 right-4 z-10 flex items-center gap-2">
+        <ThemeToggle />
         <LangToggle />
       </div>
 

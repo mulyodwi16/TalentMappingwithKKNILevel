@@ -300,8 +300,9 @@ export default function HelpButton() {
   return (
     <>
       <button onClick={() => setOpen(true)} title={t("Panduan fitur & cara kerja sistem")}
-        className="p-2 rounded-xl transition-colors hover:bg-brand-50" style={{ color: "var(--text-3)" }} aria-label={t("Bantuan")}>
-        <HelpCircle size={18} />
+        className="flex items-center gap-1.5 py-1.5 px-2.5 rounded-xl text-xs font-semibold transition-colors hover:bg-brand-50 hover:text-brand-600"
+        style={{ color: "var(--text-3)", border: "1px solid var(--border)" }} aria-label={t("Bantuan")}>
+        <HelpCircle size={16} /> <span className="hidden sm:inline">{t("Bantuan")}</span>
       </button>
       {open && <HelpModal name={user?.name} onClose={() => setOpen(false)} />}
     </>

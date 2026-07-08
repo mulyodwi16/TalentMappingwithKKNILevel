@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -270,20 +270,14 @@ function AiCheckCard({ aiCheck, inputs, source }) {
 export default function LearningPath() {
   const { lang, t } = useLang();
   const qc = useQueryClient();
-  const [targetRole, setTargetRole] = useState("");
-  const [touched, setTouched] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["learning-path"],
     queryFn: () => api.get("/learning-path/"),
   });
 
-  useEffect(() => {
-    if (!touched && data?.targetRole != null) setTargetRole(data.targetRole);
-  }, [data?.targetRole, touched]);
-
   const generate = useMutation({
-    mutationFn: () => api.post("/learning-path/generate", { targetRole }, { timeout: 90_000 }),
+    mutationFn: () => api.post("/learning-path/generate", {}, { timeout: 90_000 }),
     onSuccess: (res) => {
       qc.setQueryData(["learning-path"], (old) => ({ ...(old || {}), ...res, llmAvailable: old?.llmAvailable }));
       toast.success(res.source === "ai" ? t("Learning Path disusun oleh AI") : t("Learning Path disusun"));
@@ -328,28 +322,29 @@ export default function LearningPath() {
       {/* Data yang dipertimbangkan AI */}
       <ConsideredData inputs={inputs} />
 
-      {/* Target profesi + tombol susun */}
+      {/* Target profesi OTOMATIS dari kompetensi (tanpa input manual, #6) + tombol susun */}
       <div className="card p-4 space-y-3">
-        <label className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "var(--text-3)" }}>
-          <Target className="w-3.5 h-3.5 text-brand-500" /> {t("Profesi yang kamu targetkan")}
-        </label>
-        <div className="flex gap-2 flex-wrap">
-          <input
-            value={targetRole}
-            onChange={(e) => { setTargetRole(e.target.value); setTouched(true); }}
-            placeholder={inputs?.competency ? t("mis. {x}…", { x: inputs.competency.title.split(" ").slice(0, 3).join(" ") }) : t("mis. Video Editor Profesional")}
-            className="input flex-1 min-w-[200px]"
-          />
-          <button onClick={() => generate.mutate()} disabled={generate.isPending}
-            className="btn-primary flex items-center gap-2 whitespace-nowrap">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "var(--text-3)" }}>
+              <Target className="w-3.5 h-3.5 text-brand-500" /> {t("Profesi target (otomatis dari kompetensi)")}
+            </p>
+            <p className="text-base font-bold mt-1 truncate" style={{ color: "var(--text-base)" }}>
+              {inputs?.competency?.title || t("Belum ada kompetensi dipilih")}
+            </p>
+            <p className="text-[11px] mt-0.5" style={{ color: "var(--text-4)" }}>
+              {t("Rencana diturunkan otomatis dari kompetensi SKKNI pilihanmu & seluruh datamu — tanpa input manual.")}
+            </p>
+          </div>
+          <button onClick={() => generate.mutate()} disabled={generate.isPending || noComp}
+            className="btn-primary flex items-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed">
             {generate.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : plan ? <RefreshCw className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
             {generate.isPending ? t("Menyusun…") : plan ? t("Perbarui Rencana") : t("Susun dengan AI")}
           </button>
         </div>
         {noComp && (
           <p className="text-xs" style={{ color: "var(--text-4)" }}>
-            {t("Tip:")} <Link to="/app/profile" className="text-brand-500 hover:underline">{t("pilih kompetensi SKKNI")}</Link> {t("dan")}{" "}
-            <Link to="/app/exam" className="text-brand-500 hover:underline">{t("ambil ujian")}</Link> {t("agar rencana lebih personal.")}
+            {t("Tip:")} <Link to="/app/profile" className="text-brand-500 hover:underline">{t("pilih kompetensi SKKNI")}</Link> {t("dulu agar Learning Path bisa disusun otomatis.")}
           </p>
         )}
       </div>

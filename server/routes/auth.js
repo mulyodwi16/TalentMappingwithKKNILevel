@@ -12,6 +12,12 @@ const SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
 const makeToken = (u) =>
   jwt.sign({ id: u.id, email: u.email, role: u.role, name: u.name }, SECRET, { expiresIn: "8h" });
 
+// Bentuk objek user untuk klien — sertakan preferensi tampilan (#9) agar diterapkan saat login.
+const authUser = (u) => ({
+  id: u.id, email: u.email, role: u.role, name: u.name,
+  themeMode: u.themeMode ?? null, accent: u.accent ?? null,
+});
+
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body || {};
@@ -20,7 +26,7 @@ router.post("/login", async (req, res) => {
     const u = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
     const ok = u && await bcrypt.compare(password, u.passwordHash);
     if (!ok) return res.status(401).json({ error: "email atau password salah" });
-    res.json({ token: makeToken(u), user: { id: u.id, email: u.email, role: u.role, name: u.name } });
+    res.json({ token: makeToken(u), user: authUser(u) });
   } catch (e) {
     console.error("[login]", e.message);
     res.status(500).json({ error: "Terjadi kesalahan server: " + e.message });
@@ -45,7 +51,7 @@ router.post("/register", async (req, res) => {
         currentKkniLevel: seed,
       },
     });
-    res.status(201).json({ token: makeToken(u), user: { id: u.id, email: u.email, role: u.role, name: u.name } });
+    res.status(201).json({ token: makeToken(u), user: authUser(u) });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
@@ -97,7 +103,7 @@ router.post("/google", async (req, res) => {
         data: { googleId: p.sub, avatarUrl: u.avatarUrl || p.picture || null },
       });
     }
-    res.json({ token: makeToken(u), user: { id: u.id, email: u.email, role: u.role, name: u.name }, isNew });
+    res.json({ token: makeToken(u), user: authUser(u), isNew });
   } catch (e) {
     console.error("[google-auth]", e.message);
     res.status(500).json({ error: "Login Google gagal: " + e.message });

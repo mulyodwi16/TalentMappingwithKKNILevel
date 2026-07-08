@@ -1,6 +1,7 @@
 import { rankOf, rankName, tierProgress, RANKS } from "../lib/rank.js";
 import RankIcon from "./RankIcon.jsx";
 import { useLang } from "../lib/i18n.jsx";
+import useIsDark from "../lib/useIsDark.js";
 
 // Panggung rank ala main-menu game ranked — komponen rank terbesar & tersorot.
 // Dipakai di Dashboard (hero) & Profile (pusat). Selalu panel gelap dramatis;
@@ -19,6 +20,7 @@ export default function RankHero({
   rank, rankInfo, readiness, competency, size = "lg", footer,
 }) {
   const { t } = useLang();
+  const dark = useIsDark();
   const level = rank?.effective || rank?.earned || 1;
   const r = rankOf(level) || RANKS[0];
   const c = r.color;
@@ -27,11 +29,17 @@ export default function RankHero({
   const nextName = prog.nextLevel ? rankName(prog.nextLevel) : null;
   const emblemSize = size === "lg" ? 168 : 128;
 
+  // Mode gelap: panggung near-black dramatis (seperti main-menu game).
+  // Mode terang: gradien biru brand yang kaya (tetap megah, serasi tema) — glow tier di atas.
+  const bg = dark
+    ? `radial-gradient(90% 80% at 50% 22%, ${c}33 0%, #0b1120 52%, #070b16 100%)`
+    : `radial-gradient(100% 92% at 50% 15%, ${c}55 0%, #16408f 46%, #0c1f49 100%)`;
+
   return (
     <div
-      className="rank-dark relative overflow-hidden rounded-3xl px-6 py-8 sm:px-10"
+      className="rank-dark relative overflow-hidden rounded-3xl px-6 py-8 sm:px-10 flex flex-col justify-center h-full"
       style={{
-        background: `radial-gradient(90% 80% at 50% 22%, ${c}33 0%, #0b1120 52%, #070b16 100%)`,
+        background: bg,
         border: `1px solid ${c}44`,
         boxShadow: `0 0 0 1px ${c}18 inset, 0 24px 60px -30px ${c}66`,
       }}
@@ -61,15 +69,17 @@ export default function RankHero({
             </div>
           </div>
 
-          {/* Nama rank */}
+          {/* Nama rank — teks tier + glow, plus bayangan gelap agar kontras di gradien terang */}
           <h2 className="mt-3 font-black tracking-[0.14em] uppercase"
-            style={{ color: c, fontSize: size === "lg" ? "2.6rem" : "2rem", lineHeight: 1, textShadow: `0 0 24px ${c}66` }}>
+            style={{ color: c, fontSize: size === "lg" ? "2.6rem" : "2rem", lineHeight: 1,
+              textShadow: `0 0 22px ${c}aa, 0 2px 4px rgba(2,6,23,0.55), 0 0 2px rgba(2,6,23,0.6)`,
+              WebkitTextStroke: `0.5px ${c}` }}>
             {r.name}
           </h2>
           <p className="mt-1.5 text-sm text-slate-300">
             <span className="font-semibold text-slate-200">Rank {level}</span>
             {rankInfo?.title ? <> · {rankInfo.title}</> : null}
-            {rankInfo?.jobGroup ? <span className="text-slate-500"> · {rankInfo.jobGroup}</span> : null}
+            {rankInfo?.jobGroup ? <span className="text-slate-300"> · {rankInfo.jobGroup}</span> : null}
           </p>
 
           {rank?.boostedByEvidence && (

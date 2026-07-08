@@ -3,8 +3,9 @@ import { requireAuth } from "../middleware/auth.js";
 import { LlmError } from "../llm.js";
 import { getPlan, generatePlan } from "../learningpath.js";
 
-// Learning Path AI (permintaan #4): rencana belajar personal dari hasil ujian +
-// kompetensi SKKNI yang dipilih + profesi target, plus pengecekan kesiapan oleh AI.
+// Learning Path AI (permintaan #4/#6): rencana belajar personal dari hasil ujian +
+// kompetensi SKKNI yang dipilih (profesi target diturunkan OTOMATIS dari kompetensi,
+// tanpa input manual), plus pengecekan kesiapan oleh AI. Dibedakan per kompetensi.
 const router = express.Router();
 router.use(requireAuth);
 
@@ -19,11 +20,11 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Susun / perbarui rencana (memanggil AI; simpan profesi target bila dikirim).
+// Susun / perbarui rencana (memanggil AI). Profesi target diturunkan otomatis dari kompetensi
+// yang dipilih — tidak ada input manual (permintaan #6).
 router.post("/generate", async (req, res) => {
   try {
-    const targetRole = typeof req.body?.targetRole === "string" ? req.body.targetRole : undefined;
-    res.json(await generatePlan(req.user.id, targetRole));
+    res.json(await generatePlan(req.user.id));
   } catch (e) {
     res.status(errStatus(e)).json({ error: e.message || "Gagal menyusun rencana." });
   }

@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { NavLink, useNavigate, useLocation } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { NavLink, Link, useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard, Upload, ClipboardCheck, Target, BookOpen,
-  Users, Settings2, Mail, ScrollText, LogOut, X, Bot, ShoppingBag, Compass,
+  Users, Settings2, Mail, ScrollText, X, Bot, ShoppingBag, Compass,
   GraduationCap, ChevronDown,
 } from "lucide-react";
+import api from "../api/client.js";
 import useAuthStore from "../store/authStore.js";
 import Logo from "./Logo.jsx";
 import { useLang } from "../lib/i18n.jsx";
@@ -62,7 +63,7 @@ const ROLE_LABEL = { user: "Talenta", hrd: "HRD", admin: "Admin" };
 
 const linkClass = ({ isActive }) =>
   `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-    isActive ? "bg-brand-600 text-white shadow-lg shadow-brand-600/20" : "hover:bg-brand-50"
+    isActive ? "bg-brand-500 text-white shadow-lg shadow-brand-600/30" : "hover:bg-white/10"
   }`;
 const linkStyle = ({ isActive }) => (isActive ? {} : { color: "var(--text-3)" });
 
@@ -101,17 +102,26 @@ function NavGroup({ group, activePath, onNavigate }) {
 
 export default function Sidebar({ open, onClose }) {
   const { t } = useLang();
-  const { user, logout } = useAuthStore();
-  const navigate = useNavigate();
+  const { user } = useAuthStore();
   const { pathname } = useLocation();
-  const queryClient = useQueryClient();
   const role = user?.role || "user";
   const nav = navFor(role);
+
+  // Foto & data akun (khusus User punya /user/overview; HRD/Admin pakai inisial).
+  const { data: overview } = useQuery({
+    queryKey: ["overview"],
+    queryFn: () => api.get("/user/overview"),
+    enabled: role === "user",
+    staleTime: 60_000,
+  });
+  const p = overview?.profile;
+  const avatarUrl = p?.avatarUrl;
+  const subtitle = p?.position || p?.email || user?.email || "";
 
   return (
     <aside
       className={[
-        "w-60 h-screen flex flex-col flex-shrink-0",
+        "sidebar-dark w-60 h-screen flex flex-col flex-shrink-0",
         "fixed inset-y-0 left-0 z-40 lg:static lg:z-auto",
         "transition-transform duration-300 ease-out",
         open ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
@@ -121,18 +131,38 @@ export default function Sidebar({ open, onClose }) {
       {/* Logo + close on mobile */}
       <div className="p-5 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
         <Logo size={34} />
-        <button onClick={onClose} className="lg:hidden p-1.5 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors" style={{ color: "var(--text-4)" }}>
+        <button onClick={onClose} className="lg:hidden p-1.5 rounded-lg hover:bg-white/10 hover:text-red-400 transition-colors" style={{ color: "var(--text-4)" }}>
           <X size={16} />
         </button>
       </div>
 
-      {/* User badge */}
+      {/* Kartu akun: foto + data (di bawah logo, di atas menu — #10) */}
       <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
-        <div className="glass rounded-xl px-3 py-2.5">
-          <p className="text-xs" style={{ color: "var(--text-3)" }}>{t("Login sebagai")}</p>
-          <p className="text-sm font-semibold truncate" style={{ color: "var(--text-base)" }}>{user?.name}</p>
-          <span className="text-xs font-medium text-brand-600">{t(ROLE_LABEL[role])}</span>
-        </div>
+        {(() => {
+          const inner = (
+            <>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" className="w-11 h-11 rounded-full object-cover ring-2 ring-brand-500/40 flex-shrink-0" />
+              ) : (
+                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-brand-600 to-tosca-500 flex items-center justify-center text-base font-bold text-white flex-shrink-0">
+                  {user?.name?.[0]?.toUpperCase() || "?"}
+                </div>
+              )}
+              <div className="min-w-0 leading-tight">
+                <p className="text-sm font-semibold truncate" style={{ color: "var(--text-base)" }}>{user?.name}</p>
+                {subtitle && <p className="text-[11px] truncate" style={{ color: "var(--text-3)" }}>{subtitle}</p>}
+                <span className="text-[11px] font-medium text-brand-400">{t(ROLE_LABEL[role])}</span>
+              </div>
+            </>
+          );
+          return role === "user" ? (
+            <Link to="/app/profile" onClick={onClose} className="flex items-center gap-3 rounded-xl p-2 -mx-2 hover:bg-white/5 transition-colors">
+              {inner}
+            </Link>
+          ) : (
+            <div className="flex items-center gap-3 px-0">{inner}</div>
+          );
+        })()}
       </div>
 
       {/* Nav: item lepas + grup collapsible */}
@@ -146,17 +176,6 @@ export default function Sidebar({ open, onClose }) {
           <NavGroup key={g.key} group={g} activePath={pathname} onNavigate={onClose} />
         ))}
       </nav>
-
-      {/* Logout */}
-      <div className="p-4" style={{ borderTop: "1px solid var(--border)" }}>
-        <button
-          onClick={() => { queryClient.clear(); logout(); navigate("/login"); }}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-red-50 hover:text-red-500 transition-all duration-200"
-          style={{ color: "var(--text-3)" }}
-        >
-          <LogOut size={17} /> {t("Keluar")}
-        </button>
-      </div>
     </aside>
   );
 }

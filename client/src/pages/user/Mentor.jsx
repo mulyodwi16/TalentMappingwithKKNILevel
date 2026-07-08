@@ -6,6 +6,7 @@ import api from "../../api/client.js";
 import useAuthStore from "../../store/authStore.js";
 import { useMentorChat } from "../../hooks/useMentorChat.js";
 import { useLang } from "../../lib/i18n.jsx";
+import { BUST, parseDialog, preloadCompanion, useBlink, useVnReveal } from "../../lib/companion.js";
 
 const CHIPS = [
   "Apa langkah prioritas untuk naik Skill Rank saya?",
@@ -38,6 +39,30 @@ export default function Mentor() {
   const boxRef = useRef(null);
   const initials = user?.name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() ?? "?";
 
+  // Onyen setengah badan di kanan (ala VN, #feedback 3) — jawaban AI dipecah per segmen
+  // ber-tag [EMOSI] (pola VN MBTI Game) dan dimunculkan bergiliran; ekspresi berganti PER
+  // SEGMEN sehingga emosinya dinamis mengikuti alur bicara.
+  const [emotion, setEmotion] = useState("neutral");
+  const blink = useBlink(true);
+  const emoTimer = useRef(null);
+  useEffect(() => { preloadCompanion(true); }, []);
+  const reveal = useVnReveal(messages, (emo) => {
+    setEmotion(emo);
+    clearTimeout(emoTimer.current);
+    emoTimer.current = setTimeout(() => setEmotion("neutral"), 12_000);
+  });
+  useEffect(() => {
+    if (busy) { clearTimeout(emoTimer.current); setEmotion("surprised"); } // menyimak pertanyaan
+    else if (!messages.length) {
+      // Sapaan awal happy → turun ke neutral (pose idle yang BERKEDIP) agar karakter tetap
+      // hidup — happy tak punya aset blink (di VN juga: matanya sudah tertutup tersenyum).
+      setEmotion("happy");
+      clearTimeout(emoTimer.current);
+      emoTimer.current = setTimeout(() => setEmotion("neutral"), 6000);
+    }
+  }, [busy, messages.length]);
+  useEffect(() => () => clearTimeout(emoTimer.current), []);
+
   // Saran menutup gap berbasis data ujian (clickable → fitur terkait).
   const { data: assessments = [] } = useQuery({
     queryKey: ["assessments"],
@@ -51,7 +76,7 @@ export default function Mentor() {
 
   useEffect(() => {
     boxRef.current?.scrollTo({ top: boxRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, busy]);
+  }, [messages, busy, reveal]);
 
   function submit(text) {
     // JANGAN beri nama `t` — men-shadow fungsi terjemahan useLang.
@@ -62,7 +87,9 @@ export default function Mentor() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="lg:grid lg:gap-5 lg:items-start" style={{ gridTemplateColumns: "minmax(0,1fr) 340px" }}>
+      {/* Kolom kiri: chat (feedback #3 — chat di kiri, karakter di kanan) */}
+      <div className="space-y-4 min-w-0">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
@@ -130,18 +157,43 @@ export default function Mentor() {
               <div className="rounded-2xl rounded-tl-sm px-3.5 py-2.5 text-sm leading-relaxed max-w-[82%]" style={{ backgroundColor: "var(--bg-muted)", color: "var(--text-base)" }} dangerouslySetInnerHTML={fmt(t(GREETING))} />
             </div>
           )}
-          {messages.map((m, i) => (
-            <div key={i} className={`flex gap-2 items-start ${m.role === "user" ? "flex-row-reverse" : ""}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-medium ${m.role === "user" ? "bg-brand-600 text-white" : "bg-brand-600/10"}`}>
-                {m.role === "user" ? initials : <Bot className="w-4 h-4 text-brand-600" />}
+          {messages.map((m, i) => {
+            if (m.role === "user") {
+              return (
+                <div key={i} className="flex gap-2 items-start flex-row-reverse">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-medium bg-brand-600 text-white">{initials}</div>
+                  <div className="rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed max-w-[82%] bg-brand-600 text-white rounded-tr-sm" dangerouslySetInnerHTML={fmt(m.content)} />
+                </div>
+              );
+            }
+            // Jawaban Onyen dipecah jadi bubble pendek per segmen (ala textbox VN);
+            // pesan terbaru muncul bergiliran, riwayat lama tampil langsung penuh.
+            const segs = parseDialog(m.content);
+            const visible = i === reveal.idx ? reveal.count : segs.length;
+            const revealing = i === reveal.idx && reveal.count < segs.length;
+            return (
+              <div key={i} className="flex gap-2 items-start">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-brand-600/10 overflow-hidden">
+                  <img src={BUST("neutral", false)} alt="" className="w-7 h-7 object-contain object-top" />
+                </div>
+                <div className="flex flex-col gap-1.5 max-w-[82%] items-start">
+                  {segs.slice(0, visible).map((s, j) => (
+                    <div
+                      key={j}
+                      className="companion-pop rounded-2xl rounded-tl-sm px-3.5 py-2.5 text-sm leading-relaxed w-fit"
+                      style={{ backgroundColor: "var(--bg-muted)", color: "var(--text-base)" }}
+                      dangerouslySetInnerHTML={fmt(s.text)}
+                    />
+                  ))}
+                  {revealing && (
+                    <div className="rounded-2xl rounded-tl-sm px-4 py-2.5 w-fit" style={{ backgroundColor: "var(--bg-muted)" }}>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-brand-600" />
+                    </div>
+                  )}
+                </div>
               </div>
-              <div
-                className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed max-w-[82%] ${m.role === "user" ? "bg-brand-600 text-white rounded-tr-sm" : "rounded-tl-sm"}`}
-                style={m.role === "user" ? {} : { backgroundColor: "var(--bg-muted)", color: "var(--text-base)" }}
-                dangerouslySetInnerHTML={fmt(m.content)}
-              />
-            </div>
-          ))}
+            );
+          })}
           {busy && (
             <div className="flex gap-2 items-start">
               <div className="w-8 h-8 rounded-full bg-brand-600/10 flex items-center justify-center shrink-0"><Bot className="w-4 h-4 text-brand-600" /></div>
@@ -170,6 +222,44 @@ export default function Mentor() {
       <p className="text-[11px] flex items-center gap-1" style={{ color: "var(--text-4)" }}>
         <Sparkles className="w-3 h-3" /> {t("Riwayat tersimpan otomatis di perangkat ini. Jawaban AI memakai data pemetaan skill-mu — verifikasi info penting ke sumber resmi (Perpres 8/2012, SKKNI Kemnaker).")}
       </p>
+      </div>
+
+      {/* Kolom kanan: Onyen setengah badan ala VN (#3) — sticky DI TENGAH vertikal layar
+          (bukan pojok atas) agar terasa duduk menemani percakapan; ekspresi ikut per segmen */}
+      <div className="hidden lg:block sticky" style={{ top: "max(12px, calc(50vh - 260px))" }}>
+        <div className="card p-0 overflow-hidden">
+          <div
+            className="relative flex items-center justify-center h-[300px] px-4 overflow-hidden"
+            style={{ background: "radial-gradient(120% 100% at 50% 30%, rgb(var(--brand-500) / 0.20) 0%, transparent 70%)" }}
+          >
+            {/* float idle di wrapper TERPISAH dari companion-pop (dua animasi transform saling
+                menimpa bila digabung di elemen yang sama) — pola sama dgn avatar kiri-bawah */}
+            <span className="companion-float block">
+              <img
+                key={emotion}
+                src={BUST(emotion, blink)}
+                alt="Onyen"
+                draggable={false}
+                className="companion-pop w-[250px] max-w-full drop-shadow-[0_10px_18px_rgba(2,6,23,0.4)]"
+              />
+            </span>
+          </div>
+          <div className="px-4 py-3 flex items-center gap-2.5" style={{ borderTop: "1px solid var(--border)" }}>
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: busy ? "#f59e0b" : "#10b981" }} />
+            <div className="min-w-0">
+              <p className="text-sm font-bold" style={{ color: "var(--text-base)" }}>Onyen</p>
+              <p className="text-[11px] truncate" style={{ color: "var(--text-3)" }}>
+                {busy
+                  ? t("Menyimak & menyusun jawaban…")
+                  : emotion === "happy" ? t("Senang dengan progresmu!")
+                  : emotion === "sadness" ? t("Masih ada yang perlu ditutup — pelan-pelan, ya.")
+                  : emotion === "fear" ? t("Hmm, ada yang perlu diwaspadai…")
+                  : t("Siap membantumu naik Skill Rank.")}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

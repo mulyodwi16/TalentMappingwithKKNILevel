@@ -1,6 +1,7 @@
 import { rankOf, RANKS } from "../lib/rank.js";
 import RankIcon from "./RankIcon.jsx";
 import { useLang } from "../lib/i18n.jsx";
+import useIsDark from "../lib/useIsDark.js";
 
 // Kartu identitas ala profil game — DI LUAR frame rank, kolom kanan.
 // Foto BESAR di atas, informasi data diri tepat di bawahnya.
@@ -9,11 +10,17 @@ import { useLang } from "../lib/i18n.jsx";
 //  identity : { name, email, subtitle, targetLabel, photoUrl, onPhotoClick, onPhotoRemove, uploading }
 export default function RankIdentityCard({ level, identity }) {
   const { t } = useLang();
+  const dark = useIsDark();
   const r = rankOf(level) || RANKS[0];
   const color = r.color;
   const { name, email, subtitle, targetLabel, photoUrl, onPhotoClick, onPhotoRemove, uploading } = identity || {};
   const initial = (name || "?").charAt(0).toUpperCase();
   const clickable = !!onPhotoClick;
+
+  // Selaras RankHero: gelap = near-black dramatis; terang = gradien biru brand.
+  const bg = dark
+    ? `radial-gradient(120% 100% at 50% 0%, ${color}26 0%, #0b1120 55%, #070b16 100%)`
+    : `radial-gradient(130% 110% at 50% 0%, ${color}44 0%, #16408f 52%, #0c1f49 100%)`;
 
   const photo = photoUrl ? (
     <img src={photoUrl} alt={name || "Foto profil"} className="h-full w-full object-cover" />
@@ -25,7 +32,7 @@ export default function RankIdentityCard({ level, identity }) {
   return (
     <div className="rank-dark relative overflow-hidden rounded-3xl p-5 flex flex-col items-center text-center"
       style={{
-        background: `radial-gradient(120% 100% at 50% 0%, ${color}26 0%, #0b1120 55%, #070b16 100%)`,
+        background: bg,
         border: `1px solid ${color}44`,
         boxShadow: `0 0 0 1px ${color}18 inset, 0 18px 44px -24px ${color}55`,
       }}>

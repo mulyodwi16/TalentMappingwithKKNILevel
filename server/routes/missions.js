@@ -74,7 +74,27 @@ function stripAnswers(questions) {
   return questions.map((q, i) => ({ id: i, q: q.q, options: q.options }));
 }
 
-// Ambil ±5 log soal terakhir (untuk hindari pengulangan).
+// Judul unit/tema dari kode (untuk label "Topik hari ini") — bukan kode mentah.
+async function resolveTopicName(code, docId) {
+  if (!code) return null;
+  if (docId) {
+    const u = await prisma.skkniUnit.findFirst({ where: { documentId: docId, code }, select: { title: true } });
+    if (u?.title) return u.title;
+  }
+  const c = await prisma.competency.findFirst({ where: { code }, select: { name: true } }).catch(() => null);
+  return c?.name || code;
+}
+
+// Course Harian = SATU per hari. Ambil log hari ini: utamakan yang SUDAH selesai (completion =
+// jangkar anti-farm; sekali selesai, tetap selesai), jika belum ada yang selesai pakai yang terawal.
+// Toleran terhadap sisa >1 baris/hari dari data lama (sebelum aturan 1×/hari diberlakukan).
+async function todaysQuizLog(userId, day) {
+  const logs = await prisma.dailyQuizLog.findMany({ where: { userId, day }, orderBy: { createdAt: "asc" } });
+  return logs.find((l) => l.completed) || logs[0] || null;
+}
+
+// Ambil ±5 log soal terakhir (untuk hindari pengulangan). Course Harian 1×/hari (lintas
+// kompetensi) → cukup pantau seluruh log terakhir user, tak perlu di-scope per docId.
 async function recentQuestionTexts(userId) {
   const logs = await prisma.dailyQuizLog.findMany({
     where: { userId }, orderBy: { createdAt: "desc" }, take: 5,
@@ -84,8 +104,20 @@ async function recentQuestionTexts(userId) {
   return out;
 }
 
-// Pilih kompetensi untuk kuis hari ini (rotasi berdasarkan tanggal + gap user).
-async function pickCompetency(userId, day) {
+// Pilih topik kuis hari ini. Bila user punya kompetensi SKKNI aktif → pilih 1 UNIT dari
+// kompetensi itu (prioritas unit yang masih gap, else rotasi tanggal) → course harian mengikuti
+// kompetensi aktif & berganti saat kompetensi diganti. Tanpa kompetensi → fallback tabel legacy.
+async function pickTopic(userId, day, docId) {
+  if (docId) {
+    const units = await prisma.skkniUnit.findMany({ where: { documentId: docId }, select: { code: true, title: true } });
+    if (units.length) {
+      const gaps = await prisma.skillAssessment.findMany({ where: { userId }, orderBy: { gap: "desc" } });
+      const gapCodes = gaps.filter((g) => g.gap > 0).map((g) => g.competencyCode);
+      const gapUnit = gapCodes.map((code) => units.find((u) => u.code === code)).find(Boolean);
+      const unit = gapUnit || units[parseInt(day.replace(/-/g, ""), 10) % units.length];
+      return { code: unit.code, name: unit.title, skkni: null, description: null };
+    }
+  }
   const comps = await prisma.competency.findMany();
   if (!comps.length) return null;
   const gaps = await prisma.skillAssessment.findMany({ where: { userId }, orderBy: { gap: "desc" } });
@@ -125,12 +157,18 @@ router.get("/quiz", async (req, res) => {
   const userId = req.user.id;
   const day = todayStr();
   try {
-    const existing = await prisma.dailyQuizLog.findUnique({ where: { userId_day: { userId, day } } });
+    // Course Harian = SATU per hari (anti-farm). Bila log hari ini sudah ada — untuk kompetensi
+    // MANA PUN — tampilkan itu apa adanya; ganti kompetensi TIDAK me-reset course & statusnya.
+    const existing = await todaysQuizLog(userId, day);
     if (existing) {
       const qs = JSON.parse(existing.questions);
-      return res.json({ day, competency: existing.competencyCode, completed: existing.completed, score: existing.score, total: existing.total, questions: stripAnswers(qs) });
+      const name = await resolveTopicName(existing.competencyCode, existing.docId);
+      return res.json({ day, competency: name, competencyCode: existing.competencyCode, completed: existing.completed, score: existing.score, total: existing.total, questions: stripAnswers(qs) });
     }
-    const comp = await pickCompetency(userId, day);
+    // Belum ada course hari ini → susun dari kompetensi yang SEDANG aktif.
+    const u = await prisma.user.findUnique({ where: { id: userId }, select: { chosenSkkniId: true } });
+    const docId = u?.chosenSkkniId || null;
+    const comp = await pickTopic(userId, day, docId);
     if (!comp) return res.status(503).json({ error: "Belum ada data kompetensi." });
     const avoid = await recentQuestionTexts(userId);
 
@@ -144,7 +182,7 @@ router.get("/quiz", async (req, res) => {
     if (!questions.length) return res.status(503).json({ error: "Gagal menyiapkan soal hari ini." });
 
     await prisma.dailyQuizLog.create({
-      data: { userId, day, competencyCode: comp.code, questions: JSON.stringify(questions), completed: false },
+      data: { userId, day, docId, competencyCode: comp.code, questions: JSON.stringify(questions), completed: false },
     });
     res.json({ day, competency: comp.name, competencyCode: comp.code, completed: false, questions: stripAnswers(questions) });
   } catch (e) {
@@ -157,7 +195,8 @@ router.post("/quiz/submit", async (req, res) => {
   const day = todayStr();
   const answers = req.body?.answers ?? {};
   try {
-    const log = await prisma.dailyQuizLog.findUnique({ where: { userId_day: { userId, day } } });
+    // Satu course per hari → cari log hari ini apa pun kompetensinya (konsisten dgn GET /quiz).
+    const log = await todaysQuizLog(userId, day);
     if (!log) return res.status(400).json({ error: "Ambil soal hari ini dulu." });
     const questions = JSON.parse(log.questions);
     let score = 0;

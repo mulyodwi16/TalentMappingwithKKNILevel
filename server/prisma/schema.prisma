@@ -26,6 +26,10 @@ model User {
   targetKkniLevel  Int?
   // Foto profil (data URI base64, di-resize kecil di klien). Kustomisasi profil.
   avatarUrl        String?
+  // Preferensi tampilan tersimpan per-akun (#9). NULLABLE: null = belum diset eksplisit →
+  // pakai nilai klien/default (jangan menimpa user lama). themeMode: light|dark; accent: key ACCENTS (klien).
+  themeMode        String?
+  accent           String?
   readinessScore   Int      @default(0)
   status           String   @default("not_ready")
   // Kompetensi SKKNI yang dipilih user sebagai target/patokan semua fitur (referensi ke SkkniDocument.id).
@@ -54,7 +58,7 @@ model User {
   certificates    Certificate[]
   jobs            Job[]
   applications    JobApplication[]
-  learningPlan    LearningPlan?
+  learningPlan    LearningPlan[]
   unitProgress    UnitProgress[]
   evidence        ExternalEvidence[]
   skillClaims     SkillClaim[]
@@ -127,13 +131,18 @@ model SkillClaim {
 // Disusun dari hasil ujian (gap) + kompetensi SKKNI yang dipilih + profesi target.
 model LearningPlan {
   id          String   @id @default(cuid())
-  userId      String   @unique
+  userId      String
+  // Kompetensi SKKNI aktif saat rencana disusun — rencana DIBEDAKAN per kompetensi:
+  // ganti kompetensi = rencana baru (mulai dari 0); kembali ke kompetensi lama = rencana lamanya pulih.
+  docId       String?
   targetRole  String?
   plan        String   @default("{}") // JSON { aiCheck:{...}, steps:[{id,order,title,objective,why,difficulty,competencyRef,estEffort,courseQuery,progress}] }
   source      String   @default("ai") // ai | fallback
   generatedAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, docId])
 }
 
 // ── Misi harian (3 tugas → klaim koin) ───────────────────────────────────────
@@ -155,6 +164,7 @@ model DailyQuizLog {
   id             String   @id @default(cuid())
   userId         String
   day            String                 // YYYY-MM-DD
+  docId          String?                // dokumen SKKNI (kompetensi aktif) — course harian dibedakan per kompetensi & per akun
   competencyCode String?
   questions      String   @default("[]") // JSON [{q, options[], answerKey}]
   score          Int?
@@ -164,7 +174,7 @@ model DailyQuizLog {
 
   user User @relation(fields: [userId], references: [id])
 
-  @@unique([userId, day])
+  @@unique([userId, day, docId])
   @@index([userId])
 }
 

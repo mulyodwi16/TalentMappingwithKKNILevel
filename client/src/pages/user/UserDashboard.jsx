@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, PenLine, Target, Route, Trophy, Award } from "lucide-react";
+import { FileText, PenLine, Target, Route, Trophy, Award, Crosshair, Sparkles } from "lucide-react";
 import api from "../../api/client.js";
 import useAuthStore from "../../store/authStore.js";
 import DailyLoginCard from "../../components/DailyLoginCard.jsx";
 import DailyMissions from "../../components/DailyMissions.jsx";
 import DailyQuiz from "../../components/DailyQuiz.jsx";
 import RankHero from "../../components/RankHero.jsx";
-import RankIdentityCard from "../../components/RankIdentityCard.jsx";
 import RankUpOverlay from "../../components/RankUpOverlay.jsx";
 import { rankName } from "../../lib/rank.js";
 import { useLang, dateLocale } from "../../lib/i18n.jsx";
@@ -49,50 +48,37 @@ export default function UserDashboard() {
 
   const topGaps = assessments.filter((a) => a.gap > 0).sort((a, b) => b.gap - a.gap).slice(0, 3);
 
+  // Aksi cepat = launchpad. Interaksi yang dipindah dari Profile (ganti kompetensi,
+  // tambah bukti) dibuka via deep-link ke Profil (?pick / ?evidence). Profil kini fokus lihat data.
   const actions = [
-    { to: "/app/cv-upload",     icon: FileText, label: t("Upload CV"),     desc: t("Auto-klasifikasi Rank"),        color: "#2563eb" },
-    { to: "/app/exam",          icon: PenLine,  label: t("Ikut Ujian"),    desc: t("{n} percobaan", { n: attempts.length }),  color: "#12a594" },
-    { to: "/app/skill-gap",     icon: Target,   label: t("Skill Gap"),     desc: t("{n} gap terdeteksi", { n: topGaps.length }), color: "#f59e0b" },
-    { to: "/app/learning-path", icon: Route,    label: t("Learning Path"), desc: t("Rekomendasi personal"),          color: "#10b981" },
+    { to: "/app/cv-upload",         icon: FileText,  label: t("Upload CV"),     desc: t("Auto-klasifikasi Rank"),        color: "#2563eb" },
+    { to: "/app/profile?pick=1",    icon: Crosshair, label: t("Kompetensi"),    desc: overview?.chosenSkkni ? t("Ganti target") : t("Pilih target"), color: "#6366f1" },
+    { to: "/app/profile?evidence=1",icon: Sparkles,  label: t("Tambah Bukti"),  desc: t("Sertifikasi/portofolio"),       color: "#10b981" },
+    { to: "/app/exam",              icon: PenLine,   label: t("Ikut Ujian"),    desc: t("{n} percobaan", { n: attempts.length }),  color: "#12a594" },
+    { to: "/app/skill-gap",         icon: Target,    label: t("Skill Gap"),     desc: t("{n} gap terdeteksi", { n: topGaps.length }), color: "#f59e0b" },
+    { to: "/app/learning-path",     icon: Route,     label: t("Learning Path"), desc: t("Rekomendasi personal"),          color: "#8b5cf6" },
   ];
 
   return (
     <div className="space-y-6">
       {rankUp && <RankUpOverlay from={rankUp.from} to={rankUp.to} onClose={() => setRankUp(null)} />}
 
-      {/* ── Panggung Rank (hero) + kartu identitas DI LUAR frame (kanan) ── */}
+      {/* ── Panggung Rank (hero) full-width — kartu identitas dipindah ke sidebar (#10) ── */}
       {rank ? (
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-4 items-start">
-          <RankHero
-            rank={rank}
-            rankInfo={overview?.rankInfo}
-            readiness={overview?.readiness?.total ?? p?.readinessScore ?? 0}
-            competency={overview?.chosenSkkni?.title}
-            footer={
-              <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-                <span className={`badge ${sc.cls}`}>{t(sc.label)}</span>
-                {!overview?.chosenSkkni && (
-                  <Link to="/app/profile" className="text-xs font-semibold text-brand-400 hover:underline">{t("Pilih kompetensi target →")}</Link>
-                )}
-              </div>
-            }
-          />
-          <div className="space-y-4">
-            <RankIdentityCard
-              level={rank.effective}
-              identity={{
-                name: p?.name,
-                email: p?.email,
-                subtitle: p?.position || p?.academicStatus || t("Talenta"),
-                targetLabel: p?.targetKkniLevel ? t("Target: {rank}", { rank: rankName(p.targetKkniLevel) }) : null,
-                photoUrl: p?.avatarUrl,
-              }}
-            />
-            <Link to="/app/profile" className="card p-3 block text-center text-xs font-semibold text-brand-500 hover:underline">
-              {t("Kelola profil & foto →")}
-            </Link>
-          </div>
-        </div>
+        <RankHero
+          rank={rank}
+          rankInfo={overview?.rankInfo}
+          readiness={overview?.readiness?.total ?? p?.readinessScore ?? 0}
+          competency={overview?.chosenSkkni?.title}
+          footer={
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+              <span className={`badge ${sc.cls}`}>{t(sc.label)}</span>
+              {!overview?.chosenSkkni && (
+                <Link to="/app/profile" className="text-xs font-semibold text-brand-400 hover:underline">{t("Pilih kompetensi target →")}</Link>
+              )}
+            </div>
+          }
+        />
       ) : (
         <div className="card p-8 text-center text-sm" style={{ color: "var(--text-4)" }}>{t("Memuat rank…")}</div>
       )}
@@ -106,10 +92,10 @@ export default function UserDashboard() {
         <DailyMissions />
       </div>
 
-      {/* Aksi cepat */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Aksi cepat — launchpad interaksi utama (termasuk yang dipindah dari Profil) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {actions.map((c) => (
-          <Link key={c.to} to={c.to} className="card p-5 hover:scale-[1.03] transition-transform group">
+          <Link key={c.to} to={c.to} className="card p-4 hover:scale-[1.03] transition-transform group">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
               style={{ background: `${c.color}1f`, color: c.color }}>
               <c.icon className="w-5 h-5" />

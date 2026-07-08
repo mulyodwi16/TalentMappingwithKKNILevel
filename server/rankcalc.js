@@ -1,5 +1,6 @@
 import { prisma } from "./prisma.js";
 import { educationSeed, clampRank } from "./onboarding.js";
+import { chosenUnitCodeSet } from "./competencyScope.js";
 
 // Rank efektif = MAX( seed pendidikan (rendah), rank yang DIRAIH dari kompetensi ).
 // Rank diraih dari BUKTI kompetensi: unit kompetensi yang LULUS + sertifikat + course selesai.
@@ -29,15 +30,23 @@ export function nextTierInfo(score) {
 }
 
 export async function computeRank(userId) {
-  const [u, assess, certs, courseTx, redemptions] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId } }),
+  const u = await prisma.user.findUnique({ where: { id: userId } });
+  // Batasi bukti kompetensi ke kompetensi yang SEDANG dipilih — ganti kompetensi = analisa
+  // berganti; kompetensi baru mulai dari 0 (data lama tetap tersimpan & pulih bila kembali).
+  const codes = await chosenUnitCodeSet(userId, u?.chosenSkkniId || null);
+  const [assessAll, certRows, learnedRows] = await Promise.all([
     prisma.skillAssessment.findMany({ where: { userId } }),
-    prisma.certificate.count({ where: { userId } }),
-    prisma.coinTransaction.count({ where: { userId, refType: "course" } }).catch(() => 0),
-    prisma.shopRedemption.count({ where: { userId } }).catch(() => 0),
+    prisma.certificate.findMany({ where: { userId }, select: { competencyCode: true } }),
+    u?.chosenSkkniId
+      ? prisma.unitProgress.findMany({ where: { userId, docId: u.chosenSkkniId, learned: true }, select: { unitCode: true } }).catch(() => [])
+      : Promise.resolve([]),
   ]);
-  const passedUnits = assess.filter((a) => a.currentScore >= 60).length;
-  const courses = (courseTx || 0) + (redemptions || 0);
+  const inScope = (code) => (codes ? codes.has(code) : false);
+  const passedCodes = new Set(assessAll.filter((a) => a.currentScore >= 60 && inScope(a.competencyCode)).map((a) => a.competencyCode));
+  const passedUnits = passedCodes.size;
+  const certs = certRows.filter((c) => inScope(c.competencyCode)).length;
+  // "Course" = kelas kompetensi ini yang sudah dipelajari tapi BELUM lulus (hindari dobel hitung).
+  const courses = learnedRows.filter((p) => !passedCodes.has(p.unitCode)).length;
   const seed = educationSeed(u);
   const earned = earnedFromMastery(passedUnits, certs, courses);
 

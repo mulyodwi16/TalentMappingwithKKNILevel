@@ -230,7 +230,7 @@ function categorize(title, sector) {
   return FALLBACK_CAT;
 }
 // Nama tampilan yang bersih (buang prefiks "SKKNI").
-function cleanTitle(title) {
+export function cleanTitle(title) {
   return (title || "").replace(/^SKKNI\s+/i, "").trim() || "(tanpa judul)";
 }
 // Filter dokumen yang layak dipilih user (bukan perubahan/pencabutan/tanpa-judul).
