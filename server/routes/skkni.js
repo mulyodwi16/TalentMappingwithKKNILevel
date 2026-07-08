@@ -15,7 +15,10 @@ import { refreshRank } from "../rankcalc.js";
 // Kompetensi SKKNI = acuan utama semua perhitungan (skill, soal, syarat naik level).
 // User memilih 1 dokumen SKKNI (profesi/bidang) sebagai target → jadi patokan fitur lain.
 const router = express.Router();
-router.use(requireAuth);
+
+// ── Endpoint KATALOG (PUBLIK, tanpa auth) ────────────────────────────────────
+// Data katalog SKKNI bukan data user. WAJIB publik karena wizard Register fase 2 memakai
+// picker ini SEBELUM akun dibuat (akun baru dibuat saat fase 3 lolos → belum ada token).
 
 // Pencarian kompetensi dari katalog lokal (hasil sinkron dari Kemnaker), bisa difilter kategori.
 router.get("/search", async (req, res) => {
@@ -34,6 +37,9 @@ router.get("/categories", async (req, res) => {
 router.get("/catalog-status", async (req, res) => {
   res.json(await getCatalogStatus());
 });
+
+// ── Endpoint di bawah ini butuh login (data/aksi milik user + akses Kemnaker) ──
+router.use(requireAuth);
 
 // Detail 1 dokumen + unit (dari cache; tarik dari Kemnaker bila belum pernah di-cache).
 router.get("/documents/:id", async (req, res) => {
