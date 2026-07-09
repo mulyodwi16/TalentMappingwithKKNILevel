@@ -54,7 +54,7 @@ app.use("/api",           gamificationRoutes);
 if (process.env.NODE_ENV === "production") {
   const dist = join(HERE, "../client/dist");
   app.use(express.static(dist));
-  app.get("*", (_req, res) => res.sendFile(join(dist, "index.html")));
+  app.use((_req, res) => res.sendFile(join(dist, "index.html")));
 }
 
 // eslint-disable-next-line no-unused-vars
