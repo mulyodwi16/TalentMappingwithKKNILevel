@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import Landing from "./pages/Landing.jsx";
 import Login from "./pages/Login.jsx";
@@ -33,6 +33,13 @@ function DashboardGate() {
   return <UserDashboard />;
 }
 
+// Wrapper untuk animasi entrance di rute publik (/, /login, /register).
+// Layout sudah pakai .page-enter untuk /app/*; ini menutupi celahnya.
+function PublicPage({ children }) {
+  const { pathname } = useLocation();
+  return <div key={pathname} className="page-enter">{children}</div>;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -45,9 +52,9 @@ export default function App() {
         }}
       />
       <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route path="/" element={<PublicPage><Landing /></PublicPage>} />
+        <Route path="/login" element={<PublicPage><Login /></PublicPage>} />
+        <Route path="/register" element={<PublicPage><Register /></PublicPage>} />
         <Route
           path="/app"
           element={
