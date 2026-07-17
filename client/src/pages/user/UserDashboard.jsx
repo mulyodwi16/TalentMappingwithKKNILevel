@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, PenLine, Target, Route, Trophy, Award, Crosshair, Sparkles } from "lucide-react";
+import toast from "react-hot-toast";
+import { FileText, PenLine, Target, Route, Trophy, Award, Crosshair, Sparkles, GraduationCap, PlayCircle, Loader2, Star, X } from "lucide-react";
 import api from "../../api/client.js";
+import { useCoins } from "../../hooks/useCoins.js";
 import useAuthStore from "../../store/authStore.js";
 import DailyLoginCard from "../../components/DailyLoginCard.jsx";
 import DailyMissions from "../../components/DailyMissions.jsx";
@@ -19,6 +21,104 @@ const STATUS_CONFIG = {
 };
 
 const LAST_RANK_KEY = (id) => `talenta:lastRank:${id}`;
+
+const AV_LEVEL = {
+  beginner:     { label: "Pemula",   cls: "bg-emerald-500/20 text-emerald-400" },
+  intermediate: { label: "Menengah", cls: "bg-amber-500/20 text-amber-400" },
+  advanced:     { label: "Mahir",    cls: "bg-violet-500/20 text-violet-400" },
+};
+
+// SCORM course dibuka dalam iframe modal; embed URL diinject key server-side.
+function CourseModal({ title, url, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6" style={{ background: "rgba(0,0,0,0.6)" }} onClick={onClose}>
+      <div className="w-full max-w-4xl rounded-2xl overflow-hidden flex flex-col shadow-2xl" style={{ background: "var(--bg-surface)", maxHeight: "92vh" }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between gap-3 p-3 border-b" style={{ borderColor: "var(--border)" }}>
+          <p className="text-sm font-semibold truncate flex items-center gap-2" style={{ color: "var(--text-base)" }}>
+            <Sparkles className="w-4 h-4 text-violet-400 shrink-0" /> {title}
+          </p>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[var(--bg-muted)] shrink-0" style={{ color: "var(--text-3)" }} aria-label="Tutup">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <iframe src={url} className="w-full flex-1" style={{ border: 0, minHeight: "60vh" }} allow="fullscreen" title={title} />
+      </div>
+    </div>
+  );
+}
+
+// Kursus interaktif AvatarEdu.ai (kurasi admin via /featured) — dibuka langsung dari dashboard.
+function AvatarEduDashboard() {
+  const { t } = useLang();
+  const { setBalance } = useCoins();
+  const [modal, setModal] = useState(null);
+  const [busy, setBusy] = useState(null);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["dash-av-featured"],
+    queryFn: () => api.get("/avataredu/featured"),
+    staleTime: 5 * 60 * 1000,
+  });
+  const courses = data?.data || [];
+
+  async function follow(c) {
+    if (busy) return;
+    setBusy(c.slug);
+    try {
+      const r = await api.post("/coins/course-start", { slug: c.slug }).catch(() => ({}));
+      if (r?.awarded > 0) { toast.success(t("+{n} Koin — selamat belajar!", { n: r.awarded })); if (typeof r.balance === "number") setBalance(r.balance); }
+      const d = await api.get(`/avataredu/embed-url/${encodeURIComponent(c.slug)}`);
+      setModal({ title: c.title, url: d.url });
+    } catch (e) {
+      toast.error(typeof e === "string" ? e : t("Gagal membuka kursus"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  if (isLoading || courses.length === 0) return null;
+
+  return (
+    <div className="card p-6">
+      <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-base)" }}>
+        <GraduationCap className="w-4 h-4 text-violet-400" /> {t("Kursus Interaktif AvatarEdu")}
+      </h3>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        {courses.map((c) => {
+          const lv = AV_LEVEL[c.level] || AV_LEVEL.beginner;
+          return (
+            <div key={c.slug} className="rounded-xl border overflow-hidden flex flex-col" style={{ background: "var(--bg-raised)", borderColor: "var(--border)" }}>
+              {c.thumbnail_url && <img src={c.thumbnail_url} alt={c.title} className="w-full h-28 object-cover" loading="lazy" />}
+              <div className="p-3 flex flex-col flex-1 gap-1.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${lv.cls}`}>{t(lv.label)}</span>
+                  {c.category && <span className="text-[10px]" style={{ color: "var(--text-4)" }}>{c.category.name}</span>}
+                </div>
+                <p className="text-xs font-semibold line-clamp-2" style={{ color: "var(--text-base)" }}>{c.title}</p>
+                <div className="flex items-center gap-2 text-[11px]" style={{ color: "var(--text-4)" }}>
+                  {c.average_rating > 0 && <span className="flex items-center gap-0.5 text-amber-400"><Star className="w-2.5 h-2.5 fill-amber-400" />{c.average_rating.toFixed(1)}</span>}
+                  {c.total_chapters ? <span>{t("{n} bab", { n: c.total_chapters })}</span> : null}
+                </div>
+                <p className="text-xs font-bold text-brand-500 mt-auto">{c.formatted_price || t("Gratis")}</p>
+                <button onClick={() => follow(c)} disabled={busy === c.slug}
+                  className="btn-primary text-xs py-1.5 w-full flex items-center justify-center gap-1.5">
+                  {busy === c.slug ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PlayCircle className="w-3.5 h-3.5" />}
+                  {t("Ikuti Kelas")}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {modal && <CourseModal title={modal.title} url={modal.url} onClose={() => setModal(null)} />}
+    </div>
+  );
+}
 
 export default function UserDashboard() {
   const { lang, t } = useLang();
@@ -105,6 +205,9 @@ export default function UserDashboard() {
           </Link>
         ))}
       </div>
+
+      {/* Kursus interaktif AvatarEdu.ai (SCORM embed) */}
+      <AvatarEduDashboard />
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Riwayat ujian */}
