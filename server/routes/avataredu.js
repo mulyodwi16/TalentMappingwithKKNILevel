@@ -96,7 +96,9 @@ router.get("/embed-url/:slug", (req, res) => {
   const key = process.env.AVATAREDU_API_KEY;
   if (!key) return res.status(503).json({ error: "AVATAREDU_API_KEY not set" });
   const partnerUserId = encodeURIComponent(String(req.user?.id ?? req.user?.email ?? "guest"));
-  res.json({ url: `https://avataredu.ai/embed/scorm/${encodeURIComponent(req.params.slug)}?key=${encodeURIComponent(key)}&partner_user_id=${partnerUserId}` });
+  // ?chapter={id} memilih bab tertentu (course multi-chapter); tanpa itu → bab pertama.
+  const chapter = req.query.chapter ? `&chapter=${encodeURIComponent(String(req.query.chapter))}` : "";
+  res.json({ url: `https://avataredu.ai/embed/scorm/${encodeURIComponent(req.params.slug)}?key=${encodeURIComponent(key)}&partner_user_id=${partnerUserId}${chapter}` });
 });
 
 export default router;

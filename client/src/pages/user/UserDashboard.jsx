@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { FileText, PenLine, Target, Route, Trophy, Award, Crosshair, Sparkles, GraduationCap, PlayCircle, Loader2, Star, X } from "lucide-react";
+import { FileText, PenLine, Target, Route, Trophy, Award, Crosshair, Sparkles, GraduationCap, PlayCircle, Loader2, Star, X, CheckCircle2, CircleDot, Circle } from "lucide-react";
 import api from "../../api/client.js";
 import { useCoins } from "../../hooks/useCoins.js";
 import useAuthStore from "../../store/authStore.js";
@@ -28,25 +28,135 @@ const AV_LEVEL = {
   advanced:     { label: "Mahir",    cls: "bg-violet-500/20 text-violet-400" },
 };
 
-// SCORM course dibuka dalam iframe modal; embed URL diinject key server-side.
-function CourseModal({ title, url, onClose }) {
+// Player SCORM multi-chapter: sidebar bab + progres (kiri), iframe player (kanan).
+// Progres ditangkap dari event postMessage player AvatarEdu (scorm:progress/complete)
+// lalu disimpan di localStorage per course+bab — tak ada progress API dari partner.
+const AV_PROG_KEY = (slug) => `talenta:avprog:${slug}`;
+const AV_ORIGIN = "https://avataredu.ai";
+const isDone = (type, status) =>
+  type === "scorm:complete" || ["passed", "completed"].includes(String(status || "").toLowerCase());
+
+function CoursePlayerModal({ course, onClose }) {
+  const { t } = useLang();
+  const slug = course.slug;
+  const [chapters, setChapters] = useState(null); // null=loading, []=single/none
+  const [active, setActive] = useState(null);     // chapter id (0 = single-chapter)
+  const [url, setUrl] = useState("");
+  const [prog, setProg] = useState({});           // { [chapterId]: { pct, status } }
+
+  // Muat daftar bab + progres tersimpan.
+  useEffect(() => {
+    try { setProg(JSON.parse(localStorage.getItem(AV_PROG_KEY(slug)) || "{}")); } catch { /* ignore */ }
+    let alive = true;
+    api.get(`/avataredu/courses/${encodeURIComponent(slug)}`)
+      .then((d) => {
+        if (!alive) return;
+        const chs = (d?.data?.scorm_chapters || []).slice().sort((a, b) => a.order - b.order);
+        setChapters(chs);
+        setActive(chs.length ? chs[0].id : 0);
+      })
+      .catch(() => { if (alive) { setChapters([]); setActive(0); } });
+    return () => { alive = false; };
+  }, [slug]);
+
+  // Ambil URL player saat bab aktif berubah (key diinject server-side).
+  useEffect(() => {
+    if (active === null) return;
+    setUrl("");
+    const q = active ? `?chapter=${encodeURIComponent(active)}` : "";
+    api.get(`/avataredu/embed-url/${encodeURIComponent(slug)}${q}`).then((d) => setUrl(d.url)).catch(() => {});
+  }, [slug, active]);
+
+  // Tangkap progres SCORM dari iframe (lintas-origin) → simpan ke localStorage.
+  useEffect(() => {
+    function onMsg(e) {
+      if (e.origin !== AV_ORIGIN) return;
+      const m = e.data;
+      if (!m || typeof m !== "object") return;
+      const type = String(m.type || "");
+      if (type !== "scorm:progress" && type !== "scorm:complete") return;
+      if (m.course_slug && m.course_slug !== slug) return;
+      const chId = Number(m.chapter_id) || 0;
+      const done = isDone(type, m.lesson_status);
+      const pct = done ? 100 : Math.max(0, Math.min(100, Math.round(Number(m.completion_pct) || 0)));
+      const status = done ? "completed" : (m.lesson_status || "incomplete");
+      setProg((prev) => {
+        const cur = prev[chId];
+        if (cur?.status === "completed" && !done) return prev; // jangan turunkan yang sudah selesai
+        const next = { ...prev, [chId]: { pct: Math.max(pct, cur?.pct || 0), status } };
+        try { localStorage.setItem(AV_PROG_KEY(slug), JSON.stringify(next)); } catch { /* ignore */ }
+        return next;
+      });
+    }
+    window.addEventListener("message", onMsg);
+    return () => window.removeEventListener("message", onMsg);
+  }, [slug]);
+
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  const chs = chapters || [];
+  const total = chs.length || 1;
+  const doneCount = chs.length
+    ? chs.filter((c) => prog[c.id]?.status === "completed").length
+    : (prog[0]?.status === "completed" ? 1 : 0);
+  const overall = Math.round((doneCount / total) * 100);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6" style={{ background: "rgba(0,0,0,0.6)" }} onClick={onClose}>
-      <div className="w-full max-w-4xl rounded-2xl overflow-hidden flex flex-col shadow-2xl" style={{ background: "var(--bg-surface)", maxHeight: "92vh" }} onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6" style={{ background: "rgba(0,0,0,0.6)" }} onClick={onClose}>
+      <div className="w-full max-w-6xl rounded-2xl overflow-hidden flex flex-col shadow-2xl" style={{ background: "var(--bg-surface)", maxHeight: "94vh" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-3 p-3 border-b" style={{ borderColor: "var(--border)" }}>
           <p className="text-sm font-semibold truncate flex items-center gap-2" style={{ color: "var(--text-base)" }}>
-            <Sparkles className="w-4 h-4 text-violet-400 shrink-0" /> {title}
+            <Sparkles className="w-4 h-4 text-violet-400 shrink-0" /> {course.title}
           </p>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[var(--bg-muted)] shrink-0" style={{ color: "var(--text-3)" }} aria-label="Tutup">
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[var(--bg-muted)] shrink-0" style={{ color: "var(--text-3)" }} aria-label={t("Tutup")}>
             <X className="w-4 h-4" />
           </button>
         </div>
-        <iframe src={url} className="w-full flex-1" style={{ border: 0, minHeight: "60vh" }} allow="fullscreen" title={title} />
+
+        <div className="flex flex-1 min-h-0 flex-col sm:flex-row">
+          {chs.length > 0 && (
+            <div className="sm:w-64 shrink-0 border-b sm:border-b-0 sm:border-r overflow-y-auto sm:max-h-none max-h-40" style={{ borderColor: "var(--border)", background: "var(--bg-raised)" }}>
+              <div className="p-3">
+                <div className="flex items-center justify-between text-xs mb-1.5" style={{ color: "var(--text-3)" }}>
+                  <span>{t("Progres")}</span><span className="font-semibold">{doneCount}/{total} ({overall}%)</span>
+                </div>
+                <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-muted)" }}>
+                  <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${overall}%` }} />
+                </div>
+              </div>
+              <div className="pb-2">
+                {chs.map((c, i) => {
+                  const st = prog[c.id]?.status;
+                  const pct = prog[c.id]?.pct || 0;
+                  const isActive = active === c.id;
+                  const Icon = st === "completed" ? CheckCircle2 : (pct > 0 ? CircleDot : Circle);
+                  const color = st === "completed" ? "#10b981" : (pct > 0 ? "#f59e0b" : "var(--text-4)");
+                  return (
+                    <button key={c.id} onClick={() => setActive(c.id)}
+                      className={`w-full text-left px-3 py-2 flex items-center gap-2.5 text-xs transition-colors ${isActive ? "bg-brand-500/10" : "hover:bg-[var(--bg-muted)]"}`}>
+                      <Icon className="w-4 h-4 shrink-0" style={{ color }} />
+                      <span className="flex-1 min-w-0">
+                        <span className="block font-medium truncate" style={{ color: isActive ? "rgb(var(--brand-500))" : "var(--text-2)" }}>{t("Bab {n}", { n: i + 1 })}</span>
+                        <span className="block truncate" style={{ color: "var(--text-4)" }}>{c.title}</span>
+                      </span>
+                      {pct > 0 && st !== "completed" && <span className="text-[10px] text-amber-500 shrink-0">{pct}%</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="flex-1 min-h-0 flex flex-col" style={{ minHeight: "60vh" }}>
+            {url
+              ? <iframe key={url} src={url} className="w-full flex-1" style={{ border: 0, minHeight: "60vh" }} allow="fullscreen" title={course.title} />
+              : <div className="flex-1 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-brand-500" /></div>}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -72,8 +182,7 @@ function AvatarEduDashboard() {
     try {
       const r = await api.post("/coins/course-start", { slug: c.slug }).catch(() => ({}));
       if (r?.awarded > 0) { toast.success(t("+{n} Koin — selamat belajar!", { n: r.awarded })); if (typeof r.balance === "number") setBalance(r.balance); }
-      const d = await api.get(`/avataredu/embed-url/${encodeURIComponent(c.slug)}`);
-      setModal({ title: c.title, url: d.url });
+      setModal(c);
     } catch (e) {
       toast.error(typeof e === "string" ? e : t("Gagal membuka kursus"));
     } finally {
@@ -115,7 +224,7 @@ function AvatarEduDashboard() {
           );
         })}
       </div>
-      {modal && <CourseModal title={modal.title} url={modal.url} onClose={() => setModal(null)} />}
+      {modal && <CoursePlayerModal course={modal} onClose={() => setModal(null)} />}
     </div>
   );
 }
