@@ -89,11 +89,14 @@ router.get("/courses/:slug", async (req, res) => {
   } catch (e) { res.status(502).json({ error: e.message }); }
 });
 
-// Embed URL dengan key diinject server-side — key tak pernah bocor ke bundle JS.
+// Player SCORM: /embed/scorm/{slug} (BUKAN /embed/course/{slug} yang cuma kartu preview).
+// Wajib partner_user_id agar AvatarEdu lacak progres per pengguna; key & id diinject
+// server-side (tak bocor ke bundle). Endpoint ini 302 → sesi player bertoken.
 router.get("/embed-url/:slug", (req, res) => {
   const key = process.env.AVATAREDU_API_KEY;
   if (!key) return res.status(503).json({ error: "AVATAREDU_API_KEY not set" });
-  res.json({ url: `https://avataredu.ai/embed/course/${encodeURIComponent(req.params.slug)}?key=${encodeURIComponent(key)}` });
+  const partnerUserId = encodeURIComponent(String(req.user?.id ?? req.user?.email ?? "guest"));
+  res.json({ url: `https://avataredu.ai/embed/scorm/${encodeURIComponent(req.params.slug)}?key=${encodeURIComponent(key)}&partner_user_id=${partnerUserId}` });
 });
 
 export default router;
