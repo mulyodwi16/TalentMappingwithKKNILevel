@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, ArrowRight } from "lucide-react";
 import { rankName, rankColor } from "../lib/rank.js";
 import RankIcon from "../components/RankIcon.jsx";
 import { useLang } from "../lib/i18n.jsx";
@@ -23,7 +23,7 @@ const FEATURES = [
   { icon: "⚡", title: "Auto-Mapping Engine",   desc: "Upload CV → prediksi Skill Rank otomatis berdasarkan pendidikan & sertifikasi." },
   { icon: "✎",  title: "Ujian Kompetensi",      desc: "Bank soal terstandar SKKNI, timer, penilaian otomatis per kompetensi." },
   { icon: "◎", title: "Skill Gap Radar",        desc: "Radar chart kompetensi aktual vs target level, urutan prioritas gap." },
-  { icon: "→",  title: "Learning Path AI",      desc: "Rekomendasi belajar bertahap berbasis AI + katalog resource per kompetensi." },
+  { icon: "🧭", title: "Learning Path AI",      desc: "Rekomendasi belajar bertahap berbasis AI + katalog resource per kompetensi." },
   { icon: "⊞", title: "Dashboard HRD",          desc: "Analitik otomatis: distribusi level, readiness score, ekspor Excel." },
   { icon: "◉", title: "Admin Full Control",     desc: "CRUD rules mapping, bank soal, inbox request, audit log semua aksi." },
 ];
@@ -93,12 +93,19 @@ export default function Landing() {
           </h1>
 
           <p style={{ fontSize: 18, lineHeight: 1.7, color: dark ? "#93c5fd" : "#2563eb", marginBottom: 36, maxWidth: 560, margin: "0 auto 36px" }}>
-            {t("Upload CV → prediksi Skill Rank → ujian verifikasi → skill gap → learning path personalisasi.")}
+            <span className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+              {[t("Upload CV"), t("prediksi Skill Rank"), t("ujian verifikasi"), t("skill gap"), t("learning path personalisasi")].map((s, i, arr) => (
+                <span key={i} className="inline-flex items-center gap-2">
+                  <span>{s}</span>
+                  {i < arr.length - 1 && <ArrowRight size={14} style={{ opacity: 0.6 }} />}
+                </span>
+              ))}
+            </span>
           </p>
 
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: 56 }}>
-            <Link to="/register" style={{ fontSize: 16, fontWeight: 700, color: "#fff", background: "linear-gradient(135deg,#3b82f6,#2563eb)", padding: "14px 32px", borderRadius: 12, textDecoration: "none", boxShadow: "0 6px 20px rgba(59,130,246,0.4)" }}>
-              {t("Mulai Sekarang →")}
+            <Link to="/register" style={{ fontSize: 16, fontWeight: 700, color: "#fff", background: "linear-gradient(135deg,#3b82f6,#2563eb)", padding: "14px 32px", borderRadius: 12, textDecoration: "none", boxShadow: "0 6px 20px rgba(59,130,246,0.4)", display: "inline-flex", alignItems: "center", gap: 8 }}>
+              {t("Mulai Sekarang")} <ArrowRight size={18} />
             </Link>
             <Link to="/login" style={{ fontSize: 16, fontWeight: 600, color: dark ? "#93c5fd" : "#2563eb", background: dark ? "rgba(59,130,246,0.1)" : "rgba(59,130,246,0.08)", border: `1px solid ${dark ? "rgba(59,130,246,0.3)" : "rgba(59,130,246,0.25)"}`, padding: "14px 32px", borderRadius: 12, textDecoration: "none" }}>
               {t("Sudah Punya Akun")}
@@ -175,8 +182,8 @@ export default function Landing() {
         <div style={{ maxWidth: 640, margin: "0 auto", textAlign: "center", background: dark ? "rgba(59,130,246,0.1)" : "#ffffff", border: `1px solid ${dark ? "rgba(59,130,246,0.25)" : "#dbeafe"}`, borderRadius: 24, padding: "56px 40px", boxShadow: dark ? "0 0 60px rgba(59,130,246,0.12)" : "0 8px 40px rgba(59,130,246,0.1)" }}>
           <h2 style={{ fontSize: "clamp(1.6rem,3vw,2rem)", fontWeight: 800, marginBottom: 12 }}>{t("Siap Memulai?")}</h2>
           <p style={{ color: dark ? "#93c5fd" : "#2563eb", marginBottom: 32, fontSize: 15, opacity: 0.9 }}>{t("Daftarkan organisasi Anda dan mulai pemetaan talenta hari ini.")}</p>
-          <Link to="/register" style={{ fontSize: 16, fontWeight: 700, color: "#fff", background: "linear-gradient(135deg,#3b82f6,#2563eb)", padding: "14px 36px", borderRadius: 12, textDecoration: "none", boxShadow: "0 6px 20px rgba(59,130,246,0.4)", display: "inline-block" }}>
-            {t("Buat Akun Gratis →")}
+          <Link to="/register" style={{ fontSize: 16, fontWeight: 700, color: "#fff", background: "linear-gradient(135deg,#3b82f6,#2563eb)", padding: "14px 36px", borderRadius: 12, textDecoration: "none", boxShadow: "0 6px 20px rgba(59,130,246,0.4)", display: "inline-flex", alignItems: "center", gap: 8 }}>
+            {t("Buat Akun Gratis")} <ArrowRight size={18} />
           </Link>
           <p style={{ fontSize: 12, color: dark ? "#3b82f6" : "#93c5fd", marginTop: 20 }}>
             Demo: user@demo.id / hrd@demo.id / admin@demo.id — password: demo123

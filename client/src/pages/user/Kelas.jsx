@@ -471,7 +471,7 @@ export default function Kelas() {
         <GraduationCap className="w-10 h-10 mx-auto mb-3 text-brand-500" />
         <h2 className="font-bold mb-1" style={{ color: "var(--text-base)" }}>{t("Belum Ada Kelas")}</h2>
         <p className="text-sm mb-5" style={{ color: "var(--text-3)" }}>{t("Pilih kompetensi SKKNI dulu agar kami susun kelas per unit kompetensinya.")}</p>
-        <Link to="/app/profile" className="btn-primary">{t("Pilih Kompetensi →")}</Link>
+        <Link to="/app/profile" className="btn-primary inline-flex items-center gap-2">{t("Pilih Kompetensi")} <ArrowRight size={16} /></Link>
       </div>
     );
   }

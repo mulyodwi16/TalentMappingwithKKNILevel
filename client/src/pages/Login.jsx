@@ -7,6 +7,7 @@ import useAuthStore from "../store/authStore.js";
 import LangToggle from "../components/LangToggle.jsx";
 import ThemeToggle from "../components/ThemeToggle.jsx";
 import { useLang } from "../lib/i18n.jsx";
+import { ArrowRight } from "lucide-react";
 
 // Muat script Google Identity Services sekali (idempoten).
 function loadGis() {
@@ -128,8 +129,8 @@ export default function Login() {
             />
           </div>
 
-          <button type="submit" disabled={login.isPending} className="btn-primary w-full py-3">
-            {login.isPending ? t("Masuk…") : t("Masuk →")}
+          <button type="submit" disabled={login.isPending} className="btn-primary w-full py-3 inline-flex items-center justify-center gap-2">
+            {login.isPending ? t("Masuk…") : <>{t("Masuk")} <ArrowRight size={16} /></>}
           </button>
 
           {/* Login Google (muncul bila dikonfigurasi). Kontainer ref selalu ter-mount

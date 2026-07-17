@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { FileText, PenLine, Target, Route, Trophy, Award, Crosshair, Sparkles, GraduationCap, PlayCircle, Loader2, Star, X, CheckCircle2, CircleDot, Circle } from "lucide-react";
+import { FileText, PenLine, Target, Route, Trophy, Award, Crosshair, Sparkles, GraduationCap, PlayCircle, Loader2, Star, X, CheckCircle2, CircleDot, Circle, ArrowRight } from "lucide-react";
 import api from "../../api/client.js";
 import { useCoins } from "../../hooks/useCoins.js";
 import useAuthStore from "../../store/authStore.js";
@@ -283,7 +283,7 @@ export default function UserDashboard() {
             <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
               <span className={`badge ${sc.cls}`}>{t(sc.label)}</span>
               {!overview?.chosenSkkni && (
-                <Link to="/app/profile" className="text-xs font-semibold text-brand-400 hover:underline">{t("Pilih kompetensi target →")}</Link>
+                <Link to="/app/profile" className="text-xs font-semibold text-brand-400 hover:underline inline-flex items-center gap-1">{t("Pilih kompetensi target")} <ArrowRight className="w-3 h-3" /></Link>
               )}
             </div>
           }
@@ -376,7 +376,7 @@ export default function UserDashboard() {
                   </div>
                 </div>
               ))}
-              <Link to="/app/skill-gap" className="text-sm text-brand-400 hover:text-brand-300 block mt-2">{t("Lihat semua →")}</Link>
+              <Link to="/app/skill-gap" className="text-sm text-brand-400 hover:text-brand-300 mt-2 inline-flex items-center gap-1">{t("Lihat semua")} <ArrowRight className="w-3.5 h-3.5" /></Link>
             </div>
           )}
         </div>

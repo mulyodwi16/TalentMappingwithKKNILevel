@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
-  CheckCircle2, Lock, BookOpen, PlayCircle, RotateCcw, GraduationCap, Award, ArrowLeft, Sparkles,
+  CheckCircle2, Lock, BookOpen, PlayCircle, RotateCcw, GraduationCap, Award, ArrowLeft, ArrowRight, Sparkles,
   History, XCircle, X, Loader2,
 } from "lucide-react";
 import api from "../../api/client.js";
@@ -171,7 +171,7 @@ function ExamHistory() {
               <span className="block text-xs font-medium truncate" style={{ color: "var(--text-base)" }}>{it.unitTitle}</span>
               <span className="block text-[11px]" style={{ color: "var(--text-4)" }}>{fmtDT(it.createdAt)} · {it.passed ? t("Lulus") : t("Belum lulus")}</span>
             </span>
-            <span className="text-[11px] text-brand-500 shrink-0">{t("Review →")}</span>
+            <span className="text-[11px] text-brand-500 shrink-0 inline-flex items-center gap-1">{t("Review")} <ArrowRight className="w-3 h-3" /></span>
           </button>
         ))}
       </div>
@@ -313,7 +313,7 @@ export default function Exam() {
           <div className="rounded-xl p-3 mb-5 text-sm" style={{ background: "var(--bg-muted)", color: "var(--text-3)" }}>
             {t("Belum memilih kompetensi target.")} <Link to="/app/profile" className="text-brand-500 font-medium hover:underline">{t("Pilih kompetensi SKKNI")}</Link> {t("agar ujian menjadi per unit & menerbitkan sertifikat.")}
           </div>
-          <button onClick={() => setStarted(true)} className="btn-primary w-full py-3">{t("Mulai Ujian →")}</button>
+          <button onClick={() => setStarted(true)} className="btn-primary w-full py-3 inline-flex items-center justify-center gap-2">{t("Mulai Ujian")} <ArrowRight size={16} /></button>
         </div>
       </div>
     );
@@ -358,7 +358,7 @@ export default function Exam() {
           <div className="card p-5" style={{ borderColor: "rgba(16,185,129,0.3)" }}>
             <p className="text-sm font-semibold text-emerald-500 flex items-center gap-1.5 mb-2"><Award className="w-4 h-4" /> {t("Sertifikat unit terbit")}</p>
             <span className="text-xs bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 rounded-lg px-2.5 py-1 inline-block">{result.certificate}</span>
-            <Link to="/app/profile" className="block mt-3 text-xs text-brand-500 hover:underline">{t("Lihat & unduh sertifikat di Profil →")}</Link>
+            <Link to="/app/profile" className="mt-3 text-xs text-brand-500 hover:underline inline-flex items-center gap-1">{t("Lihat & unduh sertifikat di Profil")} <ArrowRight className="w-3 h-3" /></Link>
           </div>
         )}
 
@@ -405,7 +405,7 @@ export default function Exam() {
             </>
           ) : (
             <>
-              <Link to="/app/skill-gap" className="btn-primary flex-1 text-center py-2.5">{t("Lihat Skill Gap →")}</Link>
+              <Link to="/app/skill-gap" className="btn-primary flex-1 py-2.5 inline-flex items-center justify-center gap-2">{t("Lihat Skill Gap")} <ArrowRight size={16} /></Link>
               <button onClick={restartLegacy} className="btn-outline flex-1">{t("Ujian Ulang")}</button>
             </>
           )}
@@ -480,9 +480,9 @@ export default function Exam() {
       )}
 
       <div className="flex gap-3">
-        <button onClick={() => setCurrent((c) => Math.max(0, c - 1))} disabled={current === 0} className="btn-outline flex-1">← {t("Sebelumnya")}</button>
+        <button onClick={() => setCurrent((c) => Math.max(0, c - 1))} disabled={current === 0} className="btn-outline flex-1 inline-flex items-center justify-center gap-2"><ArrowLeft size={16} /> {t("Sebelumnya")}</button>
         {current < questions.length - 1 ? (
-          <button onClick={() => setCurrent((c) => c + 1)} className="btn-primary flex-1">{t("Berikutnya")} →</button>
+          <button onClick={() => setCurrent((c) => c + 1)} className="btn-primary flex-1 inline-flex items-center justify-center gap-2">{t("Berikutnya")} <ArrowRight size={16} /></button>
         ) : (
           <button onClick={() => submit.mutate()} disabled={submit.isPending} className="btn-primary flex-1 bg-emerald-600 hover:bg-emerald-700">
             {submit.isPending ? t("Mengirim…") : t("Submit ({a}/{b})", { a: answered, b: questions.length })}

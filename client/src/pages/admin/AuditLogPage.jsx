@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import api from "../../api/client.js";
 import { useLang, dateLocale } from "../../lib/i18n.jsx";
 
@@ -76,10 +77,10 @@ export default function AuditLogPage() {
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-            className="btn-outline text-sm py-1.5 px-3 disabled:opacity-40">← Prev</button>
+            className="btn-outline text-sm py-1.5 px-3 disabled:opacity-40 inline-flex items-center gap-1"><ArrowLeft size={14} /> Prev</button>
           <span className="text-sm text-slate-400">{t("Halaman {a} / {b}", { a: page, b: totalPages })}</span>
           <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-            className="btn-outline text-sm py-1.5 px-3 disabled:opacity-40">Next →</button>
+            className="btn-outline text-sm py-1.5 px-3 disabled:opacity-40 inline-flex items-center gap-1">Next <ArrowRight size={14} /></button>
         </div>
       )}
     </div>

@@ -100,7 +100,7 @@ function StepCourses({ query }) {
             {c.duration_hours ? <span>{t("{n} jam", { n: c.duration_hours })}</span> : null}
           </div>
           <p className="text-xs font-medium line-clamp-2" style={{ color: "var(--text-base)" }}>{c.title}</p>
-          <span className="text-[11px] text-brand-500 mt-auto">{t("Buka di Kelas")} →</span>
+          <span className="text-[11px] text-brand-500 mt-auto inline-flex items-center gap-1">{t("Buka di Kelas")} <ArrowRight className="w-3 h-3" /></span>
         </Link>
       ))}
     </div>
@@ -251,7 +251,7 @@ function AiCheckCard({ aiCheck, inputs, source }) {
           <div className="flex items-center gap-2 pt-3">
             <span className="text-xs" style={{ color: "var(--text-4)" }}>Rank</span>
             <span className="text-sm font-bold" style={{ color: rankColor(cur) }}>{rankName(cur)}</span>
-            <span style={{ color: "var(--text-4)" }}>→</span>
+            <ArrowRight size={14} style={{ color: "var(--text-4)" }} />
             <span className="text-sm font-bold" style={{ color: rankColor(tgt) }}>{rankName(tgt)}</span>
           </div>
         )}
@@ -380,7 +380,7 @@ export default function LearningPath() {
               <p className="text-sm mb-5 max-w-md mx-auto" style={{ color: "var(--text-3)" }}>
                 {t("Pilih kompetensi SKKNI dulu di Profil — begitu terpilih, AI langsung menyusun langkah bertahap menuju profesi targetmu secara otomatis.")}
               </p>
-              <Link to="/app/profile" className="btn-outline">{t("Pilih Kompetensi →")}</Link>
+              <Link to="/app/profile" className="btn-outline inline-flex items-center gap-2">{t("Pilih Kompetensi")} <ArrowRight size={16} /></Link>
             </>
           ) : (
             <>

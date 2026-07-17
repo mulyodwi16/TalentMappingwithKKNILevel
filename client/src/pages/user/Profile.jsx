@@ -3,7 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   User, Target, FileText, GraduationCap, Award, Search, Loader2,
-  Pencil, Save, X, Briefcase, Building2, Clock, ListChecks, Sparkles,
+  Pencil, Save, X, Briefcase, Building2, Clock, ListChecks, Sparkles, ArrowRight,
 } from "lucide-react";
 import api from "../../api/client.js";
 import useAuthStore from "../../store/authStore.js";
@@ -155,7 +155,7 @@ export default function Profile() {
             <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text-base)" }}>
               <Award className="w-4 h-4 text-brand-600" /> {t("Sertifikat Terbaru")}
             </h2>
-            <Link to="/app/exam" className="text-xs text-brand-600 hover:underline">{t("Ikut ujian →")}</Link>
+            <Link to="/app/exam" className="text-xs text-brand-600 hover:underline inline-flex items-center gap-1">{t("Ikut ujian")} <ArrowRight className="w-3 h-3" /></Link>
           </div>
           {ov.certificates?.length ? (
             <div className="space-y-2">
@@ -185,7 +185,7 @@ export default function Profile() {
             <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text-base)" }}>
               <GraduationCap className="w-4 h-4 text-brand-600" /> {t("Kelas yang Diikuti")}
             </h2>
-            <Link to="/app/kelas" className="text-xs text-brand-600 hover:underline">{t("Buka Kelas →")}</Link>
+            <Link to="/app/kelas" className="text-xs text-brand-600 hover:underline inline-flex items-center gap-1">{t("Buka Kelas")} <ArrowRight className="w-3 h-3" /></Link>
           </div>
           {ov.classes?.length ? (
             <div className="space-y-2">
@@ -310,7 +310,7 @@ function ReadinessCard({ readiness, rankInfo, rank, level }) {
           <div className="mt-2 rounded-lg p-2.5 text-[11px]" style={{ background: "var(--bg-muted)", color: "var(--text-3)" }}>
             <div className="flex items-center gap-1.5 flex-wrap">
               <span>{t("Dari pendidikan:")} <b>{rankName(rank.seed)}</b></span>
-              <span aria-hidden>→</span>
+              <ArrowRight aria-hidden size={12} className="opacity-70" />
               <span>{t("diraih dari kompetensi:")} <b style={{ color: rankOf(rank.earned)?.color }}>{rankName(rank.earned)}</b></span>
             </div>
 

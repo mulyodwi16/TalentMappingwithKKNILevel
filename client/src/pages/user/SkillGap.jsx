@@ -120,7 +120,7 @@ export default function SkillGap() {
         <div className="w-14 h-14 rounded-2xl bg-brand-500/15 grid place-items-center mx-auto mb-4"><Target className="w-7 h-7 text-brand-500" /></div>
         <h2 className="text-xl font-bold mb-2" style={{ color: "var(--text-base)" }}>{t("Belum Ada Data Skill Gap")}</h2>
         <p className="text-sm mb-6" style={{ color: "var(--text-4)" }}>{t("Selesaikan ujian kompetensi untuk melihat analisis gap & rencana menutupnya.")}</p>
-        <Link to="/app/exam" className="btn-primary">{t("Mulai Ujian →")}</Link>
+        <Link to="/app/exam" className="btn-primary inline-flex items-center gap-2">{t("Mulai Ujian")} <ArrowRight size={16} /></Link>
       </div>
     );
   }
@@ -185,7 +185,7 @@ export default function SkillGap() {
       <div>
         <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--text-base)" }}>
           <Route className="w-4 h-4 text-brand-500" /> {t("Detail Gap & Rencana Menutupnya")}
-          {!lp?.plan && <Link to="/app/learning-path" className="text-[11px] font-normal text-brand-500 hover:underline">{t("(susun Learning Path untuk langkah detail →)")}</Link>}
+          {!lp?.plan && <Link to="/app/learning-path" className="text-[11px] font-normal text-brand-500 hover:underline inline-flex items-center gap-1">{t("(susun Learning Path untuk langkah detail)")} <ArrowRight className="w-3 h-3" /></Link>}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
           {sorted.map((a) => <GapCard key={a.id} a={a} step={stepFor(a)} />)}

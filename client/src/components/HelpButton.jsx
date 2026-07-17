@@ -207,7 +207,7 @@ function TourView({ name, onClose, onSwitch }) {
           </button>
         )}
         <button onClick={onSwitch} className="flex items-center gap-2 text-xs font-medium hover:underline" style={{ color: "var(--text-4)" }}>
-          <ListChecks className="w-3.5 h-3.5" /> {t("Pelajari cara kerja sistem (skor, rank, AI) →")}
+          <ListChecks className="w-3.5 h-3.5" /> {t("Pelajari cara kerja sistem (skor, rank, AI)")} <ArrowRight className="w-3 h-3" />
         </button>
       </div>
 

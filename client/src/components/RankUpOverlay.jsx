@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import { ArrowRight } from "lucide-react";
 import { rankOf, rankName } from "../lib/rank.js";
 import RankIcon from "./RankIcon.jsx";
 import { useLang } from "../lib/i18n.jsx";
@@ -58,9 +59,9 @@ export default function RankUpOverlay({ from, to, onClose }) {
           {rankName(to)}
         </h2>
         {from ? (
-          <p className="rankup-text mt-2 text-sm text-slate-300" style={{ animationDelay: "0.45s" }}>
+          <p className="rankup-text mt-2 text-sm text-slate-300 inline-flex items-center justify-center gap-2" style={{ animationDelay: "0.45s" }}>
             <span className="text-slate-500 line-through">{rankName(from)}</span>
-            <span className="mx-2" style={{ color: c }}>→</span>
+            <ArrowRight size={16} style={{ color: c }} />
             <b style={{ color: c }}>{rankName(to)}</b>
           </p>
         ) : null}

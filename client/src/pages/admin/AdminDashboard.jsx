@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { ArrowRight } from "lucide-react";
 import api from "../../api/client.js";
 import { useLang, dateLocale } from "../../lib/i18n.jsx";
 
@@ -60,7 +61,7 @@ export default function AdminDashboard() {
         <div className="card p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-white">{t("Aktivitas Terbaru")}</h3>
-            <Link to="/app/admin/audit" className="text-xs text-brand-400 hover:text-brand-300">{t("Lihat semua →")}</Link>
+            <Link to="/app/admin/audit" className="text-xs text-brand-400 hover:text-brand-300 inline-flex items-center gap-1">{t("Lihat semua")} <ArrowRight className="w-3 h-3" /></Link>
           </div>
           <div className="space-y-2">
             {stats.recentLogs.map((log) => (
