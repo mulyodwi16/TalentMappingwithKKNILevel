@@ -410,6 +410,24 @@ export async function generatePlan(userId) {
     plan = generateFallback(inputs); source = "fallback";
   }
 
+  // Roadmap UTUH & anti-mundur: sertakan unit yang SUDAH LULUS sebagai langkah (akan otomatis
+  // ditandai "Selesai" oleh deriveStepProgress). Efeknya progres TAK PERNAH menyusut saat rencana
+  // disusun ulang — daftar langkah selalu sinkron dengan data utama user (unit lulus), bukan
+  // menghapus pencapaian. Hanya unit lulus yang belum tercakup langkah baru yang ditambahkan.
+  const covered = new Set(plan.steps.map((s) => s.unitCode).filter(Boolean));
+  const doneSteps = (inputs.passedUnits || [])
+    .filter((p) => p.code && !covered.has(p.code))
+    .map((p, i) => normStep({
+      title: `Kuasai: ${p.name}`,
+      objective: `Unit "${p.name}" sudah kamu buktikan lewat ujian (${p.score}%).`,
+      why: `Fondasi kompetensi "${inputs.competency?.title || inputs.user.targetRole || ""}" yang sudah tervalidasi.`,
+      difficulty: "beginner", competencyRef: p.name, unitCode: p.code,
+      trackType: "unit", feature: "ujian",
+    }, i));
+  if (doneSteps.length) {
+    plan.steps = [...doneSteps, ...plan.steps].slice(0, 12).map((s, i) => ({ ...s, id: `s${i + 1}`, order: i + 1 }));
+  }
+
   // Upsert manual per (userId, docId) — findFirst aman untuk docId null di unique majemuk.
   const existing = await prisma.learningPlan.findFirst({ where: { userId, docId } });
   const data = { targetRole: inputs.user.targetRole, plan: JSON.stringify(plan), source };

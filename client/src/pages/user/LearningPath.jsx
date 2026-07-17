@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -292,6 +292,18 @@ export default function LearningPath() {
   const done = plan?.steps?.filter((s) => s.progress === "done").length || 0;
   const total = plan?.steps?.length || 0;
 
+  // OTOMATIS: begitu kompetensi dipilih & belum ada rencana, susun sendiri (tanpa tombol manual).
+  // Fire sekali per kompetensi (guard autoKey) agar tak berulang & tak me-reset progres.
+  const autoKey = useRef(null);
+  useEffect(() => {
+    if (isLoading || generate.isPending) return;
+    const compId = inputs?.competency?.id || null;
+    if (!plan && compId && autoKey.current !== compId) {
+      autoKey.current = compId;
+      generate.mutate();
+    }
+  }, [isLoading, plan, inputs?.competency?.id, generate.isPending]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (isLoading) return <div className="flex items-center justify-center h-64" style={{ color: "var(--text-4)" }}>{t("Memuat…")}</div>;
 
   return (
@@ -333,14 +345,24 @@ export default function LearningPath() {
               {inputs?.competency?.title || t("Belum ada kompetensi dipilih")}
             </p>
             <p className="text-[11px] mt-0.5" style={{ color: "var(--text-4)" }}>
-              {t("Rencana diturunkan otomatis dari kompetensi SKKNI pilihanmu & seluruh datamu — tanpa input manual.")}
+              {t("Rencana tersusun & tersinkron otomatis dari kompetensi SKKNI pilihanmu & seluruh datamu — tanpa tombol manual.")}
             </p>
           </div>
-          <button onClick={() => generate.mutate()} disabled={generate.isPending || noComp}
-            className="btn-primary flex items-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed">
-            {generate.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : plan ? <RefreshCw className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
-            {generate.isPending ? t("Menyusun…") : plan ? t("Perbarui Rencana") : t("Susun dengan AI")}
-          </button>
+          {generate.isPending ? (
+            <span className="text-xs flex items-center gap-2 whitespace-nowrap" style={{ color: "var(--text-4)" }}>
+              <Loader2 className="w-4 h-4 animate-spin" /> {t("Menyusun otomatis…")}
+            </span>
+          ) : plan ? (
+            // Escape hatch opsional & AMAN (tak me-reset progres — unit lulus tetap tercakup).
+            <button onClick={() => generate.mutate()} disabled={noComp}
+              className="text-[11px] flex items-center gap-1 hover:underline whitespace-nowrap disabled:opacity-50" style={{ color: "var(--text-4)" }}>
+              <RefreshCw className="w-3.5 h-3.5" /> {t("Susun ulang")}
+            </button>
+          ) : !noComp ? (
+            <span className="text-xs flex items-center gap-2 whitespace-nowrap" style={{ color: "var(--text-4)" }}>
+              <Loader2 className="w-4 h-4 animate-spin" /> {t("Menyusun otomatis…")}
+            </span>
+          ) : null}
         </div>
         {noComp && (
           <p className="text-xs" style={{ color: "var(--text-4)" }}>
@@ -351,13 +373,25 @@ export default function LearningPath() {
 
       {!plan ? (
         <div className="card p-10 text-center">
-          <Compass className="w-10 h-10 mx-auto mb-3 text-brand-500" />
-          <h3 className="font-bold mb-1" style={{ color: "var(--text-base)" }}>{t("Belum Ada Learning Path")}</h3>
-          <p className="text-sm mb-5 max-w-md mx-auto" style={{ color: "var(--text-3)" }}>
-            {t("Klik")} <b>{t("Susun dengan AI")}</b> {t("di atas. AI akan menganalisis")} {noGaps ? t("kompetensi pilihanmu") : t("{n} gap kompetensi", { n: inputs.gaps.length })}
-            {" "}{t("dan menyusun langkah bertahap menuju profesi targetmu.")}
-          </p>
-          {noGaps && <Link to="/app/exam" className="btn-outline">{t("Ambil Ujian Dulu →")}</Link>}
+          {noComp ? (
+            <>
+              <Compass className="w-10 h-10 mx-auto mb-3 text-brand-500" />
+              <h3 className="font-bold mb-1" style={{ color: "var(--text-base)" }}>{t("Belum Ada Learning Path")}</h3>
+              <p className="text-sm mb-5 max-w-md mx-auto" style={{ color: "var(--text-3)" }}>
+                {t("Pilih kompetensi SKKNI dulu di Profil — begitu terpilih, AI langsung menyusun langkah bertahap menuju profesi targetmu secara otomatis.")}
+              </p>
+              <Link to="/app/profile" className="btn-outline">{t("Pilih Kompetensi →")}</Link>
+            </>
+          ) : (
+            <>
+              <Loader2 className="w-10 h-10 mx-auto mb-3 text-brand-500 animate-spin" />
+              <h3 className="font-bold mb-1" style={{ color: "var(--text-base)" }}>{t("Menyusun Learning Path…")}</h3>
+              <p className="text-sm max-w-md mx-auto" style={{ color: "var(--text-3)" }}>
+                {t("AI sedang menganalisis")} {noGaps ? t("kompetensi pilihanmu") : t("{n} gap kompetensi", { n: inputs.gaps.length })}
+                {" "}{t("dan seluruh datamu untuk menyusun langkah otomatis. Sebentar ya…")}
+              </p>
+            </>
+          )}
         </div>
       ) : (
         <>
@@ -377,7 +411,7 @@ export default function LearningPath() {
           {data?.generatedAt && (
             <p className="text-[11px] text-center" style={{ color: "var(--text-4)" }}>
               {data.source === "ai" ? t("Disusun oleh AI") : t("Disusun otomatis")} · {new Date(data.generatedAt).toLocaleString(dateLocale(lang))}.
-              {" "}{t("Perbarui setelah aktivitas baru agar rencana & progres menyesuaikan.")}
+              {" "}{t("Progres tersinkron otomatis dari aktivitasmu — tak perlu memperbarui manual.")}
             </p>
           )}
         </>

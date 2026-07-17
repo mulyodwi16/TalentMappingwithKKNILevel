@@ -441,6 +441,15 @@ export default {
   "Disusun oleh AI": "Built by AI",
   "Disusun otomatis": "Built automatically",
   "Perbarui setelah aktivitas baru agar rencana & progres menyesuaikan.": "Refresh after new activity so the plan & progress adjust.",
+  "Progres tersinkron otomatis dari aktivitasmu — tak perlu memperbarui manual.": "Progress syncs automatically from your activity — no manual refresh needed.",
+  "Rencana tersusun & tersinkron otomatis dari kompetensi SKKNI pilihanmu & seluruh datamu — tanpa tombol manual.": "The plan is built & synced automatically from your chosen SKKNI competency & all of your data — no manual button.",
+  "Menyusun otomatis…": "Building automatically…",
+  "Susun ulang": "Rebuild",
+  "Menyusun Learning Path…": "Building Learning Path…",
+  "AI sedang menganalisis": "The AI is analyzing",
+  "dan seluruh datamu untuk menyusun langkah otomatis. Sebentar ya…": "and all of your data to build the steps automatically. One moment…",
+  "Pilih kompetensi SKKNI dulu di Profil — begitu terpilih, AI langsung menyusun langkah bertahap menuju profesi targetmu secara otomatis.": "Choose an SKKNI competency in your Profile first — once chosen, the AI immediately builds step-by-step actions towards your target profession automatically.",
+  "Pilih Kompetensi →": "Choose Competency →",
 
   // ---------- Peta Posisi ----------
   "Tervalidasi": "Validated",
