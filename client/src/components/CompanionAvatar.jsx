@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Send, X, Loader2, Sparkles, Trash2, Bot } from "lucide-react";
 import api from "../api/client.js";
 import { useMentorChat } from "../hooks/useMentorChat.js";
+import { useMediaQuery } from "../hooks/useMediaQuery.js";
 import useAuthStore from "../store/authStore.js";
 import { useLang } from "../lib/i18n.jsx";
 import { IMG, parseDialog, preloadCompanion, useBlink, useVnReveal } from "../lib/companion.js";
@@ -127,7 +128,12 @@ export default function CompanionAvatar() {
   const tipIdx = useRef(0);
   const hoverRef = useRef(false);
 
-  const enabled = role === "user" && !pathname.startsWith("/app/mentor");
+  // Di HP companion tampil sebagai tombol quick-access kecil (tak menutup konten). Di desktop,
+  // halaman Mentor punya Onyen sendiri (kolom kanan) → matikan di sana agar tak dobel; namun di
+  // HP kolom itu tersembunyi (hidden lg:block) sehingga companion TETAP tampil di Mentor mobile.
+  const isPhone = useMediaQuery("(max-width: 639px)");
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const enabled = role === "user" && !(pathname.startsWith("/app/mentor") && isDesktop);
   const blink = useBlink(enabled);
 
   // Data user untuk saran sadar-data — berbagi cache dgn Sidebar/Dashboard (["overview"]).
@@ -243,8 +249,9 @@ export default function CompanionAvatar() {
 
   return (
     <>
-      {/* Avatar Onyen (kiri-bawah) saat idle — sembunyi saat chat terbuka (pindah ke atas panel) */}
-      {!open && (
+      {/* Avatar Onyen (kiri-bawah) saat idle — DESKTOP/tablet. Di HP diganti tombol quick-access
+          agar tak menutup konten. Sembunyi saat chat terbuka (pindah ke atas panel). */}
+      {!open && !isPhone && (
         <div className="fixed bottom-0 left-2 z-40 flex items-end gap-2 select-none pointer-events-none">
           <button
             onClick={toggleChat}
@@ -261,14 +268,14 @@ export default function CompanionAvatar() {
                 src={IMG(emotion, blink)}
                 alt="Onyen"
                 draggable={false}
-                className="h-44 w-auto drop-shadow-[0_6px_10px_rgba(2,6,23,0.45)]"
+                className="h-32 sm:h-44 w-auto drop-shadow-[0_6px_10px_rgba(2,6,23,0.45)]"
               />
             </span>
           </button>
 
           {bubble && (
             <div
-              className="companion-pop relative mb-16 max-w-[280px] rounded-2xl rounded-bl-sm px-3.5 py-2.5 text-xs leading-relaxed shadow-lg pointer-events-auto"
+              className="companion-pop relative mb-16 max-w-[min(72vw,280px)] rounded-2xl rounded-bl-sm px-3.5 py-2.5 text-xs leading-relaxed shadow-lg pointer-events-auto"
               style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", color: "var(--text-base)" }}
               role="status"
             >
@@ -281,6 +288,25 @@ export default function CompanionAvatar() {
             </div>
           )}
         </div>
+      )}
+
+      {/* HP: tombol quick-access (FAB) di pojok kiri-bawah — memanggil Onyen tanpa menutup konten. */}
+      {!open && isPhone && (
+        <button
+          onClick={toggleChat}
+          aria-label={t("Buka AI Mentor")}
+          title={t("Ngobrol dengan Onyen (AI Mentor)")}
+          className="companion-float fixed bottom-4 left-3 z-40 pointer-events-auto rounded-full shadow-xl p-[3px] bg-gradient-to-br from-brand-600 to-tosca-500 active:scale-95 transition-transform"
+        >
+          <img
+            src={IMG("happy", false)}
+            alt="Onyen"
+            draggable={false}
+            className="w-14 h-14 object-contain object-top rounded-full"
+            style={{ background: "var(--bg-surface)" }}
+          />
+          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2" style={{ borderColor: "var(--bg-page)" }} />
+        </button>
       )}
 
       {/* Panel chat — KANAN-bawah; Onyen "nongol" dari balik tepi atas panel (kaki ter-clip),
@@ -334,7 +360,7 @@ export default function CompanionAvatar() {
                 return (
                   <div key={i} className="flex gap-2 items-start flex-row-reverse">
                     <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 bg-brand-600 text-white text-[10px]">{t("Aku")}</div>
-                    <div className="rounded-2xl px-3 py-2 text-sm leading-relaxed max-w-[82%] bg-brand-600 text-white rounded-tr-sm" dangerouslySetInnerHTML={fmt(m.content)} />
+                    <div className="rounded-2xl px-3 py-2 text-sm leading-relaxed max-w-[82%] break-words bg-brand-600 text-white rounded-tr-sm" dangerouslySetInnerHTML={fmt(m.content)} />
                   </div>
                 );
               }
@@ -349,7 +375,7 @@ export default function CompanionAvatar() {
                   </div>
                   <div className="flex flex-col gap-1.5 max-w-[82%] items-start">
                     {segs.slice(0, visible).map((s, j) => (
-                      <div key={j} className="companion-pop rounded-2xl rounded-tl-sm px-3 py-2 text-sm leading-relaxed w-fit" style={{ backgroundColor: "var(--bg-muted)", color: "var(--text-base)" }} dangerouslySetInnerHTML={fmt(s.text)} />
+                      <div key={j} className="companion-pop rounded-2xl rounded-tl-sm px-3 py-2 text-sm leading-relaxed w-fit max-w-full break-words" style={{ backgroundColor: "var(--bg-muted)", color: "var(--text-base)" }} dangerouslySetInnerHTML={fmt(s.text)} />
                     ))}
                     {revealing && (
                       <div className="rounded-2xl rounded-tl-sm px-3.5 py-2 w-fit" style={{ backgroundColor: "var(--bg-muted)" }}>

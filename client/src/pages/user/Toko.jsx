@@ -72,7 +72,7 @@ export default function Toko() {
       {redemptions.length > 0 && (
         <div className="card p-4">
           <p className="text-sm font-semibold flex items-center gap-2 mb-2" style={{ color: "var(--text-base)" }}><Ticket className="w-4 h-4 text-brand-600" /> {t("Kelas Saya")}</p>
-          <div className="grid sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {redemptions.map((rd) => (
               <div key={rd.id} className="flex items-center justify-between gap-2 rounded-lg p-2.5" style={{ border: "1px dashed var(--border-2)" }}>
                 <div className="min-w-0">
@@ -92,7 +92,7 @@ export default function Toko() {
       ) : cats.map((cat) => (
         <div key={cat} className="space-y-2">
           <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--text-3)" }}>{cat}</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {items.filter((i) => i.category === cat).map((item) => {
               const Icon = ITEM_ICONS[item.icon] ?? Coins;
               const affordable = (balance ?? 0) >= item.cost;

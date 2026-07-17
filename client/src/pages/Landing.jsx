@@ -59,7 +59,7 @@ export default function Landing() {
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
           <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#3b82f6,#2563eb)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: "#fff" }}>K</div>
-          <span style={{ fontWeight: 700, fontSize: 14, color: dark ? "#f1f5f9" : "#172554" }}>TalentaAI</span>
+          <span className="landing-brand-text" style={{ fontWeight: 700, fontSize: 14, color: dark ? "#f1f5f9" : "#172554" }}>TalentaAI</span>
         </div>
         <LangToggle />
         <button onClick={() => applyTheme(dark ? "light" : "dark")} title={dark ? t("Mode terang") : t("Mode gelap")}
@@ -106,7 +106,7 @@ export default function Landing() {
           </div>
 
           {/* Stats */}
-          <div style={{ display: "inline-grid", gridTemplateColumns: "repeat(3,1fr)", gap: "0 40px", background: dark ? "rgba(59,130,246,0.08)" : "rgba(255,255,255,0.7)", backdropFilter: "blur(12px)", border: `1px solid ${dark ? "rgba(59,130,246,0.2)" : "rgba(59,130,246,0.15)"}`, borderRadius: 16, padding: "20px 32px" }}>
+          <div className="landing-stats" style={{ display: "inline-grid", gridTemplateColumns: "repeat(3,1fr)", gap: "0 40px", background: dark ? "rgba(59,130,246,0.08)" : "rgba(255,255,255,0.7)", backdropFilter: "blur(12px)", border: `1px solid ${dark ? "rgba(59,130,246,0.2)" : "rgba(59,130,246,0.15)"}`, borderRadius: 16, padding: "20px 32px" }}>
             {[["9","Tier","Skill Rank"],["12+","Kompetensi","Terstandar SKKNI"],["100%","Otomatis","Tanpa Manual"]].map(([v,s,l]) => (
               <div key={l} style={{ textAlign: "center", padding: "0 8px" }}>
                 <p style={{ fontSize: 28, fontWeight: 900, color: "#3b82f6", margin: 0 }}>{v} <span style={{ fontSize: 16 }}>{t(s)}</span></p>
@@ -158,7 +158,7 @@ export default function Landing() {
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <h2 style={{ textAlign: "center", fontSize: "clamp(1.6rem,3vw,2.2rem)", fontWeight: 800, marginBottom: 8 }}>{t("Fitur Lengkap")}</h2>
           <p style={{ textAlign: "center", color: dark ? "#93c5fd" : "#3b82f6", marginBottom: 48, fontSize: 16 }}>{t("Semua yang dibutuhkan untuk talent mapping modern")}</p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(min(100%,300px),1fr))", gap: 20 }}>
             {FEATURES.map((f) => (
               <div key={f.title} style={{ background: dark ? "rgba(59,130,246,0.06)" : "#f1f5f9", border: `1px solid ${dark ? "rgba(59,130,246,0.18)" : "#dbeafe"}`, borderRadius: 16, padding: "24px" }}>
                 <div style={{ width: 44, height: 44, borderRadius: 12, background: "linear-gradient(135deg,rgba(59,130,246,0.15),rgba(59,130,246,0.15))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, marginBottom: 14 }}>{f.icon}</div>

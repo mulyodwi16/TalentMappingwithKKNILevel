@@ -79,7 +79,7 @@ export default function AvatarEduSettings() {
         <div className="card p-5">
           <p className="text-sm font-semibold mb-3" style={{ color: "var(--text-base)" }}>{t("Pratinjau course unggulan ({n})", { n: preview.length })}</p>
           {preview.length === 0 ? <p className="text-sm" style={{ color: "var(--text-4)" }}>{t("Tidak ada course — cek kata kunci/slug atau API key.")}</p> : (
-            <div className="grid sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {preview.map((c) => (
                 <div key={c.slug} className="rounded-lg p-3" style={{ border: "1px solid var(--border)" }}>
                   <p className="text-sm font-medium" style={{ color: "var(--text-base)" }}>{c.title}</p>

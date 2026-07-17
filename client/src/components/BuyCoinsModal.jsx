@@ -86,7 +86,7 @@ export default function BuyCoinsModal({ open, onClose, onSuccess }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div className="is-modal fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={step === "processing" ? undefined : onClose} />
       <div className="relative w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
         style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>

@@ -96,7 +96,7 @@ export default function Topbar({ onBurger }) {
       </button>
 
       {/* Page title */}
-      <h1 className="flex-1 text-sm font-semibold truncate" style={{ color: "var(--text-base)" }}>
+      <h1 className="flex-1 min-w-0 text-sm font-semibold truncate" style={{ color: "var(--text-base)" }}>
         {TITLES[pathname] ? t(TITLES[pathname]) : "TalentaAI"}
       </h1>
 

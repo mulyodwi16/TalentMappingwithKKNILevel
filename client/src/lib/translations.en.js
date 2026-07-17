@@ -751,6 +751,8 @@ export default {
   "Bukti eksternal (sertifikasi BNSP, portofolio) bisa menembus batas rank — tambahkan di Profil!": "External evidence (BNSP certification, portfolio) can break through the rank cap — add it in your Profile!",
   "Sudah cek Peta Posisi? Lihat seberapa siap kamu untuk posisi targetmu.": "Checked the Position Map yet? See how ready you are for your target position.",
   "Menyimak & menyusun jawaban…": "Listening & composing an answer…",
+  "menyusun jawaban…": "composing an answer…",
+  "AI Mentor · Online": "AI Mentor · Online",
   "Senang dengan progresmu!": "Happy with your progress!",
   "Masih ada yang perlu ditutup — pelan-pelan, ya.": "There's still some ground to cover — one step at a time.",
   "Hmm, ada yang perlu diwaspadai…": "Hmm, something to watch out for…",

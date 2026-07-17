@@ -87,7 +87,7 @@ export default function UserManagement() {
 
       {/* Modal */}
       {modal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="is-modal fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="card p-6 w-full max-w-md max-h-screen overflow-y-auto">
             <h3 className="font-semibold text-white mb-5">{modal.mode === "create" ? t("Tambah User") : t("Edit User")}</h3>
             <form onSubmit={(e) => { e.preventDefault(); save.mutate(form); }} className="space-y-4">

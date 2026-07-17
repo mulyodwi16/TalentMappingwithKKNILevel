@@ -42,8 +42,8 @@ export default function AuditLogPage() {
         </div>
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="card overflow-x-auto">
+        <table className="w-full text-sm min-w-[560px]">
           <thead className="border-b border-slate-700">
             <tr>
               {["Waktu", "Aktor", "Aksi", "Target"].map((h) => (

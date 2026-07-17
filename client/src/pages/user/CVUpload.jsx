@@ -86,7 +86,7 @@ export default function CVUpload() {
 
           <div className="card p-6">
             <h3 className="font-semibold mb-4" style={{ color: "var(--text-base)" }}>{t("Profil Diekstrak dari CV")}</h3>
-            <div className="grid sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="rounded-xl p-4" style={{ background: "var(--bg-raised)" }}>
                 <p className="text-xs mb-1" style={{ color: "var(--text-4)" }}>{t("Pendidikan")}</p>
                 <p className="font-semibold" style={{ color: "var(--text-base)" }}>{result.profile?.education || "—"}</p>
@@ -168,7 +168,7 @@ function SupportingData() {
       </div>
 
       {/* Tautan */}
-      <div className="grid sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {LINK_FIELDS.map((f) => (
           <label key={f.key} className="block">
             <span className="text-xs font-medium flex items-center gap-1.5 mb-1" style={{ color: "var(--text-3)" }}><f.Icon className="w-3.5 h-3.5 text-brand-500" /> {f.label}</span>
@@ -189,7 +189,7 @@ function SupportingData() {
         ) : (
           <div className="space-y-2">
             {certs.map((c, i) => (
-              <div key={i} className="grid sm:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center">
+              <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center">
                 <input value={c.name} onChange={(e) => setCerts((arr) => arr.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} placeholder={t("Nama sertifikat")} className="input text-xs" />
                 <input value={c.issuer} onChange={(e) => setCerts((arr) => arr.map((x, j) => j === i ? { ...x, issuer: e.target.value } : x))} placeholder={t("Penerbit (mis. BNSP)")} className="input text-xs" />
                 <input value={c.url} onChange={(e) => setCerts((arr) => arr.map((x, j) => j === i ? { ...x, url: e.target.value } : x))} placeholder={t("Tautan (opsional)")} className="input text-xs" />

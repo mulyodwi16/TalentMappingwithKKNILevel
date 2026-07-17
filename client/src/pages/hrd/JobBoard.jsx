@@ -14,7 +14,7 @@ function TalentPool({ jobId, onClose }) {
   const { t } = useLang();
   const { data, isLoading } = useQuery({ queryKey: ["candidates", jobId], queryFn: () => api.get(`/jobs/${jobId}/candidates`) });
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60" onClick={onClose}>
+    <div className="is-modal fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60" onClick={onClose}>
       <div className="w-full max-w-lg rounded-2xl max-h-[80vh] overflow-y-auto" style={{ backgroundColor: "var(--bg-surface)", border: "1px solid var(--border)" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-3 sticky top-0" style={{ backgroundColor: "var(--bg-surface)", borderBottom: "1px solid var(--border)" }}>
           <div>
@@ -108,7 +108,7 @@ export default function JobBoard() {
 
       {showForm && (
         <form onSubmit={submit} className="card p-5 space-y-3">
-          <div className="grid sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><label className="text-xs" style={{ color: "var(--text-3)" }}>{t("Judul posisi *")}</label>{inp("title", { placeholder: t("Video Editor Senior") })}</div>
             <div><label className="text-xs" style={{ color: "var(--text-3)" }}>{t("Perusahaan/Unit")}</label>{inp("company", { placeholder: "PT Kreatif" })}</div>
             <div><label className="text-xs" style={{ color: "var(--text-3)" }}>{t("Lokasi")}</label>{inp("location", { placeholder: "Jakarta" })}</div>
@@ -136,7 +136,7 @@ export default function JobBoard() {
       ) : jobs.length === 0 ? (
         <div className="card p-10 text-center" style={{ color: "var(--text-3)" }}>{t("Belum ada posisi. Klik")} <b>{t("Posisi Baru")}</b> {t("untuk memetakan.")}</div>
       ) : (
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {jobs.map((j) => (
             <div key={j.id} className="card p-5">
               <div className="flex items-start justify-between gap-2">

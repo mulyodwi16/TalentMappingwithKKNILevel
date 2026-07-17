@@ -106,7 +106,7 @@ function CoursePlayerModal({ course, onClose }) {
   const overall = Math.round((doneCount / total) * 100);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6" style={{ background: "rgba(0,0,0,0.6)" }} onClick={onClose}>
+    <div className="is-modal fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6" style={{ background: "rgba(0,0,0,0.6)" }} onClick={onClose}>
       <div className="w-full max-w-6xl rounded-2xl overflow-hidden flex flex-col shadow-2xl" style={{ background: "var(--bg-surface)", maxHeight: "94vh" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-3 p-3 border-b" style={{ borderColor: "var(--border)" }}>
           <p className="text-sm font-semibold truncate flex items-center gap-2" style={{ color: "var(--text-base)" }}>
@@ -197,7 +197,7 @@ function AvatarEduDashboard() {
       <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-base)" }}>
         <GraduationCap className="w-4 h-4 text-violet-400" /> {t("Kursus Interaktif AvatarEdu")}
       </h3>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {courses.map((c) => {
           const lv = AV_LEVEL[c.level] || AV_LEVEL.beginner;
           return (
@@ -293,7 +293,7 @@ export default function UserDashboard() {
       )}
 
       {/* Gamifikasi harian — Course Harian di bawah bonus login (mengisi ruang kosong) */}
-      <div className="grid lg:grid-cols-2 gap-4 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         <div className="space-y-4">
           <DailyLoginCard />
           <DailyQuiz />
@@ -318,7 +318,7 @@ export default function UserDashboard() {
       {/* Kursus interaktif AvatarEdu.ai (SCORM embed) */}
       <AvatarEduDashboard />
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Riwayat ujian */}
         <div className="card p-6">
           <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-base)" }}>

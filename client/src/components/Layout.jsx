@@ -19,7 +19,7 @@ export default function Layout() {
       {/* mobile backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          className="is-modal fixed inset-0 z-30 bg-black/40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -28,7 +28,7 @@ export default function Layout() {
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <Topbar onBurger={() => setSidebarOpen((v) => !v)} />
-        <main ref={mainRef} className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6">
           <div key={pathname} className="page-enter">
             <Outlet />
           </div>

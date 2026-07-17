@@ -90,6 +90,26 @@ export default function Mentor() {
     <div className="lg:grid lg:gap-5 lg:items-start" style={{ gridTemplateColumns: "minmax(0,1fr) 340px" }}>
       {/* Kolom kiri: chat (feedback #3 — chat di kiri, karakter di kanan) */}
       <div className="space-y-4 min-w-0">
+      {/* HP: panggung karakter DI ATAS chat (referensi UI) — sticky agar ekspresi Onyen selalu
+          terlihat saat mengobrol. Di desktop karakter ada di kolom kanan (hidden lg:block),
+          maka panggung ini lg:hidden. Ekspresi & kedip berbagi state dgn bust desktop. */}
+      <div className="lg:hidden sticky top-0 z-20 -mx-4 -mt-4 mb-1 px-4 pt-3 pb-1" style={{ background: "var(--bg-page)" }}>
+        <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+          <div className="relative flex items-end justify-center h-32"
+               style={{ background: "radial-gradient(130% 100% at 50% 8%, rgb(var(--brand-500) / 0.28) 0%, transparent 72%), var(--bg-surface)" }}>
+            <span className="companion-float block">
+              <img key={emotion} src={BUST(emotion, blink)} alt="Onyen" draggable={false}
+                className="companion-pop h-28 w-auto drop-shadow-[0_8px_16px_rgba(2,6,23,0.45)]" />
+            </span>
+          </div>
+          <div className="flex items-center justify-center gap-2 py-1.5" style={{ borderTop: "1px solid var(--border)", background: "var(--bg-surface)" }}>
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: busy ? "#f59e0b" : "#10b981" }} />
+            <span className="text-sm font-bold" style={{ color: "var(--text-base)" }}>Onyen</span>
+            <span className="text-[11px]" style={{ color: "var(--text-4)" }}>· {busy ? t("menyusun jawaban…") : t("AI Mentor · Online")}</span>
+          </div>
+        </div>
+      </div>
+
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
@@ -111,12 +131,12 @@ export default function Mentor() {
           <p className="text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5" style={{ color: "var(--text-3)" }}>
             <Sparkles className="w-3.5 h-3.5 text-brand-600" /> {t("Prioritas untuk Anda (gap terbesar)")}
           </p>
-          <div className="grid sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {suggestions.map((s) => (
               <button
                 key={s.id || s.competencyCode}
                 onClick={() => navigate("/app/learning-path")}
-                className="flex items-center gap-2.5 rounded-lg p-2.5 text-left transition-colors hover:border-brand-500"
+                className="flex items-center gap-2.5 rounded-lg p-2.5 text-left min-w-0 transition-colors hover:border-brand-500"
                 style={{ border: "1px solid var(--border-2)", backgroundColor: "var(--bg-raised)" }}
               >
                 <div className="rounded-md bg-amber-500/10 p-1.5 text-amber-600 shrink-0"><Target className="w-4 h-4" /></div>
@@ -162,7 +182,7 @@ export default function Mentor() {
               return (
                 <div key={i} className="flex gap-2 items-start flex-row-reverse">
                   <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-medium bg-brand-600 text-white">{initials}</div>
-                  <div className="rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed max-w-[82%] bg-brand-600 text-white rounded-tr-sm" dangerouslySetInnerHTML={fmt(m.content)} />
+                  <div className="rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed max-w-[82%] break-words bg-brand-600 text-white rounded-tr-sm" dangerouslySetInnerHTML={fmt(m.content)} />
                 </div>
               );
             }
@@ -180,7 +200,7 @@ export default function Mentor() {
                   {segs.slice(0, visible).map((s, j) => (
                     <div
                       key={j}
-                      className="companion-pop rounded-2xl rounded-tl-sm px-3.5 py-2.5 text-sm leading-relaxed w-fit"
+                      className="companion-pop rounded-2xl rounded-tl-sm px-3.5 py-2.5 text-sm leading-relaxed w-fit max-w-full break-words"
                       style={{ backgroundColor: "var(--bg-muted)", color: "var(--text-base)" }}
                       dangerouslySetInnerHTML={fmt(s.text)}
                     />

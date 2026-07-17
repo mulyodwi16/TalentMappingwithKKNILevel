@@ -24,7 +24,7 @@ export default function AdminDashboard() {
 
       {/* Status counts */}
       {stats?.statusCounts && (
-        <div className="grid sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
             { k: "ready",       label: "Siap Naik",    color: "emerald" },
             { k: "in_progress", label: "Dalam Proses", color: "amber" },
@@ -42,7 +42,7 @@ export default function AdminDashboard() {
       )}
 
       {/* Nav cards */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {cards.map((c) => (
           <Link key={c.to} to={c.to} className="card p-5 hover:scale-105 transition-transform group">
             <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${c.color} flex items-center justify-center text-lg mb-3`}>{c.icon}</div>

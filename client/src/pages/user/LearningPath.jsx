@@ -89,7 +89,7 @@ function StepCourses({ query }) {
   if (isLoading) return <p className="text-xs py-2" style={{ color: "var(--text-4)" }}>{t("Mencari kursus…")}</p>;
   if (isError || courses.length === 0) return <p className="text-xs py-2" style={{ color: "var(--text-4)" }}>{t("Belum ada kursus cocok di AvatarEdu. Coba")} <Link to="/app/kelas" className="text-brand-500 hover:underline">{t("Kelas")}</Link>.</p>;
   return (
-    <div className="grid sm:grid-cols-3 gap-2 pt-1">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
       {courses.map((c) => (
         <Link key={c.slug} to="/app/kelas"
           className="rounded-lg border p-2.5 flex flex-col gap-1 hover:border-brand-500/50 transition-colors"
@@ -310,7 +310,7 @@ export default function LearningPath() {
     <div className="space-y-6">
       {/* Header + ilustrasi */}
       <div className="card p-5 relative overflow-hidden">
-        <div className="grid md:grid-cols-2 gap-4 items-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
           <div>
             <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: "var(--text-base)" }}>
               <Sparkles className="w-5 h-5 text-brand-500" /> {t("Learning Path Personal")}

@@ -133,13 +133,13 @@ export default function SkillGap() {
       </div>
 
       {/* Stats */}
-      <div className="grid sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard icon={TrendingUp} value={`${avgReadiness}%`} label={t("Rata-rata Kompetensi")} color="#2563eb" />
         <StatCard icon={AlertTriangle} value={gaps.length} label={t("Kompetensi Gap")} color="#ef4444" />
         <StatCard icon={CheckCircle2} value={assessments.length - gaps.length} label={t("Kompetensi Terpenuhi")} color="#10b981" />
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         {/* Radar */}
         <div className="card p-6">
           <h3 className="font-semibold mb-4" style={{ color: "var(--text-base)" }}>{t("Radar Kompetensi")}</h3>
@@ -187,7 +187,7 @@ export default function SkillGap() {
           <Route className="w-4 h-4 text-brand-500" /> {t("Detail Gap & Rencana Menutupnya")}
           {!lp?.plan && <Link to="/app/learning-path" className="text-[11px] font-normal text-brand-500 hover:underline">{t("(susun Learning Path untuk langkah detail →)")}</Link>}
         </h3>
-        <div className="grid md:grid-cols-2 gap-3 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
           {sorted.map((a) => <GapCard key={a.id} a={a} step={stepFor(a)} />)}
         </div>
       </div>

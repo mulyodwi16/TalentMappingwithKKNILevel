@@ -103,7 +103,7 @@ function FulfillmentPlan({ job, onChanged }) {
       </div>
 
       {/* Level & pengalaman */}
-      <div className="grid sm:grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div className="rounded-lg p-2.5 flex items-center gap-2" style={{ background: "var(--bg-raised)" }}>
           {m.levelOk ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <XCircle className="w-4 h-4 text-red-500" />}
           <div className="text-xs">
@@ -295,7 +295,7 @@ export default function Jobs() {
           <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>{t("HRD belum memetakan posisi target. Cek lagi nanti.")}</p>
         </div>
       ) : (
-        <div className="grid lg:grid-cols-2 gap-4 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           {jobs.map((job) => (
             <PositionCard key={job.id} job={job} onTarget={toggleTarget} targeting={targeting === job.id} />
           ))}

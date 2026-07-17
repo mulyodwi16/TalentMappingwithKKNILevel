@@ -119,7 +119,7 @@ export default function Profile() {
 
       {/* Baris atas: frame rank (kiri) + kartu identitas & Data Diri DI LUAR frame (kanan).
           items-stretch → tinggi frame rank menyejajarkan kolom kanan (tak ada sisa ruang). */}
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-4 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-4 items-stretch">
         <RankHero
           rank={ov.rank}
           rankInfo={ov.rankInfo}
@@ -148,7 +148,7 @@ export default function Profile() {
       {/* ── Detail ringkas — 2 kolom agar tak memanjang penuh ke bawah (#1/#3).
           Aksi interaktif (upload CV, ganti kompetensi, tambah bukti, ujian) ada di Dashboard;
           di sini fokus MELIHAT data & pencapaian. Picker/form tetap bisa dibuka via deep-link. ── */}
-      <div className="grid lg:grid-cols-2 gap-4 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         {/* Sertifikat terbaru */}
         <div className="card p-5">
           <div className="flex items-center justify-between gap-2 mb-3">
@@ -191,7 +191,7 @@ export default function Profile() {
             <div className="space-y-2">
               {ov.classes.slice(0, 4).map((c, i) => (
                 <div key={i} className="flex items-center justify-between gap-2 rounded-lg p-2.5" style={{ border: "1px solid var(--border)" }}>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate" style={{ color: "var(--text-base)" }}>{c.name}</p>
                     <p className="text-[11px]" style={{ color: "var(--text-4)" }}>{c.kind === "avataredu" ? "AvatarEdu" : t("Kelas Premium")} · {fmtDate(c.at)}</p>
                   </div>
@@ -246,7 +246,7 @@ export default function Profile() {
       </div>
 
       {/* ── Rincian panjang (Kesiapan/Rank + Bukti) — 2 kolom ── */}
-      <div className="grid lg:grid-cols-2 gap-4 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         <ReadinessCard readiness={ov.readiness} rankInfo={ov.rankInfo} rank={ov.rank} level={ov.rank?.effective ?? p.currentKkniLevel} />
         <EvidenceCard rank={ov.rank} onChanged={load} open={evidenceOpen} setOpen={setEvidenceOpen} />
       </div>
@@ -410,7 +410,7 @@ function SkkniSection({ chosen, doc, onChanged, picking, setPicking }) {
                 {doc.units.map((u) => (
                   <div key={u.code} className="flex items-start gap-2 text-sm rounded-lg px-2.5 py-1.5" style={{ background: "var(--bg-muted)" }}>
                     <span className="text-[10px] font-mono mt-0.5 px-1.5 py-0.5 rounded shrink-0" style={{ background: "var(--bg-surface)", color: "var(--text-4)" }}>{u.code}</span>
-                    <span style={{ color: "var(--text-3)" }}>{u.title}</span>
+                    <span className="min-w-0 break-words" style={{ color: "var(--text-3)" }}>{u.title}</span>
                   </div>
                 ))}
               </div>
@@ -588,7 +588,7 @@ function EvidenceCard({ rank, onChanged, open, setOpen }) {
 
       {open && (
         <form onSubmit={submit} className="rounded-xl p-3 mb-3 space-y-2" style={{ background: "var(--bg-raised)", border: "1px solid var(--border)" }}>
-          <div className="grid sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <select className="input text-sm" value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}>
               {Object.entries(EV_TYPE).map(([k, v]) => <option key={k} value={k}>{t(v.label)}</option>)}
             </select>

@@ -57,8 +57,8 @@ export default function RuleManagement() {
         <button onClick={openCreate} className="btn-primary text-sm py-2 px-4">{t("+ Tambah Aturan")}</button>
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="card overflow-x-auto">
+        <table className="w-full text-sm min-w-[640px]">
           <thead className="border-b border-slate-700">
             <tr>
               {["Urutan", "Pendidikan", "Sertifikasi", "Min. Pengalaman", "→ Rank", "Aksi"].map((h) => (
@@ -92,7 +92,7 @@ export default function RuleManagement() {
       </div>
 
       {modal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="is-modal fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="card p-6 w-full max-w-sm">
             <h3 className="font-semibold text-white mb-5">{modal.mode === "create" ? t("Tambah Aturan") : t("Edit Aturan")}</h3>
             <form onSubmit={(e) => { e.preventDefault(); save.mutate({ ...form, conditions: { ...form.conditions, minExperience: form.conditions.minExperience ? parseInt(form.conditions.minExperience) : undefined } }); }} className="space-y-4">

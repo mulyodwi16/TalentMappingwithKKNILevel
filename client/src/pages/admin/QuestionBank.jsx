@@ -69,7 +69,7 @@ export default function QuestionBank() {
                   <span className="badge bg-slate-700/60 text-slate-400 border-slate-600/30 text-[10px]">Level {q.kkniLevel}</span>
                 </div>
                 <p className="text-sm font-medium text-white mb-3">{q.question}</p>
-                <div className="grid sm:grid-cols-2 gap-1.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                   {q.options.map((opt, idx) => (
                     <p key={idx} className={`text-xs px-3 py-1.5 rounded-lg ${idx === q.answerKey ? "bg-emerald-500/15 text-emerald-400 font-medium" : "bg-slate-900/50 text-slate-400"}`}>
                       {String.fromCharCode(65 + idx)}. {opt}
@@ -91,7 +91,7 @@ export default function QuestionBank() {
       </div>
 
       {modal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="is-modal fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="card p-6 w-full max-w-lg max-h-screen overflow-y-auto">
             <h3 className="font-semibold text-white mb-5">{modal.mode === "create" ? t("Tambah Soal") : t("Edit Soal")}</h3>
             <form onSubmit={(e) => { e.preventDefault(); save.mutate({ ...form, answerKey: parseInt(form.answerKey), kkniLevel: parseInt(form.kkniLevel), points: parseInt(form.points) }); }} className="space-y-4">

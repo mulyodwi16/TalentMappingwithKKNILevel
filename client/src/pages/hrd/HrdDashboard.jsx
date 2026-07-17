@@ -36,7 +36,7 @@ function WorkerDetailModal({ id, onClose }) {
   const passed = data?.assessments?.filter((a) => a.passed).length || 0;
   const total = data?.assessments?.length || 0;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6" style={{ background: "rgba(0,0,0,0.6)" }} onClick={onClose}>
+    <div className="is-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6" style={{ background: "rgba(0,0,0,0.6)" }} onClick={onClose}>
       <div className="w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col shadow-2xl" style={{ background: "var(--bg-surface)", maxHeight: "90vh" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-3 p-4 border-b" style={{ borderColor: "var(--border)" }}>
           <div className="min-w-0">
@@ -163,7 +163,7 @@ export default function HrdDashboard() {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Total Talenta", value: analytics?.total || 0, color: "text-white" },
           { label: "Siap Naik", value: analytics?.statusCounts?.ready || 0, color: "text-emerald-400" },
@@ -178,7 +178,7 @@ export default function HrdDashboard() {
       </div>
 
       {/* Charts */}
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card p-6">
           <h3 className="font-semibold text-white mb-4">{t("Distribusi Skill Rank")}</h3>
           <ResponsiveContainer width="100%" height={200}>
@@ -279,7 +279,7 @@ export default function HrdDashboard() {
 
       {/* Request modal */}
       {showRequest && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="is-modal fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="card p-6 w-full max-w-md">
             <h3 className="font-semibold text-white mb-4">{t("Ajukan Request ke Admin")}</h3>
             <div className="space-y-4">

@@ -28,7 +28,7 @@ export default function RankUpOverlay({ from, to, onClose }) {
   }), [c]);
 
   return (
-    <div className="rank-dark rankup-backdrop fixed inset-0 z-[100] flex items-center justify-center px-4"
+    <div className="is-modal rank-dark rankup-backdrop fixed inset-0 z-[100] flex items-center justify-center px-4"
       style={{ background: "radial-gradient(circle at 50% 40%, rgba(10,16,30,0.86), rgba(3,6,12,0.96))", backdropFilter: "blur(4px)" }}
       onClick={onClose} role="dialog" aria-label={t("Naik rank")}>
       {/* Konfeti */}

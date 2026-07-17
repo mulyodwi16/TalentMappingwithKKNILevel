@@ -35,7 +35,7 @@ function CourseModal({ title, url, onClose }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6" style={{ background: "rgba(0,0,0,0.6)" }} onClick={onClose}>
+    <div className="is-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6" style={{ background: "rgba(0,0,0,0.6)" }} onClick={onClose}>
       <div className="w-full max-w-4xl rounded-2xl overflow-hidden flex flex-col shadow-2xl" style={{ background: "var(--bg-surface)", maxHeight: "92vh" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-3 p-3 border-b" style={{ borderColor: "var(--border)" }}>
           <p className="text-sm font-semibold truncate flex items-center gap-2" style={{ color: "var(--text-base)" }}>
@@ -91,7 +91,7 @@ function AvatarEduForUnit({ query }) {
           {t("Belum ada kursus AvatarEdu khusus untuk unit ini — menampilkan kursus umum yang tersedia.")}
         </p>
       )}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {courses.map((c) => {
           const lv = AV_LEVEL[c.level] || AV_LEVEL.beginner;
           return (
@@ -507,7 +507,7 @@ export default function Kelas() {
       </div>
 
       {/* Grid kartu unit ala AvatarEdu */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start">
         {units.map((u) => (
           <UnitCard key={u.code} unit={u} balance={balance} busy={busy}
             onOpen={(code) => setSp({ unit: code })}

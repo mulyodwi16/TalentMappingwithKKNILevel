@@ -125,7 +125,7 @@ function HistoryReviewModal({ id, onClose }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <div className="is-modal fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div className="w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col" style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", maxHeight: "90vh" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-3 px-4 py-3 shrink-0" style={{ borderBottom: "1px solid var(--border)" }}>
           <div className="min-w-0">
@@ -210,7 +210,7 @@ function UnitPicker({ chosen, onPick }) {
       </div>
 
       {/* Library grid: 2–4 kolom (samping) × n baris (ke bawah) */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {units.map((u) => {
           const ui = STATE_UI[u.state] || STATE_UI.locked;
           const canExam = u.state === "ready" || u.state === "passed";

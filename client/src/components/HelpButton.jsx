@@ -275,7 +275,7 @@ function SystemsView({ onClose, onSwitch }) {
 function HelpModal({ name, onClose }) {
   const [view, setView] = useState("tour"); // tour | systems
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div className="is-modal fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-2xl overflow-hidden flex flex-col" style={{ backgroundColor: "var(--bg-surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow)", maxHeight: "92vh" }}>
         {view === "tour"
           ? <TourView name={name} onClose={onClose} onSwitch={() => setView("systems")} />

@@ -180,16 +180,17 @@ html.dark {
 }
 
 /* ── Page transitions ──────────────────────────────────────────────────────── */
-/* PENTING: keyframe akhir HARUS `transform: none` (bukan translateY(0)).
-   Nilai transform yang menempel (fill both) menjadikan .page-enter "containing block"
-   bagi position:fixed → semua modal (sertifikat, kursus, dll) ikut posisi halaman,
-   bukan viewport — modal tampak "tidak di tengah kamera" saat halaman di-scroll. */
+/* Transisi halaman FADE-ONLY (opacity). JANGAN pakai transform/filter di sini: nilainya yang
+   menempel (animation-fill: both) menjadikan .page-enter "containing block" bagi position:fixed,
+   sehingga SEMUA modal (sertifikat, ganti profil, naik level, dll) center ke tengah HALAMAN yang
+   panjang — bukan tengah LAYAR. Dengan opacity saja, modal selalu center ke viewport (kamera),
+   sama seperti pop-up Bantuan yang dirender di luar .page-enter. */
 @keyframes page-in {
-  from { opacity: 0; transform: translateY(28px) scale(0.985); filter: blur(6px); }
-  to   { opacity: 1; transform: none; filter: none; }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 .page-enter {
-  animation: page-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: page-in 0.32s ease both;
 }
 @media (prefers-reduced-motion: reduce) {
   .page-enter { animation: none; }
@@ -254,6 +255,13 @@ html.dark .auth-bg { background: linear-gradient(135deg, #0b1120 0%, #0f1626 55%
   .landing-brand-text { display: none; }
   .landing-stats { grid-template-columns: 1fr !important; gap: 12px !important; }
 }
+
+/* ── Kunci scroll latar saat modal terbuka ───────────────────────────────────
+   Scroller aplikasi = <main> (Layout), bukan <body>. Saat ada overlay bertanda
+   .is-modal di DOM, kunci main & body agar latar TIDAK ikut naik-turun di belakang
+   pop-up (sertifikat, ganti profil, naik level, tur, dll). */
+html:has(.is-modal) body,
+html:has(.is-modal) main { overflow: hidden !important; }
 
 /* ── Scoped light-mode overrides (only inside .app-root, NOT on Landing/Login) */
 /* bg overrides */
