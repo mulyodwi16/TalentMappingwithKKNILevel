@@ -1,0 +1,480 @@
+{
+  "_generated": "export dari DB dev lokal (bahan Skill Gap demo)",
+  "documents": [
+    {
+      "id": "72892d99-d3dc-4bc4-bb79-fd49679f3f54",
+      "title": "SKKNI Video Editing",
+      "sector": "Video Editing",
+      "number": "118",
+      "year": "2014",
+      "numberKepmen": "Nomor 118 Tahun 2014",
+      "availability": "applied",
+      "unitsCached": true,
+      "unitCount": 11,
+      "fetchedAt": "2026-07-04T23:19:44.831Z",
+      "unitsFetchedAt": "2026-07-05T00:02:02.803Z",
+      "weightMaxRank": 6,
+      "weightTier": "Operasional",
+      "weightReason": "Kompetensi mencakup tugas dasar dan operasional dalam video editing."
+    },
+    {
+      "id": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "title": "SKKNI Desain Grafis",
+      "sector": "Desain Grafis",
+      "number": "109",
+      "year": "2010",
+      "numberKepmen": "Nomor 109 Tahun 2010",
+      "availability": "cancelled",
+      "unitsCached": true,
+      "unitCount": 23,
+      "fetchedAt": "2026-07-04T23:26:44.892Z",
+      "unitsFetchedAt": "2026-07-05T00:05:44.179Z",
+      "weightMaxRank": 7,
+      "weightTier": "Teknis",
+      "weightReason": "Kompetensi mencakup keterampilan teknis dan koordinasi tingkat menengah dalam desain grafis."
+    }
+  ],
+  "units": [
+    {
+      "documentId": "72892d99-d3dc-4bc4-bb79-fd49679f3f54",
+      "code": "J.591200.001.01",
+      "title": "Melaksanakan prosedur Keselamatan dan Kesehatan Kerja (K3) ditempat kerja",
+      "availability": "applied"
+    },
+    {
+      "documentId": "72892d99-d3dc-4bc4-bb79-fd49679f3f54",
+      "code": "J.591200.002.01",
+      "title": "Menerapkan keamanan data (master shot dan master edit)",
+      "availability": "applied"
+    },
+    {
+      "documentId": "72892d99-d3dc-4bc4-bb79-fd49679f3f54",
+      "code": "J.591200.003.01",
+      "title": "Menerapkan mutu produk",
+      "availability": "applied"
+    },
+    {
+      "documentId": "72892d99-d3dc-4bc4-bb79-fd49679f3f54",
+      "code": "J.591200.004.01",
+      "title": "Melakukan komunikasi yang baik dengan sutradara dan rekan kerja serta mengenali ruang kerja.",
+      "availability": "applied"
+    },
+    {
+      "documentId": "72892d99-d3dc-4bc4-bb79-fd49679f3f54",
+      "code": "J.591200.005.01",
+      "title": "Menjalin kerjasama dengan pihak luar/client",
+      "availability": "applied"
+    },
+    {
+      "documentId": "72892d99-d3dc-4bc4-bb79-fd49679f3f54",
+      "code": "J.591200.006.01",
+      "title": "Melakukan instalasi peralatan (video player, computer dan pendukungnya)",
+      "availability": "applied"
+    },
+    {
+      "documentId": "72892d99-d3dc-4bc4-bb79-fd49679f3f54",
+      "code": "J.591200.007.01",
+      "title": "Mempersiapkan materi sesuai format yang diinginkan.",
+      "availability": "applied"
+    },
+    {
+      "documentId": "72892d99-d3dc-4bc4-bb79-fd49679f3f54",
+      "code": "J.591200.008.01",
+      "title": "Menyunting  audio dan atau video sesuai  tuntutan naskah",
+      "availability": "applied"
+    },
+    {
+      "documentId": "72892d99-d3dc-4bc4-bb79-fd49679f3f54",
+      "code": "J.591200.009.01",
+      "title": "Melakukan penambahan elemen penunjang gambar dan suara dari sumber  lain yang diperlukan (titling, voice over dan lain-lain)",
+      "availability": "applied"
+    },
+    {
+      "documentId": "72892d99-d3dc-4bc4-bb79-fd49679f3f54",
+      "code": "J.591200.010.01",
+      "title": "Melakukan export  hasil editing menjadi file video dengan format yang diperlukan (export to media)",
+      "availability": "applied"
+    },
+    {
+      "documentId": "72892d99-d3dc-4bc4-bb79-fd49679f3f54",
+      "code": "J.591200.011.01",
+      "title": "Membuat catatan-catatan pada formulir-formulir yang tersedia.",
+      "availability": "applied"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG01.001.01",
+      "title": "Menerapkan pengetahuan dasar desain",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG01.002.01",
+      "title": "Bekerja dalam konteks organisasi desain",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG01.003.01",
+      "title": "Menerapkan pengetahuan tentang metode grafika",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG01.004.01",
+      "title": "Mengoperasikan perangkat lunak desain grafis",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG01.005.01",
+      "title": "Mendokumentasikan kemajuan kerja",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG01.006.01",
+      "title": "Menerapkan teori dasar desain grafis",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG01.007.01",
+      "title": "Menyusun dokumentasi lengkap untuk menjaga Hak Atas Kekayaan Intelektual terhadap karya yang dihasilkan",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG01.008.01",
+      "title": "Menyusun brief teknis spesifikasi cetak",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG01.009.01",
+      "title": "Menerapkan teori dasar komunikasi",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG01.010.01",
+      "title": "Menghasilkan creative brief untuk pengembangan karya desain",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG01.011.01",
+      "title": "Mengkoordinasikan dan mengadakan rapat internal dengan tim",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG02.001.01",
+      "title": "Memaparkan kembali brief teknis spesifikasi kepada pihak lain",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG02.002.01",
+      "title": "Membentuk dummy",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG02.003.01",
+      "title": "Mengerjakan final artwork",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG02.004.01",
+      "title": "Menerjemahkan client brief",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG02.005.01",
+      "title": "Mengembangkan dan mengkomunikasikan konsep desain",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG02.006.01",
+      "title": "Mendesain karya berdasarkan brief",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG02.007.01",
+      "title": "Mempresentasikan hasil karya desain kepada klien",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG02.009.01",
+      "title": "Mengevaluasi hasil karya desain",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG02.010.01",
+      "title": "Merekomendasikan argumen-argumen yang meyakinkan terhadap hasil karya desain kepada klien",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG02.011.01",
+      "title": "Mengatur tim kerja",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG03.001.01",
+      "title": "Menghitung anggaran produksi",
+      "availability": "cancelled"
+    },
+    {
+      "documentId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "code": "TIK.DG03.002.01",
+      "title": "Mengintegrasikan pengetahuan dasar branding dan komunikasi pemasaran dengan desain grafis",
+      "availability": "cancelled"
+    }
+  ],
+  "talents": [
+    {
+      "email": "user@demo.id",
+      "docId": "72892d99-d3dc-4bc4-bb79-fd49679f3f54",
+      "docTitle": "Video Editing",
+      "academicStatus": "lulusan_s1",
+      "assessments": [
+        {
+          "competencyCode": "J.591200.001.01",
+          "competencyName": "Melaksanakan prosedur Keselamatan dan Kesehatan Kerja (K3) ditempat kerja",
+          "currentScore": 87,
+          "requiredScore": 100,
+          "gap": 13
+        },
+        {
+          "competencyCode": "J.591200.002.01",
+          "competencyName": "Menerapkan keamanan data (master shot dan master edit)",
+          "currentScore": 100,
+          "requiredScore": 100,
+          "gap": 0
+        },
+        {
+          "competencyCode": "J.591200.003.01",
+          "competencyName": "Menerapkan mutu produk",
+          "currentScore": 100,
+          "requiredScore": 100,
+          "gap": 0
+        },
+        {
+          "competencyCode": "J.591200.004.01",
+          "competencyName": "Melakukan komunikasi yang baik dengan sutradara dan rekan kerja serta mengenali ruang kerja.",
+          "currentScore": 100,
+          "requiredScore": 100,
+          "gap": 0
+        },
+        {
+          "competencyCode": "J.591200.005.01",
+          "competencyName": "Menjalin kerjasama dengan pihak luar/client",
+          "currentScore": 85,
+          "requiredScore": 100,
+          "gap": 15
+        },
+        {
+          "competencyCode": "J.591200.006.01",
+          "competencyName": "Melakukan instalasi peralatan (video player, computer dan pendukungnya)",
+          "currentScore": 50,
+          "requiredScore": 100,
+          "gap": 50
+        },
+        {
+          "competencyCode": "J.591200.007.01",
+          "competencyName": "Mempersiapkan materi sesuai format yang diinginkan.",
+          "currentScore": 100,
+          "requiredScore": 100,
+          "gap": 0
+        },
+        {
+          "competencyCode": "J.591200.008.01",
+          "competencyName": "Menyunting  audio dan atau video sesuai  tuntutan naskah",
+          "currentScore": 100,
+          "requiredScore": 100,
+          "gap": 0
+        },
+        {
+          "competencyCode": "J.591200.009.01",
+          "competencyName": "Melakukan penambahan elemen penunjang gambar dan suara dari sumber  lain yang diperlukan (titling, voice over dan lain-lain)",
+          "currentScore": 100,
+          "requiredScore": 100,
+          "gap": 0
+        },
+        {
+          "competencyCode": "J.591200.010.01",
+          "competencyName": "Melakukan export  hasil editing menjadi file video dengan format yang diperlukan (export to media)",
+          "currentScore": 100,
+          "requiredScore": 100,
+          "gap": 0
+        },
+        {
+          "competencyCode": "J.591200.011.01",
+          "competencyName": "Membuat catatan-catatan pada formulir-formulir yang tersedia.",
+          "currentScore": 100,
+          "requiredScore": 100,
+          "gap": 0
+        }
+      ]
+    },
+    {
+      "email": "andi@demo.id",
+      "docId": "72892d99-d3dc-4bc4-bb79-fd49679f3f54",
+      "docTitle": "Video Editing",
+      "academicStatus": "lulusan_smk",
+      "assessments": [
+        {
+          "competencyCode": "J.591200.001.01",
+          "competencyName": "Melaksanakan prosedur Keselamatan dan Kesehatan Kerja (K3) ditempat kerja",
+          "currentScore": 75,
+          "requiredScore": 100,
+          "gap": 25
+        },
+        {
+          "competencyCode": "J.591200.002.01",
+          "competencyName": "Menerapkan keamanan data (master shot dan master edit)",
+          "currentScore": 68,
+          "requiredScore": 100,
+          "gap": 32
+        },
+        {
+          "competencyCode": "J.591200.003.01",
+          "competencyName": "Menerapkan mutu produk",
+          "currentScore": 40,
+          "requiredScore": 100,
+          "gap": 60
+        },
+        {
+          "competencyCode": "J.591200.004.01",
+          "competencyName": "Melakukan komunikasi yang baik dengan sutradara dan rekan kerja serta mengenali ruang kerja.",
+          "currentScore": 35,
+          "requiredScore": 100,
+          "gap": 65
+        }
+      ]
+    },
+    {
+      "email": "dewi@demo.id",
+      "docId": "72892d99-d3dc-4bc4-bb79-fd49679f3f54",
+      "docTitle": "Video Editing",
+      "academicStatus": "lulusan_s1",
+      "assessments": [
+        {
+          "competencyCode": "J.591200.001.01",
+          "competencyName": "Melaksanakan prosedur Keselamatan dan Kesehatan Kerja (K3) ditempat kerja",
+          "currentScore": 86,
+          "requiredScore": 100,
+          "gap": 14
+        },
+        {
+          "competencyCode": "J.591200.002.01",
+          "competencyName": "Menerapkan keamanan data (master shot dan master edit)",
+          "currentScore": 82,
+          "requiredScore": 100,
+          "gap": 18
+        },
+        {
+          "competencyCode": "J.591200.003.01",
+          "competencyName": "Menerapkan mutu produk",
+          "currentScore": 78,
+          "requiredScore": 100,
+          "gap": 22
+        },
+        {
+          "competencyCode": "J.591200.004.01",
+          "competencyName": "Melakukan komunikasi yang baik dengan sutradara dan rekan kerja serta mengenali ruang kerja.",
+          "currentScore": 72,
+          "requiredScore": 100,
+          "gap": 28
+        },
+        {
+          "competencyCode": "J.591200.005.01",
+          "competencyName": "Menjalin kerjasama dengan pihak luar/client",
+          "currentScore": 68,
+          "requiredScore": 100,
+          "gap": 32
+        },
+        {
+          "competencyCode": "J.591200.006.01",
+          "competencyName": "Melakukan instalasi peralatan (video player, computer dan pendukungnya)",
+          "currentScore": 64,
+          "requiredScore": 100,
+          "gap": 36
+        },
+        {
+          "competencyCode": "J.591200.007.01",
+          "competencyName": "Mempersiapkan materi sesuai format yang diinginkan.",
+          "currentScore": 45,
+          "requiredScore": 100,
+          "gap": 55
+        },
+        {
+          "competencyCode": "J.591200.008.01",
+          "competencyName": "Menyunting  audio dan atau video sesuai  tuntutan naskah",
+          "currentScore": 40,
+          "requiredScore": 100,
+          "gap": 60
+        }
+      ]
+    },
+    {
+      "email": "reza@demo.id",
+      "docId": "dea47e59-10a9-464d-9c7a-01f1defe1663",
+      "docTitle": "Desain Grafis",
+      "academicStatus": "lulusan_s1",
+      "assessments": [
+        {
+          "competencyCode": "TLR.BJ03.001.01",
+          "competencyName": "Berbicara dengan majikan dengan Bahasa Jepang",
+          "currentScore": 100,
+          "requiredScore": 100,
+          "gap": 0
+        },
+        {
+          "competencyCode": "TLR.BJ03.002.01",
+          "competencyName": "Berkomunikasi di telpun dengan Bahasa Jepang",
+          "currentScore": 100,
+          "requiredScore": 100,
+          "gap": 0
+        },
+        {
+          "competencyCode": "TLR.BJ03.003.01",
+          "competencyName": "Menerima tamu dengan Bahasa Jepang",
+          "currentScore": 100,
+          "requiredScore": 100,
+          "gap": 0
+        },
+        {
+          "competencyCode": "TLR.BJ03.004.01",
+          "competencyName": "Berbicara di rumah dengan Bahasa Jepang",
+          "currentScore": 100,
+          "requiredScore": 100,
+          "gap": 0
+        },
+        {
+          "competencyCode": "TLR.BJ03.005.01",
+          "competencyName": "Berkomunikasi dengan lansia/klien",
+          "currentScore": 100,
+          "requiredScore": 100,
+          "gap": 0
+        },
+        {
+          "competencyCode": "TLR.JL02.023.01",
+          "competencyName": "Memberikan bimbingan kepada  pendamping dan perawat  lansia",
+          "currentScore": 100,
+          "requiredScore": 100,
+          "gap": 0
+        }
+      ]
+    }
+  ]
+}

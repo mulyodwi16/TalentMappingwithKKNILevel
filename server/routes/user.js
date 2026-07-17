@@ -351,13 +351,33 @@ router.get("/attempts", async (req, res) => {
 });
 
 // ── Skill assessments ─────────────────────────────────────────────────────────
+// Skill Gap tampil dari SELURUH unit kompetensi yang dipilih — radar/diagram MUNCUL bahkan
+// SEBELUM ujian (unit yang belum dinilai = skor 0, gap penuh). Unit yang sudah diuji pakai skor
+// nyata (otomatis terupdate usai ujian). Di-scope ke kompetensi aktif → ganti kompetensi = radar
+// ikut berganti. Tanpa kompetensi target (jalur legacy) → tampilkan assessment apa adanya.
 router.get("/skill-assessments", async (req, res) => {
   const all = await prisma.skillAssessment.findMany({ where: { userId: req.user.id } });
-  // Batasi ke kompetensi AKTIF → skill gap ikut berganti saat ganti kompetensi (kompetensi baru = kosong).
-  // Tanpa kompetensi target (jalur legacy) → tampilkan semua seperti semula.
-  const codes = await chosenUnitCodeSet(req.user.id);
-  const assessments = codes ? all.filter((a) => codes.has(a.competencyCode)) : all;
-  res.json(assessments);
+  const u = await prisma.user.findUnique({ where: { id: req.user.id }, select: { chosenSkkniId: true } });
+
+  if (u?.chosenSkkniId) {
+    const units = await prisma.skkniUnit.findMany({
+      where: { documentId: u.chosenSkkniId }, select: { code: true, title: true }, orderBy: { code: "asc" },
+    });
+    if (units.length) {
+      const byCode = new Map(all.map((a) => [a.competencyCode, a]));
+      const merged = units.map((unit) => byCode.get(unit.code) || {
+        id: `pending-${unit.code}`, userId: req.user.id,
+        competencyCode: unit.code, competencyName: unit.title,
+        currentScore: 0, requiredScore: 100, gap: 100, updatedAt: null, pending: true,
+      });
+      return res.json(merged);
+    }
+    // Unit belum ter-cache (mis. baru pilih kompetensi) → sementara pakai assessment yang ada.
+    const codes = await chosenUnitCodeSet(req.user.id);
+    return res.json(codes ? all.filter((a) => codes.has(a.competencyCode)) : all);
+  }
+
+  res.json(all);
 });
 
 // ── Recommendations ───────────────────────────────────────────────────────────

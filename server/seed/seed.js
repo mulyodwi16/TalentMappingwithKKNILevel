@@ -1,6 +1,7 @@
 import "../env.js";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
+import { restoreSkillGap } from "./seed-skillgap.js";
 
 const prisma = new PrismaClient();
 const RESET = process.argv.includes("--reset");
@@ -172,6 +173,10 @@ if (userCount === 0) {
   ]});
   console.log("Users seeded (6: 3 demo + 3 workers)");
 }
+
+// Bahan Skill Gap demo (radar/gap/learning path) dari fixture — hanya mengisi bila DB fresh
+// (anti-clobber di dalam restoreSkillGap), agar clone baru tidak menampilkan Skill Gap kosong.
+try { await restoreSkillGap(); } catch (e) { console.error("Skill-gap restore gagal (non-fatal):", e.message); }
 
 await prisma.$disconnect();
 console.log("Seed selesai ✓");
