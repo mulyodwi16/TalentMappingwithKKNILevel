@@ -3,11 +3,12 @@ import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   Coins, ShoppingBag, GraduationCap, BookOpen, Bot, Sparkles, Ticket,
-  Loader2, CheckCircle2,
+  Loader2, CheckCircle2, Plus,
 } from "lucide-react";
 import api from "../../api/client.js";
 import { useCoins } from "../../hooks/useCoins.js";
 import { useLang } from "../../lib/i18n.jsx";
+import BuyCoinsModal from "../../components/BuyCoinsModal.jsx";
 
 const ITEM_ICONS = { graduation: GraduationCap, book: BookOpen, bot: Bot, sparkle: Sparkles };
 
@@ -16,6 +17,7 @@ export default function Toko() {
   const [items, setItems] = useState(null);
   const [redemptions, setRedemptions] = useState([]);
   const [busy, setBusy] = useState(null);
+  const [buyOpen, setBuyOpen] = useState(false);
   const { balance, refresh, setBalance } = useCoins();
 
   async function load() {
@@ -56,9 +58,15 @@ export default function Toko() {
         </div>
         <div className="text-right">
           <div className="flex items-center gap-2 justify-end"><Coins className="w-7 h-7" /><span className="text-4xl font-bold font-mono">{balance ?? "…"}</span></div>
-          <p className="text-xs text-white/70 uppercase tracking-wider">{t("Saldo Koin Talenta")}</p>
+          <p className="text-xs text-white/70 uppercase tracking-wider mb-2">{t("Saldo Koin Talenta")}</p>
+          <button onClick={() => setBuyOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-white text-orange-600 font-semibold text-sm px-4 py-1.5 shadow hover:bg-white/90 transition-colors">
+            <Plus className="w-4 h-4" /> {t("Beli Koin")}
+          </button>
         </div>
       </div>
+
+      <BuyCoinsModal open={buyOpen} onClose={() => setBuyOpen(false)} onSuccess={(bal) => { setBalance(bal); load(); }} />
 
       {/* Kelas saya */}
       {redemptions.length > 0 && (

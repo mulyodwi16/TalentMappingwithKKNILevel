@@ -81,6 +81,31 @@ router.get("/shop/redemptions", async (req, res) => {
   }
 });
 
+// ── Beli Koin / Top-up ─── SIMULASI untuk demo (TANPA payment gateway asli) ────
+// Koin ditambahkan langsung via award() & tercatat di buku besar (refType "topup", orderId unik
+// → boleh top-up berkali-kali). Tidak ada transaksi uang sungguhan. Harga dalam Rupiah (IDR).
+const COIN_PACKAGES = [
+  { id: "starter", label: "Starter",  coins: 100,  bonus: 0,   price: 15000 },
+  { id: "populer", label: "Populer",  coins: 300,  bonus: 30,  price: 40000, popular: true },
+  { id: "hemat",   label: "Hemat",    coins: 600,  bonus: 90,  price: 75000 },
+  { id: "pro",     label: "Pro",      coins: 1200, bonus: 250, price: 140000 },
+];
+const PAY_METHODS = new Set(["qris", "gopay", "ovo", "dana", "bank", "card"]);
+
+router.get("/coins/packages", (req, res) => {
+  res.json({ packages: COIN_PACKAGES, currency: "IDR", demo: true });
+});
+
+router.post("/coins/purchase", async (req, res) => {
+  const pkg = COIN_PACKAGES.find((p) => p.id === String(req.body?.packageId ?? ""));
+  if (!pkg) return res.status(404).json({ error: "Paket koin tidak ditemukan." });
+  const method = PAY_METHODS.has(String(req.body?.method)) ? String(req.body.method) : "qris";
+  const total = pkg.coins + pkg.bonus;
+  const orderId = "TOPUP-" + randomBytes(5).toString("hex").toUpperCase();
+  const r = await award(req.user.id, total, `Top-up Koin — paket ${pkg.label} (${method}) [demo]`, { type: "topup", id: orderId });
+  res.json({ ok: true, orderId, credited: total, coins: pkg.coins, bonus: pkg.bonus, price: pkg.price, method, balance: r.balance });
+});
+
 router.post("/shop/redeem", async (req, res) => {
   const userId = req.user.id;
   const item = getShopItem(String(req.body?.itemId ?? ""));
