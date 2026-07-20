@@ -602,3 +602,31 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id])
 }
+
+// ── Cermin katalog AvatarEdu (kurasi admin) ──────────────────────────────────
+// Katalog partner disalin ke sini saat admin menekan Sync, supaya admin bisa memilih
+// course mana yang tampil ke talenta - tanpa itu, satu-satunya cara mengatur katalog
+// adalah menebak slug secara manual. `published` & `displayOrder` adalah keputusan admin
+// dan TIDAK PERNAH ditimpa saat sync berikutnya.
+model AvatarEduCourse {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  remoteId       String?
+  title          String
+  description    String?
+  thumbnailUrl   String?
+  level          String?
+  price          Int?
+  formattedPrice String?
+  durationHours  Float?
+  totalChapters  Int?
+  totalLessons   Int?
+  categoryName   String?
+  categorySlug   String?
+  creatorName    String?
+  published      Boolean  @default(false)
+  displayOrder   Int      @default(0)
+  syncedAt       DateTime @default(now())
+
+  @@index([published, displayOrder])
+}

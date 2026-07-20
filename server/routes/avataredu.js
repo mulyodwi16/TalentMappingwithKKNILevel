@@ -58,12 +58,27 @@ router.get("/featured", async (_req, res) => {
   if (!hasKey()) return res.status(503).json({ error: "AVATAREDU_API_KEY not set" });
   const cfg = await getConfig();
   if (!cfg.enabled) return res.json({ data: [], enabled: false });
+
+  const bySlug = async (slugs) => {
+    const results = await Promise.all(slugs.map(async (slug) => {
+      try { const r = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}`, { headers: avHeaders() }); return r.ok ? (await r.json()).data : null; } catch { return null; }
+    }));
+    return results.filter(Boolean);
+  };
+
   try {
+    // Urutan penentu: kurasi katalog (sakelar per course di admin) → daftar slug manual →
+    // kata kunci pencarian. Kurasi katalog didahulukan karena itu yang paling eksplisit.
+    const curated = await prisma.avatarEduCourse.findMany({
+      where: { published: true },
+      orderBy: [{ displayOrder: "asc" }, { title: "asc" }],
+      select: { slug: true },
+    }).catch(() => []);
+    if (curated.length) {
+      return res.json({ data: await bySlug(curated.map((c) => c.slug)), enabled: true, source: "curated" });
+    }
     if (cfg.featuredSlugs?.length) {
-      const results = await Promise.all(cfg.featuredSlugs.map(async (slug) => {
-        try { const r = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}`, { headers: avHeaders() }); return r.ok ? (await r.json()).data : null; } catch { return null; }
-      }));
-      return res.json({ data: results.filter(Boolean), enabled: true });
+      return res.json({ data: await bySlug(cfg.featuredSlugs), enabled: true, source: "slugs" });
     }
     const { data, fallback } = await fetchCourses({ q: cfg.featuredQuery, per_page: 9 });
     res.json({ ...data, enabled: true, fallback });

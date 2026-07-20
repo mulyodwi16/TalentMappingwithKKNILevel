@@ -265,6 +265,107 @@ router.put("/avataredu", async (req, res) => {
   res.json(cfg);
 });
 
+// ── Katalog AvatarEdu: cermin lokal + kurasi per course ───────────────────────
+// Sebelum ini admin hanya bisa mengatur katalog dengan menebak slug. Sekarang katalog
+// partner disalin ke basis data lalu tiap course punya sakelar tampil/sembunyi.
+
+router.get("/avataredu/courses", async (_req, res) => {
+  const courses = await prisma.avatarEduCourse.findMany({
+    orderBy: [{ displayOrder: "asc" }, { title: "asc" }],
+  });
+  const lastSyncAt = courses.reduce((a, c) => (!a || c.syncedAt > a ? c.syncedAt : a), null);
+  res.json({
+    total: courses.length,
+    published: courses.filter((c) => c.published).length,
+    lastSyncAt,
+    hasKey: !!process.env.AVATAREDU_API_KEY,
+    courses,
+  });
+});
+
+// Ambil seluruh katalog partner lalu simpan. Katalognya kecil (~10 course), jadi cukup
+// ditarik langsung; jeda antar halaman menjaga jarak dari batas laju partner.
+router.post("/avataredu/sync", async (req, res) => {
+  const key = process.env.AVATAREDU_API_KEY;
+  if (!key) return res.status(503).json({ error: "API key AvatarEdu belum diatur di server." });
+
+  const headers = { "X-API-Key": key, Accept: "application/json" };
+  const collected = [];
+  const errors = [];
+  try {
+    for (let page = 1; page <= 20; page++) {
+      if (page > 1) await new Promise((r) => setTimeout(r, 600));
+      const r = await fetch(`https://avataredu.ai/api/v1/courses?per_page=50&page=${page}`, { headers });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { errors.push(d?.message || `HTTP ${r.status}`); break; }
+      const rows = Array.isArray(d?.data) ? d.data : [];
+      collected.push(...rows);
+      const total = d?.meta?.total ?? rows.length;
+      const perPage = d?.meta?.per_page ?? 50;
+      if (page >= Math.ceil(total / perPage) || rows.length === 0) break;
+    }
+  } catch (e) {
+    errors.push(e.message);
+  }
+  if (!collected.length) {
+    return res.status(502).json({ error: errors[0] || "Katalog AvatarEdu kosong atau tidak bisa dihubungi." });
+  }
+
+  const num = (v) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+  for (const c of collected) {
+    // published & displayOrder sengaja TIDAK ikut diperbarui - itu keputusan admin.
+    const data = {
+      remoteId: c.id != null ? String(c.id) : null,
+      title: String(c.title || c.slug || "Course"),
+      description: c.description ?? null,
+      thumbnailUrl: c.thumbnail_url ?? null,
+      level: c.level ?? null,
+      price: num(c.price),
+      formattedPrice: c.formatted_price ?? null,
+      durationHours: num(c.duration_hours),
+      totalChapters: num(c.total_chapters),
+      totalLessons: num(c.total_lessons),
+      categoryName: c.category?.name ?? null,
+      categorySlug: c.category?.slug ?? null,
+      creatorName: c.creator?.name ?? null,
+      syncedAt: new Date(),
+    };
+    await prisma.avatarEduCourse.upsert({
+      where: { slug: String(c.slug) },
+      update: data,
+      create: { slug: String(c.slug), ...data },
+    });
+  }
+
+  await audit(req, "sync_avataredu_catalog", "avataredu", `${collected.length} course`);
+  const total = await prisma.avatarEduCourse.count();
+  const published = await prisma.avatarEduCourse.count({ where: { published: true } });
+  res.json({ synced: collected.length, total, published, errors });
+});
+
+router.patch("/avataredu/courses/:id", async (req, res) => {
+  const b = req.body || {};
+  const data = {};
+  if (typeof b.published === "boolean") data.published = b.published;
+  if (b.displayOrder != null && Number.isFinite(Number(b.displayOrder))) {
+    data.displayOrder = Math.max(0, Math.min(9999, Math.round(Number(b.displayOrder))));
+  }
+  if (!Object.keys(data).length) return res.status(400).json({ error: "Tidak ada perubahan." });
+  try {
+    const course = await prisma.avatarEduCourse.update({ where: { id: req.params.id }, data });
+    res.json(course);
+  } catch {
+    res.status(404).json({ error: "Course tidak ditemukan." });
+  }
+});
+
+router.post("/avataredu/courses/publish-all", async (req, res) => {
+  const published = req.body?.published !== false;
+  const r = await prisma.avatarEduCourse.updateMany({ data: { published } });
+  await audit(req, published ? "publish_all_avataredu" : "hide_all_avataredu", "avataredu", `${r.count} course`);
+  res.json({ affected: r.count, published });
+});
+
 function safeUser(u) {
   const { passwordHash: _, certifications, ...rest } = u;
   return { ...rest, certifications: JSON.parse(certifications) };
