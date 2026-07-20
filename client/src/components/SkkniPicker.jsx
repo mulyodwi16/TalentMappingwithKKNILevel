@@ -4,7 +4,7 @@ import { Search, Loader2, X, CheckCircle2 } from "lucide-react";
 import api from "../api/client.js";
 import { useLang } from "../lib/i18n.jsx";
 
-// Modal pencarian & pemilihan kompetensi SKKNI — kategori + infinite scroll (muat per 100,
+// Modal pencarian & pemilihan kompetensi SKKNI - kategori + infinite scroll (muat per 100,
 // item di luar layar di-hide via content-visibility agar hemat, scroll tetap jalan sampai habis).
 // Dipakai di Profil (ganti kompetensi) & Register wizard (fase 2).
 // selectOnly=true → hanya kembalikan item terpilih (TIDAK memanggil /skkni/choose).
@@ -36,7 +36,7 @@ export default function SkkniPicker({ onClose, onChosen, selectOnly = false }) {
       setTotal(d.total ?? (d.items?.length || 0));
       if (listRef.current) listRef.current.scrollTop = 0;
     } catch (e) {
-      toast.error(typeof e === "string" ? e : "Gagal mencari"); // di luar scope t (useCallback tanpa dep) — fallback ID
+      toast.error(typeof e === "string" ? e : "Gagal mencari"); // di luar scope t (useCallback tanpa dep) - fallback ID
     } finally {
       setSearching(false);
     }
@@ -97,7 +97,7 @@ export default function SkkniPicker({ onClose, onChosen, selectOnly = false }) {
         <div className="flex items-center justify-between mb-3">
           <div>
             <h3 className="font-semibold flex items-center gap-2" style={{ color: "var(--text-base)" }}><Search className="w-4 h-4 text-brand-600" /> {t("Pilih Kompetensi Target")}</h3>
-            <p className="text-[11px] mt-0.5" style={{ color: "var(--text-4)" }}>{t("Pilih bidang/profesi sesuai tujuan kariermu — jadi acuan semua fitur.")}</p>
+            <p className="text-[11px] mt-0.5" style={{ color: "var(--text-4)" }}>{t("Pilih bidang/profesi sesuai tujuan kariermu - jadi acuan semua fitur.")}</p>
           </div>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-red-50 hover:text-red-500" style={{ color: "var(--text-4)" }}><X className="w-4 h-4" /></button>
         </div>
@@ -135,7 +135,7 @@ export default function SkkniPicker({ onClose, onChosen, selectOnly = false }) {
           ))}
           {!searching && items.length > 0 && (
             <p className="text-[11px] text-center pt-2 pb-1" style={{ color: "var(--text-4)" }}>
-              {loadingMore ? t("Memuat lagi…") : items.length >= total ? t("{n} kompetensi (semua ditampilkan)", { n: total }) : t("{a} dari {b} — scroll untuk memuat lagi", { a: items.length, b: total })}
+              {loadingMore ? t("Memuat lagi…") : items.length >= total ? t("{n} kompetensi (semua ditampilkan)", { n: total }) : t("{a} dari {b} - scroll untuk memuat lagi", { a: items.length, b: total })}
             </p>
           )}
         </div>

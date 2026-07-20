@@ -1,6 +1,6 @@
 import { rankOf } from "../lib/rank.js";
 
-// Emblem rank ala game (Bronze→Legend) — SVG murni, skalabel, tema TalentaAI.
+// Emblem rank ala game (Bronze→Legend) - SVG murni, skalabel, tema TalentaAI.
 // Tiap tier memakai warnanya sendiri (dari lib/rank.js) dgn bahasa desain yang konsisten:
 // perisai gem bergradien + rim metalik, sayap & mahkota yang bertambah seiring tier.
 

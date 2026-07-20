@@ -63,7 +63,7 @@ app.use("/api/evidence",  evidenceRoutes);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 
-// Gamifikasi mounted di "/api" (requireAuth global) — HARUS setelah rute publik seperti /api/health.
+// Gamifikasi mounted di "/api" (requireAuth global) - HARUS setelah rute publik seperti /api/health.
 app.use("/api",           gamificationRoutes);
 
 if (process.env.NODE_ENV === "production") {

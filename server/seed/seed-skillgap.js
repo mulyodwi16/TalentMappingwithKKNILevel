@@ -1,4 +1,4 @@
-// Restore data "Skill Gap" demo dari fixture (server/seed/fixtures/skillgap.json) — agar
+// Restore data "Skill Gap" demo dari fixture (server/seed/fixtures/skillgap.json) - agar
 // clone/DB baru langsung punya bahan Skill Gap yang ramai (radar, gap, learning path) TANPA
 // perlu tarik katalog Kemnaker atau ambil ujian manual. Dipanggil dari seed.js.
 //
@@ -25,18 +25,18 @@ function loadFixture() {
 export async function restoreSkillGap({ force = false } = {}) {
   const fx = loadFixture();
   if (!fx || !Array.isArray(fx.talents) || !fx.talents.length) {
-    console.log("Skill-gap fixture tidak ada / kosong — dilewati.");
+    console.log("Skill-gap fixture tidak ada / kosong - dilewati.");
     return { skipped: true };
   }
 
   const emails = fx.talents.map((t) => t.email);
   const demo = await prisma.user.findMany({ where: { email: { in: emails } }, select: { id: true, email: true } });
-  if (!demo.length) { console.log("Skill-gap: user demo belum ada — dilewati (jalankan setelah seed user)."); return { skipped: true }; }
+  if (!demo.length) { console.log("Skill-gap: user demo belum ada - dilewati (jalankan setelah seed user)."); return { skipped: true }; }
 
   // Anti-clobber: kalau sudah ada assessment milik demo user, JANGAN timpa (kecuali force).
   if (!force) {
     const existing = await prisma.skillAssessment.count({ where: { userId: { in: demo.map((u) => u.id) } } });
-    if (existing > 0) { console.log(`Skill-gap: sudah ada ${existing} assessment demo — restore dilewati (pakai --force untuk menimpa).`); return { skipped: true }; }
+    if (existing > 0) { console.log(`Skill-gap: sudah ada ${existing} assessment demo - restore dilewati (pakai --force untuk menimpa).`); return { skipped: true }; }
   }
 
   // 1) Upsert dokumen SKKNI + unit (acuan chosenUnitCodeSet & skill gap; tak perlu Kemnaker).

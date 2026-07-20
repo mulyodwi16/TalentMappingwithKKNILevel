@@ -1,5 +1,5 @@
 import { StrictMode } from "react";
-// Terapkan tema SEBELUM render pertama (anti-flash). #9: tema ikut AKUN — bila ada sesi login
+// Terapkan tema SEBELUM render pertama (anti-flash). #9: tema ikut AKUN - bila ada sesi login
 // terpersist, pakai preferensinya; bila belum login (pra-login) → default BIRU NAVY. Aksen custom
 // TIDAK disimpan di key global, jadi tak bocor ke beranda/login/daftar maupun antar-akun.
 import { applyUserPrefs, applyDefaultTheme } from "./lib/theme.js";

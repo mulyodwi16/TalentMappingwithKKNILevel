@@ -4,7 +4,7 @@ import { rankOf, rankName } from "../lib/rank.js";
 import RankIcon from "./RankIcon.jsx";
 import { useLang } from "../lib/i18n.jsx";
 
-// Overlay perayaan saat user NAIK RANK — "feel of accomplishment".
+// Overlay perayaan saat user NAIK RANK - "feel of accomplishment".
 // Ditrigger Dashboard saat rank efektif > rank terakhir yang dilihat (localStorage).
 export default function RankUpOverlay({ from, to, onClose }) {
   const { t } = useLang();
@@ -18,7 +18,7 @@ export default function RankUpOverlay({ from, to, onClose }) {
     return () => { clearTimeout(t); window.removeEventListener("keydown", onKey); };
   }, [onClose]);
 
-  // Konfeti deterministik (tanpa Math.random — dilarang di beberapa lingkungan; pakai index).
+  // Konfeti deterministik (tanpa Math.random - dilarang di beberapa lingkungan; pakai index).
   const confetti = useMemo(() => Array.from({ length: 34 }).map((_, i) => {
     const left = (i * 37) % 100;
     const delay = ((i * 13) % 100) / 100 * 0.8;

@@ -7,7 +7,7 @@ const useAuthStore = create(
     (set) => ({
       token: null,
       user: null,
-      // Saat login: terapkan preferensi tampilan tersimpan akun (#9) — tema ikut AKUN, bukan browser.
+      // Saat login: terapkan preferensi tampilan tersimpan akun (#9) - tema ikut AKUN, bukan browser.
       setAuth: (token, user) => { applyUserPrefs(user); set({ token, user }); },
       // Saat logout: kembalikan ke tampilan DEFAULT (biru navy) agar kustomisasi akun tak menetap di pra-login.
       logout: () => { applyDefaultTheme(); set({ token: null, user: null }); },

@@ -66,7 +66,7 @@ function GapCard({ a, step }) {
       </div>
 
       {met ? (
-        <p className="text-[11px] text-emerald-500 flex items-center gap-1"><Trophy className="w-3 h-3" /> {t("Tervalidasi lewat ujian — kompetensi terpenuhi.")}</p>
+        <p className="text-[11px] text-emerald-500 flex items-center gap-1"><Trophy className="w-3 h-3" /> {t("Tervalidasi lewat ujian - kompetensi terpenuhi.")}</p>
       ) : step ? (
         <div className="rounded-lg p-3 space-y-2" style={{ background: "var(--bg-raised)" }}>
           <p className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "var(--text-3)" }}><Route className="w-3.5 h-3.5 text-brand-500" /> {t("Langkah dari Learning Path")}</p>
@@ -129,7 +129,7 @@ export default function SkillGap() {
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: "var(--text-base)" }}><Target className="w-5 h-5 text-brand-500" /> {t("Analisis Skill Gap")}</h2>
-        <p className="text-sm mt-1" style={{ color: "var(--text-4)" }}>{t("Perbandingan kompetensimu dengan standar target — lengkap dengan")} <b>{t("langkah menutupnya")}</b> {t("dari Learning Path.")}</p>
+        <p className="text-sm mt-1" style={{ color: "var(--text-4)" }}>{t("Perbandingan kompetensimu dengan standar target - lengkap dengan")} <b>{t("langkah menutupnya")}</b> {t("dari Learning Path.")}</p>
       </div>
 
       {/* Stats */}

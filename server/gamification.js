@@ -1,7 +1,7 @@
 import { prisma } from "./prisma.js";
 
 // Pusat logika gamifikasi "Koin Talenta": dompet, buku besar, reward sekali-bayar (idempoten),
-// dan login harian berantai (streak). Semua fungsi defensif — gamifikasi tak boleh memblok alur inti.
+// dan login harian berantai (streak). Semua fungsi defensif - gamifikasi tak boleh memblok alur inti.
 
 // Besaran reward (bisa disesuaikan).
 export const COIN = {
@@ -14,7 +14,7 @@ export const COIN = {
   mentorDaily: 10,      // bertanya ke AI Mentor (sekali per hari)
   missionClaim: 40,     // klaim bonus setelah semua misi harian selesai
   quizDone: 15,         // menyelesaikan Course Harian (kuis)
-  classComplete: 15,    // menyelesaikan kelas 1 unit (menandai selesai belajar) — sekali/unit
+  classComplete: 15,    // menyelesaikan kelas 1 unit (menandai selesai belajar) - sekali/unit
   unlockUnitCost: 60,   // BIAYA (spend) membuka unit lebih cepat lewat koin (bypass urutan/kelas → ujian)
 };
 

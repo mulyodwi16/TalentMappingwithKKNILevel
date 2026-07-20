@@ -54,7 +54,7 @@ export default function Toko() {
       <div className="rounded-2xl bg-gradient-to-br from-amber-500 via-amber-500/90 to-orange-500 text-white p-6 shadow-lg flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1"><ShoppingBag className="w-5 h-5" /><h1 className="text-xl font-bold text-white">{t("Toko & Kelas")}</h1></div>
-          <p className="text-sm text-white/80 max-w-lg">{t("Kumpulkan Koin dari belajar di Kelas, ujian, & misi harian — lalu tukar dengan kelas premium & materi eksklusif untuk mempercepat kenaikan Skill Rank-mu.")}</p>
+          <p className="text-sm text-white/80 max-w-lg">{t("Kumpulkan Koin dari belajar di Kelas, ujian, & misi harian - lalu tukar dengan kelas premium & materi eksklusif untuk mempercepat kenaikan Skill Rank-mu.")}</p>
         </div>
         <div className="text-right">
           <div className="flex items-center gap-2 justify-end"><Coins className="w-7 h-7" /><span className="text-4xl font-bold font-mono">{balance ?? "…"}</span></div>

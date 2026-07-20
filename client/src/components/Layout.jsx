@@ -35,7 +35,7 @@ export default function Layout() {
         </main>
       </div>
 
-      {/* AI Companion Onyen (#14/#15) — avatar kiri-bawah, menggantikan tombol mentor kanan-bawah */}
+      {/* AI Companion Onyen (#14/#15) - avatar kiri-bawah, menggantikan tombol mentor kanan-bawah */}
       <CompanionAvatar />
     </div>
   );

@@ -59,7 +59,7 @@ router.get("/unit/:code", async (req, res) => {
 });
 
 // Pelajaran MENDALAM bertahap (course player). Digenerate SEKALI per unit lalu
-// di-cache permanen (UnitCourse.content.lessons) — request berikutnya instan.
+// di-cache permanen (UnitCourse.content.lessons) - request berikutnya instan.
 router.get("/unit/:code/lessons", async (req, res) => {
   const code = req.params.code;
   const chosen = await chosenDoc(req.user.id);

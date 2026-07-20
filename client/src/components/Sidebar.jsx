@@ -11,7 +11,7 @@ import useAuthStore from "../store/authStore.js";
 import Logo from "./Logo.jsx";
 import { useLang } from "../lib/i18n.jsx";
 
-// Item nav (Profil dipindah ke dropdown ikon profil di Topbar — #16).
+// Item nav (Profil dipindah ke dropdown ikon profil di Topbar - #16).
 const USER_MAIN   = { to: "/app/dashboard", label: "Dashboard", Icon: LayoutDashboard };
 const USER_LEARN  = [
   { to: "/app/kelas",         label: "Kelas",         Icon: GraduationCap },
@@ -136,7 +136,7 @@ export default function Sidebar({ open, onClose }) {
         </button>
       </div>
 
-      {/* Kartu akun: foto + data (di bawah logo, di atas menu — #10) */}
+      {/* Kartu akun: foto + data (di bawah logo, di atas menu - #10) */}
       <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
         {(() => {
           const inner = (

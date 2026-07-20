@@ -74,13 +74,13 @@ export default function CVUpload() {
                 {result.predictedLevel}
               </div>
               <div>
-                <p className="text-xs mb-0.5" style={{ color: "var(--text-4)" }}>{t("Skill Rank Terprediksi (seed pendidikan)")}</p>
+                <p className="text-xs mb-0.5" style={{ color: "var(--text-4)" }}>{t("Skill Rank Terprediksi (perkiraan dari pendidikan)")}</p>
                 <p className="text-xl font-bold" style={{ color: "var(--text-base)" }}>{rankName(result.predictedLevel)}<span className="text-sm font-normal" style={{ color: "var(--text-4)" }}> · {result.levelInfo?.title}</span></p>
                 <p className="text-sm" style={{ color: "var(--text-4)" }}>{result.levelInfo?.jobGroup}</p>
               </div>
             </div>
             <p className="text-[11px] mt-3 flex items-start gap-1.5" style={{ color: "var(--text-4)" }}>
-              <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" /> {t("CV jadi")} <b>{t("bahan pembanding")}</b> {t("& mengangkat seed rank — tapi rank & kompetensi sebenarnya")} <b>{t("divalidasi lewat ujian")}</b>{t(", bukan dari CV.")}
+              <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" /> {t("CV jadi")} <b>{t("bahan pembanding")}</b> {t("& mengangkat rank awal - tapi rank & kompetensi sebenarnya")} <b>{t("divalidasi lewat ujian")}</b>{t(", bukan dari CV.")}
             </p>
           </div>
 
@@ -89,7 +89,7 @@ export default function CVUpload() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="rounded-xl p-4" style={{ background: "var(--bg-raised)" }}>
                 <p className="text-xs mb-1" style={{ color: "var(--text-4)" }}>{t("Pendidikan")}</p>
-                <p className="font-semibold" style={{ color: "var(--text-base)" }}>{result.profile?.education || "—"}</p>
+                <p className="font-semibold" style={{ color: "var(--text-base)" }}>{result.profile?.education || "-"}</p>
               </div>
               <div className="rounded-xl p-4" style={{ background: "var(--bg-raised)" }}>
                 <p className="text-xs mb-1" style={{ color: "var(--text-4)" }}>{t("Pengalaman")}</p>
@@ -163,7 +163,7 @@ function SupportingData() {
           <ShieldCheck className="w-4 h-4 text-brand-500" /> {t("Data Pendukung Validasi")}
         </h3>
         <p className="text-xs mt-1" style={{ color: "var(--text-4)" }}>
-          {t("Portofolio, media sosial, & sertifikat memperkuat")} <b>{t("klaim skill")}</b>{t("-mu — dipakai AI saat kamu mengajukan bukti di")} <Link to="/app/jobs" className="text-brand-500 hover:underline">{t("Peta Posisi")}</Link>. {t("Ingat: kompetensi baru")} <b>{t("sah setelah lulus ujian")}</b>.
+          {t("Portofolio, media sosial, & sertifikat memperkuat")} <b>{t("klaim skill")}</b>{t("-mu - dipakai AI saat kamu mengajukan bukti di")} <Link to="/app/jobs" className="text-brand-500 hover:underline">{t("Peta Posisi")}</Link>. {t("Ingat: kompetensi baru")} <b>{t("sah setelah lulus ujian")}</b>.
         </p>
       </div>
 

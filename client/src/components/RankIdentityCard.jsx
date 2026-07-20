@@ -3,7 +3,7 @@ import RankIcon from "./RankIcon.jsx";
 import { useLang } from "../lib/i18n.jsx";
 import useIsDark from "../lib/useIsDark.js";
 
-// Kartu identitas ala profil game — DI LUAR frame rank, kolom kanan.
+// Kartu identitas ala profil game - DI LUAR frame rank, kolom kanan.
 // Foto BESAR di atas, informasi data diri tepat di bawahnya.
 // props:
 //  level    : rank efektif (untuk warna tier + emblem mini)
@@ -62,7 +62,7 @@ export default function RankIdentityCard({ level, identity }) {
 
       {/* Informasi data diri di bawah foto */}
       <div className="mt-4 w-full min-w-0">
-        <p className="truncate text-lg font-bold text-white">{name || "—"}</p>
+        <p className="truncate text-lg font-bold text-white">{name || "-"}</p>
         {subtitle && <p className="truncate text-xs text-slate-400 mt-0.5">{subtitle}</p>}
         {email && <p className="truncate text-[11px] text-slate-500 mt-0.5">{email}</p>}
         {targetLabel && (

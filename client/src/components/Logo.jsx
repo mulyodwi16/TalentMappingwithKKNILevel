@@ -1,4 +1,4 @@
-// Logo resmi TalentaAI — gem-perisai (senada emblem rank) dengan monogram "T" + kilau AI.
+// Logo resmi TalentaAI - gem-perisai (senada emblem rank) dengan monogram "T" + kilau AI.
 // Wordmark: "Talenta" (warna teks) + "AI" (aksen tosca). Pakai di sidebar, landing, auth.
 export default function Logo({ size = 34, withWord = true, subtitle = "Skill Rank System", className = "" }) {
   return (

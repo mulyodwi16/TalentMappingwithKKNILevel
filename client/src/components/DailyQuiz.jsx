@@ -111,7 +111,7 @@ export default function DailyQuiz() {
               </p>
             </div>
           ))}
-          <p className="text-xs text-center" style={{ color: "var(--text-4)" }}>{t("Soal baru menanti besok — beda dari hari ini 🎯")}</p>
+          <p className="text-xs text-center" style={{ color: "var(--text-4)" }}>{t("Soal baru menanti besok - beda dari hari ini 🎯")}</p>
         </div>
       )}
     </div>

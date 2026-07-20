@@ -12,7 +12,7 @@ const SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
 const makeToken = (u) =>
   jwt.sign({ id: u.id, email: u.email, role: u.role, name: u.name }, SECRET, { expiresIn: "8h" });
 
-// Bentuk objek user untuk klien — sertakan preferensi tampilan (#9) agar diterapkan saat login.
+// Bentuk objek user untuk klien - sertakan preferensi tampilan (#9) agar diterapkan saat login.
 const authUser = (u) => ({
   id: u.id, email: u.email, role: u.role, name: u.name,
   themeMode: u.themeMode ?? null, accent: u.accent ?? null,
@@ -58,7 +58,7 @@ router.post("/register", async (req, res) => {
 });
 
 // ── Login Google (OAuth) ──────────────────────────────────────────────────────
-// Client ID BUKAN rahasia (dipakai FE untuk render tombol GIS) — aman diekspos.
+// Client ID BUKAN rahasia (dipakai FE untuk render tombol GIS) - aman diekspos.
 router.get("/google-config", (req, res) => {
   res.json({ clientId: process.env.GOOGLE_CLIENT_ID || null });
 });

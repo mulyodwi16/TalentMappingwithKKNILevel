@@ -1,4 +1,4 @@
-// Sistem "Skill Rank" (gamifikasi) — memetakan 9 jenjang internal ke tier ala esports.
+// Sistem "Skill Rank" (gamifikasi) - memetakan 9 jenjang internal ke tier ala esports.
 // Struktur 9-level tetap SELARAS KKNI di dalam; ini murni lapisan tampilan (display).
 export const RANKS = [
   { level: 1, name: "Bronze",      color: "#b8763e" },
@@ -16,7 +16,7 @@ export function rankOf(level) {
   return RANKS.find((r) => r.level === level) || null;
 }
 export function rankName(level) {
-  return rankOf(level)?.name || "—";
+  return rankOf(level)?.name || "-";
 }
 // mis. "Gold · Rank 3"
 export function rankLabel(level) {
@@ -27,7 +27,7 @@ export function rankColor(level) {
   return rankOf(level)?.color || "#94a3b8";
 }
 
-// Batas masteryScore per tier — MIRROR server/rankcalc.js TIERS (jaga tetap sinkron).
+// Batas masteryScore per tier - MIRROR server/rankcalc.js TIERS (jaga tetap sinkron).
 // masteryScore = unitLulus*8 + sertifikat*10 + course*4.
 export const RANK_TIERS = [
   { min: 160, level: 9 },
@@ -40,7 +40,7 @@ export const RANK_TIERS = [
 ];
 
 // Progres "LP bar" dalam tier saat ini: seberapa jauh menuju tier berikutnya.
-// Mengembalikan { pct, need, nextLevel, atCap } — pct 0..100 dalam tier berjalan.
+// Mengembalikan { pct, need, nextLevel, atCap } - pct 0..100 dalam tier berjalan.
 export function tierProgress(score = 0, cap = 9) {
   const asc = [...RANK_TIERS].sort((a, b) => a.min - b.min);
   const curFloor = asc.filter((t) => score >= t.min).pop() || asc[0];

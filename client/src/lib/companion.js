@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 // ── Helper bersama AI Companion "Onyen" (#14/#15) ─────────────────────────────
 // Dipakai CompanionAvatar (avatar kecil kiri-bawah) & halaman Mentor (bust besar kanan).
 // Aset di client/public/companion/: <emosi>.png (badan penuh 283×360) + bust_<emosi>.png
-// (setengah badan 500×414) + varian *_blink (kecuali happy — tak punya blink).
+// (setengah badan 500×414) + varian *_blink (kecuali happy - tak punya blink).
 
 export const EMOTIONS = ["neutral", "happy", "sadness", "surprised", "fear", "anger", "disgust"];
 export const HAS_BLINK = new Set(["neutral", "sadness", "surprised", "fear", "anger", "disgust"]);

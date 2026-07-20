@@ -115,7 +115,7 @@ function ReviewBreakdown({ breakdown }) {
   );
 }
 
-// Modal review riwayat ujian — buka kembali soal + jawaban untuk dipelajari.
+// Modal review riwayat ujian - buka kembali soal + jawaban untuk dipelajari.
 function HistoryReviewModal({ id, onClose }) {
   const { t } = useLang();
   const { data, isLoading } = useQuery({ queryKey: ["exam-review", id], queryFn: () => api.get(`/skkni/exam-history/${id}`), enabled: !!id });
@@ -148,7 +148,7 @@ function HistoryReviewModal({ id, onClose }) {
   );
 }
 
-// Riwayat ujian unit — daftar hasil untuk dibuka kembali (fitur belajar dari kesalahan).
+// Riwayat ujian unit - daftar hasil untuk dibuka kembali (fitur belajar dari kesalahan).
 function ExamHistory() {
   const { t } = useLang();
   const [viewId, setViewId] = useState(null);
@@ -197,7 +197,7 @@ function UnitPicker({ chosen, onPick }) {
         </div>
         <p className="text-sm mb-1" style={{ color: "var(--text-3)" }}>{chosen.title}</p>
         <p className="text-xs" style={{ color: "var(--text-4)" }}>
-          {t("Tiap unit diuji terpisah dengan jumlah soal berbeda sesuai kompleksitasnya. Selesaikan")} <b>{t("Kelas")}</b> {t("unit untuk membuka ujiannya — lulus (≥60%) menerbitkan sertifikat unit.")}
+          {t("Tiap unit diuji terpisah dengan jumlah soal berbeda sesuai kompleksitasnya. Selesaikan")} <b>{t("Kelas")}</b> {t("unit untuk membuka ujiannya - lulus (≥60%) menerbitkan sertifikat unit.")}
         </p>
         {s && (
           <div className="flex gap-2 mt-3 flex-wrap text-xs">
@@ -247,7 +247,7 @@ function UnitPicker({ chosen, onPick }) {
         </div>
       )}
 
-      {/* Riwayat ujian (#3) — review kembali soal & jawaban untuk dipelajari */}
+      {/* Riwayat ujian (#3) - review kembali soal & jawaban untuk dipelajari */}
       <ExamHistory />
     </div>
   );
@@ -348,7 +348,7 @@ export default function Exam() {
           {isUnit && <p className="text-sm mb-1" style={{ color: "var(--text-3)" }}>{result.unitTitle}</p>}
           <p className={`text-4xl font-black mb-2 ${pct >= 80 ? "text-emerald-400" : pct >= 60 ? "text-amber-400" : "text-red-400"}`}>{pct}%</p>
           {isUnit ? (
-            <p style={{ color: "var(--text-3)" }}>{result.passed ? t("LULUS — sertifikat unit terbit ✓") : t("Belum lulus (butuh ≥60%). Tinjau umpan balik AI di bawah.")}</p>
+            <p style={{ color: "var(--text-3)" }}>{result.passed ? t("LULUS - sertifikat unit terbit ✓") : t("Belum lulus (butuh ≥60%). Tinjau umpan balik AI di bawah.")}</p>
           ) : (
             <p style={{ color: "var(--text-3)" }}>{result.status === "ready" ? t("Siap Naik Level ✓") : result.status === "in_progress" ? t("Dalam Proses") : t("Perlu Peningkatan")}</p>
           )}

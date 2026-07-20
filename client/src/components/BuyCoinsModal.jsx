@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import api from "../api/client.js";
 import { useLang } from "../lib/i18n.jsx";
 
-// SIMULASI beli koin (demo — tanpa payment gateway asli). Koin benar-benar bertambah lewat
+// SIMULASI beli koin (demo - tanpa payment gateway asli). Koin benar-benar bertambah lewat
 // POST /coins/purchase, tercatat di buku besar. Ditandai jelas sebagai simulasi.
 
 const rupiah = (n) => "Rp " + new Intl.NumberFormat("id-ID").format(n || 0);
@@ -21,7 +21,7 @@ const METHODS = [
   { id: "card", label: "Kartu Kredit/Debit", Icon: CreditCard },
 ];
 
-// Pola dekoratif mirip QR (BUKAN kode asli) — hanya untuk tampilan simulasi.
+// Pola dekoratif mirip QR (BUKAN kode asli) - hanya untuk tampilan simulasi.
 function FakeQr() {
   const cells = [];
   for (let i = 0; i < 169; i++) {
@@ -111,7 +111,7 @@ export default function BuyCoinsModal({ open, onClose, onSuccess }) {
           {/* Banner simulasi */}
           <div className="flex items-start gap-2 rounded-lg px-3 py-2 mb-4 text-[11px]" style={{ background: "var(--bg-raised)", color: "var(--text-4)" }}>
             <ShieldCheck className="w-4 h-4 shrink-0 mt-px text-emerald-500" />
-            <span>{t("Simulasi pembayaran untuk demo — tidak ada transaksi uang sungguhan.")}</span>
+            <span>{t("Simulasi pembayaran untuk demo - tidak ada transaksi uang sungguhan.")}</span>
           </div>
 
           {/* STEP 1: pilih paket */}

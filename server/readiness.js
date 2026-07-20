@@ -2,9 +2,9 @@ import { prisma } from "./prisma.js";
 import { chosenUnitCodeSet } from "./competencyScope.js";
 
 // Skor Kesiapan (0–100) terbagi 3 komponen agar transparan:
-//   • CV        (maks 25) — profil/CV terisi & terpetakan.
-//   • Ujian     (maks 60) — rata-rata unit kompetensi yang LULUS (dari SkillAssessment).
-//   • Sertifikat(maks 15) — poin plus: sertifikat & bukti tambahan.
+//   • CV        (maks 25) - profil/CV terisi & terpetakan.
+//   • Ujian     (maks 60) - rata-rata unit kompetensi yang LULUS (dari SkillAssessment).
+//   • Sertifikat(maks 15) - poin plus: sertifikat & bukti tambahan.
 // Total = jumlah ketiganya (maks 100). Rank berasal dari pendidikan, TERPISAH dari kesiapan.
 export const READINESS_WEIGHTS = { cv: 25, exam: 60, cert: 15 };
 

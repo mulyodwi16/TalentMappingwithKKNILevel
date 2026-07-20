@@ -61,7 +61,7 @@ router.put("/profile", async (req, res) => {
   res.json({ ...rest, certifications: JSON.parse(certifications) });
 });
 
-// ── Foto profil (kustomisasi #8) — data URI base64, di-resize kecil di klien ──
+// ── Foto profil (kustomisasi #8) - data URI base64, di-resize kecil di klien ──
 router.put("/avatar", async (req, res) => {
   const { avatarUrl } = req.body || {};
   if (avatarUrl != null && avatarUrl !== "") {
@@ -105,7 +105,7 @@ router.post("/cv-parse", async (req, res) => {
     const profile = extractProfile(text);
     // Pertahankan data pendukung validasi (link/portofolio/sertifikat tambahan) yang diisi manual.
     const prev = safeJson((await prisma.user.findUnique({ where: { id: req.user.id }, select: { cvMeta: true } }))?.cvMeta, {});
-    // CV mengisi data pendidikan/keahlian (bahan pembanding SKKNI). Rank TIDAK diset dari CV —
+    // CV mengisi data pendidikan/keahlian (bahan pembanding SKKNI). Rank TIDAK diset dari CV -
     // pendidikan hanya jadi seed; rank efektif dihitung dari kompetensi (refreshRank).
     const cvMeta = {
       education: profile.education,
@@ -141,7 +141,7 @@ router.post("/cv-parse", async (req, res) => {
 
 // ── Data pendukung validasi CV (#2): portofolio, medsos, sertifikat tambahan ──
 // Data ini memperkaya deteksi klaim skill AI (Peta Posisi) & bukti kompetensi.
-// TIDAK mengubah rank/kesiapan langsung — validasi kompetensi tetap dari lulus ujian.
+// TIDAK mengubah rank/kesiapan langsung - validasi kompetensi tetap dari lulus ujian.
 router.put("/cv-links", async (req, res) => {
   const b = req.body || {};
   const u = await prisma.user.findUnique({ where: { id: req.user.id }, select: { cvMeta: true } });
@@ -310,7 +310,7 @@ router.post("/exam/submit", async (req, res) => {
     await prisma.notification.create({
       data: {
         userId: req.user.id, type: "exam_result",
-        message: `Ujian selesai: readiness ${readiness}% — ${status === "ready" ? "Siap Naik ✓" : status === "in_progress" ? "Dalam Proses" : "Perlu Peningkatan"}`,
+        message: `Ujian selesai: readiness ${readiness}% - ${status === "ready" ? "Siap Naik ✓" : status === "in_progress" ? "Dalam Proses" : "Perlu Peningkatan"}`,
       },
     });
 
@@ -351,7 +351,7 @@ router.get("/attempts", async (req, res) => {
 });
 
 // ── Skill assessments ─────────────────────────────────────────────────────────
-// Skill Gap tampil dari SELURUH unit kompetensi yang dipilih — radar/diagram MUNCUL bahkan
+// Skill Gap tampil dari SELURUH unit kompetensi yang dipilih - radar/diagram MUNCUL bahkan
 // SEBELUM ujian (unit yang belum dinilai = skor 0, gap penuh). Unit yang sudah diuji pakai skor
 // nyata (otomatis terupdate usai ujian). Di-scope ke kompetensi aktif → ganti kompetensi = radar
 // ikut berganti. Tanpa kompetensi target (jalur legacy) → tampilkan assessment apa adanya.

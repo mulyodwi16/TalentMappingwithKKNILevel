@@ -64,11 +64,11 @@ export default function UserManagement() {
                   <td className="px-4 py-3">
                     <span className={`text-xs font-semibold ${ROLE_CLS[u.role]}`}>{t(ROLE_LABEL[u.role])}</span>
                   </td>
-                  <td className="px-4 py-3 text-slate-400">{u.department || "—"}</td>
-                  <td className="px-4 py-3 text-center text-xs">{u.currentKkniLevel ? rankName(u.currentKkniLevel) : "—"}</td>
+                  <td className="px-4 py-3 text-slate-400">{u.department || "-"}</td>
+                  <td className="px-4 py-3 text-center text-xs">{u.currentKkniLevel ? rankName(u.currentKkniLevel) : "-"}</td>
                   <td className="px-4 py-3">
                     <span className={`badge text-xs ${u.status === "ready" ? "badge-ready" : u.status === "in_progress" ? "badge-in-progress" : "badge-not-ready"}`}>
-                      {u.status || "—"}
+                      {u.status || "-"}
                     </span>
                   </td>
                   <td className="px-4 py-3">

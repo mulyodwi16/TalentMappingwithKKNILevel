@@ -74,7 +74,7 @@ function stripAnswers(questions) {
   return questions.map((q, i) => ({ id: i, q: q.q, options: q.options }));
 }
 
-// Judul unit/tema dari kode (untuk label "Topik hari ini") — bukan kode mentah.
+// Judul unit/tema dari kode (untuk label "Topik hari ini") - bukan kode mentah.
 async function resolveTopicName(code, docId) {
   if (!code) return null;
   if (docId) {
@@ -157,8 +157,8 @@ router.get("/quiz", async (req, res) => {
   const userId = req.user.id;
   const day = todayStr();
   try {
-    // Course Harian = SATU per hari (anti-farm). Bila log hari ini sudah ada — untuk kompetensi
-    // MANA PUN — tampilkan itu apa adanya; ganti kompetensi TIDAK me-reset course & statusnya.
+    // Course Harian = SATU per hari (anti-farm). Bila log hari ini sudah ada - untuk kompetensi
+    // MANA PUN - tampilkan itu apa adanya; ganti kompetensi TIDAK me-reset course & statusnya.
     const existing = await todaysQuizLog(userId, day);
     if (existing) {
       const qs = JSON.parse(existing.questions);

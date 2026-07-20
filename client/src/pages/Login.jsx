@@ -69,13 +69,13 @@ export default function Login() {
             }
           },
         });
-        // Kosongkan kontainer dulu — efek re-run saat ganti bahasa, GIS jangan menumpuk tombol.
+        // Kosongkan kontainer dulu - efek re-run saat ganti bahasa, GIS jangan menumpuk tombol.
         gBtnRef.current.innerHTML = "";
         window.google.accounts.id.renderButton(gBtnRef.current, {
           theme: "outline", size: "large", text: "signin_with", shape: "pill", locale: lang, width: 320,
         });
         setGReady(true);
-      } catch { /* Google login opsional — form biasa tetap jalan */ }
+      } catch { /* Google login opsional - form biasa tetap jalan */ }
     })();
     return () => { cancelled = true; };
   }, [onLoggedIn, lang, t]);
@@ -91,7 +91,7 @@ export default function Login() {
         <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full blur-3xl" style={{ background: "rgb(var(--tosca-500) / 0.16)" }} />
       </div>
 
-      {/* Pemilih tema + bahasa — pojok kanan atas */}
+      {/* Pemilih tema + bahasa - pojok kanan atas */}
       <div className="fixed top-4 right-4 z-10 flex items-center gap-2">
         <ThemeToggle />
         <LangToggle />

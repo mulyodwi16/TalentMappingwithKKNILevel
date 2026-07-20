@@ -54,7 +54,7 @@ function WorkerDetailModal({ id, onClose }) {
               {/* Ringkas */}
               <div className="grid grid-cols-3 gap-2">
                 <div className="rounded-xl p-3 text-center" style={{ background: "var(--bg-raised)" }}>
-                  <div className="flex justify-center mb-1">{w?.currentKkniLevel ? <RankBadge level={w.currentKkniLevel} /> : <span style={{ color: "var(--text-4)" }}>—</span>}</div>
+                  <div className="flex justify-center mb-1">{w?.currentKkniLevel ? <RankBadge level={w.currentKkniLevel} /> : <span style={{ color: "var(--text-4)" }}>-</span>}</div>
                   <p className="text-[11px]" style={{ color: "var(--text-4)" }}>{t("Skill Rank")}</p>
                 </div>
                 <div className="rounded-xl p-3 text-center" style={{ background: "var(--bg-raised)" }}>
@@ -249,13 +249,13 @@ export default function HrdDashboard() {
                       <p className="font-medium text-white">{w.name}</p>
                       <p className="text-xs text-slate-500">{w.email}</p>
                     </td>
-                    <td className="py-3 pr-4 text-slate-300">{w.chosenSkkniTitle || <span className="text-slate-600">—</span>}</td>
-                    <td className="py-3 pr-4">{w.currentKkniLevel ? <RankBadge level={w.currentKkniLevel} /> : <span className="text-slate-600">—</span>}</td>
+                    <td className="py-3 pr-4 text-slate-300">{w.chosenSkkniTitle || <span className="text-slate-600">-</span>}</td>
+                    <td className="py-3 pr-4">{w.currentKkniLevel ? <RankBadge level={w.currentKkniLevel} /> : <span className="text-slate-600">-</span>}</td>
                     <td className="py-3 pr-4 text-slate-300">
-                      {w.assessedUnits ? <span><b className="text-emerald-400">{w.passedUnits}</b>/{w.assessedUnits}</span> : <span className="text-slate-600">—</span>}
+                      {w.assessedUnits ? <span><b className="text-emerald-400">{w.passedUnits}</b>/{w.assessedUnits}</span> : <span className="text-slate-600">-</span>}
                     </td>
                     <td className="py-3 pr-4">
-                      {w.certCount ? <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded px-1.5 py-0.5">{w.certCount}</span> : <span className="text-slate-600">—</span>}
+                      {w.certCount ? <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded px-1.5 py-0.5">{w.certCount}</span> : <span className="text-slate-600">-</span>}
                     </td>
                     <td className="py-3 pr-4">
                       <div className="flex items-center gap-2">

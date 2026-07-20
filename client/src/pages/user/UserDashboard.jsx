@@ -30,7 +30,7 @@ const AV_LEVEL = {
 
 // Player SCORM multi-chapter: sidebar bab + progres (kiri), iframe player (kanan).
 // Progres ditangkap dari event postMessage player AvatarEdu (scorm:progress/complete)
-// lalu disimpan di localStorage per course+bab — tak ada progress API dari partner.
+// lalu disimpan di localStorage per course+bab - tak ada progress API dari partner.
 const AV_PROG_KEY = (slug) => `talenta:avprog:${slug}`;
 const AV_ORIGIN = "https://avataredu.ai";
 const isDone = (type, status) =>
@@ -162,7 +162,7 @@ function CoursePlayerModal({ course, onClose }) {
   );
 }
 
-// Kursus interaktif AvatarEdu.ai (kurasi admin via /featured) — dibuka langsung dari dashboard.
+// Kursus interaktif AvatarEdu.ai (kurasi admin via /featured) - dibuka langsung dari dashboard.
 function AvatarEduDashboard() {
   const { t } = useLang();
   const { setBalance } = useCoins();
@@ -181,7 +181,7 @@ function AvatarEduDashboard() {
     setBusy(c.slug);
     try {
       const r = await api.post("/coins/course-start", { slug: c.slug }).catch(() => ({}));
-      if (r?.awarded > 0) { toast.success(t("+{n} Koin — selamat belajar!", { n: r.awarded })); if (typeof r.balance === "number") setBalance(r.balance); }
+      if (r?.awarded > 0) { toast.success(t("+{n} Koin - selamat belajar!", { n: r.awarded })); if (typeof r.balance === "number") setBalance(r.balance); }
       setModal(c);
     } catch (e) {
       toast.error(typeof e === "string" ? e : t("Gagal membuka kursus"));
@@ -272,7 +272,7 @@ export default function UserDashboard() {
     <div className="space-y-6">
       {rankUp && <RankUpOverlay from={rankUp.from} to={rankUp.to} onClose={() => setRankUp(null)} />}
 
-      {/* ── Panggung Rank (hero) full-width — kartu identitas dipindah ke sidebar (#10) ── */}
+      {/* ── Panggung Rank (hero) full-width - kartu identitas dipindah ke sidebar (#10) ── */}
       {rank ? (
         <RankHero
           rank={rank}
@@ -292,7 +292,7 @@ export default function UserDashboard() {
         <div className="card p-8 text-center text-sm" style={{ color: "var(--text-4)" }}>{t("Memuat rank…")}</div>
       )}
 
-      {/* Gamifikasi harian — Course Harian di bawah bonus login (mengisi ruang kosong) */}
+      {/* Gamifikasi harian - Course Harian di bawah bonus login (mengisi ruang kosong) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         <div className="space-y-4">
           <DailyLoginCard />
@@ -301,7 +301,7 @@ export default function UserDashboard() {
         <DailyMissions />
       </div>
 
-      {/* Aksi cepat — launchpad interaksi utama (termasuk yang dipindah dari Profil) */}
+      {/* Aksi cepat - launchpad interaksi utama (termasuk yang dipindah dari Profil) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {actions.map((c) => (
           <Link key={c.to} to={c.to} className="card p-4 hover:scale-[1.03] transition-transform group">

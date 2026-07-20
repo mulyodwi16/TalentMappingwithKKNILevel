@@ -4,7 +4,7 @@ import { Coins } from "lucide-react";
 import { useCoins } from "../hooks/useCoins.js";
 import { useLang } from "../lib/i18n.jsx";
 
-// Pill saldo Koin Talenta — tampil di topbar (khusus User). Menautkan ke Toko.
+// Pill saldo Koin Talenta - tampil di topbar (khusus User). Menautkan ke Toko.
 export default function CoinPill() {
   const { t } = useLang();
   const { balance, refresh } = useCoins();

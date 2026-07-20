@@ -3,7 +3,7 @@ import { prisma } from "../prisma.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { buildSkillProfile, matchJob, safeArr, detectSkillEvidence } from "../jobmatch.js";
 
-// Peta Posisi & Kesiapan (talent mapping internal — BUKAN rekrutmen eksternal):
+// Peta Posisi & Kesiapan (talent mapping internal - BUKAN rekrutmen eksternal):
 // HRD memposting profil posisi berkriteria (level KKNI, skill, pengalaman, sertifikasi) + modul
 // belajar. Pekerja melihat KESIAPAN skill-nya (acuan) & bisa "Jadikan Target" (minat lunak).
 // HRD mendapat TALENT POOL: semua pekerja terurut kecocokan + penanda yang berminat. Admin lihat semua.
@@ -22,7 +22,7 @@ const cleanModules = (arr) =>
     .filter((m) => m.title)
     .slice(0, 20);
 
-// ── Manajemen (HRD/Admin) — didefinisikan sebelum "/:id" ─────────────────────
+// ── Manajemen (HRD/Admin) - didefinisikan sebelum "/:id" ─────────────────────
 router.post("/", requireRole("hrd", "admin"), async (req, res) => {
   const b = req.body || {};
   const me = await prisma.user.findUnique({ where: { id: req.user.id } });
@@ -89,7 +89,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // Kirim CV/portofolio untuk MENGKLAIM sebuah skill posisi (#5). AI mendeteksi indikasi
-// bukti — tapi klaim ini TIDAK memvalidasi kompetensi; validasi hanya dari lulus ujian.
+// bukti - tapi klaim ini TIDAK memvalidasi kompetensi; validasi hanya dari lulus ujian.
 router.post("/:id/detect-skill", requireRole("user"), async (req, res) => {
   const j = await prisma.job.findUnique({ where: { id: req.params.id } });
   if (!j) return res.status(404).json({ error: "Posisi tidak ditemukan." });
@@ -142,7 +142,7 @@ router.delete("/:id", requireRole("hrd", "admin"), async (req, res) => {
   res.json({ ok: true });
 });
 
-// Pekerja menyatakan/mencabut MINAT ("Jadikan Target") — sinyal lunak, bukan lamaran.
+// Pekerja menyatakan/mencabut MINAT ("Jadikan Target") - sinyal lunak, bukan lamaran.
 router.post("/:id/interest", requireRole("user"), async (req, res) => {
   const j = await prisma.job.findUnique({ where: { id: req.params.id } });
   if (!j || j.status !== "open") return res.status(404).json({ error: "Posisi tidak tersedia." });

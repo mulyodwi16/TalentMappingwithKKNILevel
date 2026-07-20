@@ -1,5 +1,5 @@
 // Multi-turn chat helper untuk endpoint OpenAI-compatible. Provider dipilih dari env
-// (prioritas: OpenAI → OpenRouter → MiniMax) — semuanya memakai bentuk /chat/completions.
+// (prioritas: OpenAI → OpenRouter → MiniMax) - semuanya memakai bentuk /chat/completions.
 // Dipakai oleh AI Mentor. Melempar LlmError(status=503) bila tak ada provider terkonfigurasi
 // agar route bisa balas 503 rapi.
 

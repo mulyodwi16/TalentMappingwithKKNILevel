@@ -137,7 +137,7 @@ export async function syncCatalog({ fromPage } = {}) {
 }
 
 // Kick sinkron katalog di latar belakang bila belum selesai (dipanggil saat server start).
-// Catatan: JANGAN gate pada flag `running` yang tersimpan — flag itu bisa "stale=true"
+// Catatan: JANGAN gate pada flag `running` yang tersimpan - flag itu bisa "stale=true"
 // bila proses sebelumnya dimatikan di tengah sinkron. Guard anti-dobel pakai `catalogRunning`
 // (in-memory) di dalam syncCatalog().
 export function kickCatalogSyncIfEmpty() {
@@ -219,7 +219,7 @@ const CATEGORIES = [
 ];
 const FALLBACK_CAT = { key: "lainnya", label: "Lainnya" };
 
-// Cocokkan per KATA UTUH (\b) agar tak salah tangkap substring — mis. "bidang" ≠ "bidan",
+// Cocokkan per KATA UTUH (\b) agar tak salah tangkap substring - mis. "bidang" ≠ "bidan",
 // "perawatan bangunan" ≠ "perawat". Precompile sekali (dipakai berulang atas 1234 dok).
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const CAT_RE = CATEGORIES.map((c) => ({ key: c.key, label: c.label, res: c.kw.map((k) => new RegExp(`\\b${esc(k)}\\b`, "i")) }));
@@ -380,7 +380,7 @@ export async function generateUnitExam(compTitle, units) {
 
 // ══ KELAS & UJIAN PER-UNIT ═══════════════════════════════════════════════════
 // Tiap unit kompetensi punya: (1) materi kelas AI, (2) paket soal AI (jumlah variatif).
-// Keduanya library global per (docId, unitCode) — di-generate sekali, dipakai ulang.
+// Keduanya library global per (docId, unitCode) - di-generate sekali, dipakai ulang.
 
 export const UNIT_Q_MIN = 4;    // jumlah soal minimum per unit
 export const UNIT_Q_MAX = 8;    // maksimum (AI menyesuaikan kompleksitas unit di antara ini)
@@ -431,7 +431,7 @@ async function generateDeepLessons(compTitle, unit, base) {
     `Susun COURSE BERTAHAP yang MENGAJARKAN unit kompetensi: "${unit.title}" (kode ${unit.code}).\n` +
     (base?.keyPoints?.length ? `Cakup poin-poin kunci ini: ${base.keyPoints.join("; ")}.\n` : "") +
     `Buat 4-6 PELAJARAN berurutan (fondasi → praktik). Tiap pelajaran MENGAJAR dengan SPESIFIK: ` +
-    `jelaskan konsep, istilah, angka/standar, cara melakukan — BUKAN ringkasan 2 kalimat. ` +
+    `jelaskan konsep, istilah, angka/standar, cara melakukan - BUKAN ringkasan 2 kalimat. ` +
     `Balas HANYA JSON valid:\n` +
     `{"lessons":[{"title":"judul pelajaran singkat",` +
     `"body":"3-5 paragraf materi mendalam & spesifik (pisahkan paragraf dengan \\n\\n); gaya mengajar, konkret, praktis",` +
@@ -439,10 +439,10 @@ async function generateDeepLessons(compTitle, unit, base) {
     `"example":"1 contoh penerapan nyata di pekerjaan (konkret, bercerita)",` +
     `"sources":[{"label":"nama sumber","url":"https://..."}],` +
     `"ytQuery":"kueri pencarian YouTube 3-6 kata (Indonesia/Inggris) untuk video pembelajaran topik ini"}]}\n` +
-    `ATURAN SUMBER (penting): maksimal 2 per pelajaran; HANYA situs tepercaya & stabil — Wikipedia, ` +
+    `ATURAN SUMBER (penting): maksimal 2 per pelajaran; HANYA situs tepercaya & stabil - Wikipedia, ` +
     `dokumentasi/halaman dukungan resmi vendor (mis. support.google.com, helpx.adobe.com, developer.mozilla.org), ` +
-    `situs lembaga (kemnaker.go.id, bnsp.go.id, ilo.org). Gunakan URL tingkat halaman utama/topik yang PASTI ada — ` +
-    `JANGAN mengarang deep-link artikel spesifik. Bila ragu, cukup 1 sumber Wikipedia. Bahasa Indonesia.`;
+    `situs lembaga (kemnaker.go.id, bnsp.go.id, ilo.org). Gunakan URL tingkat halaman utama/topik yang PASTI ada - ` +
+    `JANGAN mengarang deep-link artikel spesifik. Bila ragu, cukup 1 sumber Wikipedia. Bahasa Indonesia. Untuk semua teks: gunakan tanda hubung biasa "-", JANGAN pakai em dash.`;
   const r = await chatComplete([{ role: "user", content: prompt }], { temperature: 0.5, maxTokens: 3600 });
   const m = (r.content || "").match(/\{[\s\S]*\}/);
   const o = JSON.parse(m ? m[0] : r.content);
@@ -486,7 +486,7 @@ async function resolveYtVideo(query) {
   }
 }
 
-// Lampirkan videoId ke tiap pelajaran yang belum punya (serial — hormati kuota).
+// Lampirkan videoId ke tiap pelajaran yang belum punya (serial - hormati kuota).
 async function attachYtVideos(lessons) {
   let changed = false;
   for (const l of lessons) {
@@ -540,7 +540,7 @@ export async function ensureUnitLessons(docId, unit) {
   return lessons;
 }
 
-// Paket soal 1 unit — 3 TIPE (validasi mendalam, bukan sekadar keberuntungan #6):
+// Paket soal 1 unit - 3 TIPE (validasi mendalam, bukan sekadar keberuntungan #6):
 //  • "mc"          pilihan ganda (pengetahuan)
 //  • "situational" studi kasus situasional (AI menilai penalaran vs keyPoints)
 //  • "steporder"   urutan/tahapan mengerjakan (AI menilai efisiensi vs idealSteps)
@@ -715,7 +715,7 @@ export async function ensureCompetencyWeight(docId) {
   if (!doc) return null;
   if (doc.weightMaxRank) return doc;
   const unitTitles = doc.units.map((u) => u.title);
-  if (!unitTitles.length) return doc; // unit belum ter-cache — tunda
+  if (!unitTitles.length) return doc; // unit belum ter-cache - tunda
   let w;
   try { w = isLlmConfigured() ? await classifyWeightLlm(doc.title, unitTitles) : heuristicWeight(doc.title, unitTitles); }
   catch (e) { console.warn("[skkni] weight LLM gagal, heuristik:", e.message); w = heuristicWeight(doc.title, unitTitles); }

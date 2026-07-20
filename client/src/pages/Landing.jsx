@@ -148,7 +148,7 @@ export default function Landing() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(100px,1fr))", gap: 12 }}>
             {LEVELS.map(({ n, edu }) => (
               <div key={n} style={{ background: dark ? "rgba(59,130,246,0.1)" : "#ffffff", border: `1px solid ${dark ? "rgba(59,130,246,0.2)" : "#bfdbfe"}`, borderRadius: 14, padding: "14px 10px", textAlign: "center" }}>
-                {/* Emblem rank bergambar (aset RankIcon, sama dgn di aplikasi) — bukan angka polos */}
+                {/* Emblem rank bergambar (aset RankIcon, sama dgn di aplikasi) - bukan angka polos */}
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: 8, filter: `drop-shadow(0 2px 6px ${rankColor(n)}55)` }}>
                   <RankIcon level={n} size={52} title={rankName(n)} />
                 </div>
@@ -186,7 +186,7 @@ export default function Landing() {
             {t("Buat Akun Gratis")} <ArrowRight size={18} />
           </Link>
           <p style={{ fontSize: 12, color: dark ? "#3b82f6" : "#93c5fd", marginTop: 20 }}>
-            Demo: user@demo.id / hrd@demo.id / admin@demo.id — password: demo123
+            Demo: user@demo.id / hrd@demo.id / admin@demo.id - password: demo123
           </p>
         </div>
       </section>

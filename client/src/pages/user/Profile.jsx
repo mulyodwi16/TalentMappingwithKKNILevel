@@ -16,7 +16,7 @@ import SkkniPicker from "../../components/SkkniPicker.jsx";
 import { RANKS, rankName, rankOf } from "../../lib/rank.js";
 import { useLang, getLang, dateLocale } from "../../lib/i18n.jsx";
 
-const fmtDate = (d) => (d ? new Date(d).toLocaleDateString(dateLocale(getLang()), { day: "numeric", month: "short", year: "numeric" }) : "—");
+const fmtDate = (d) => (d ? new Date(d).toLocaleDateString(dateLocale(getLang()), { day: "numeric", month: "short", year: "numeric" }) : "-");
 
 export default function Profile() {
   const { t } = useLang();
@@ -50,7 +50,7 @@ export default function Profile() {
     e.target.value = ""; // izinkan pilih file sama lagi
     if (!file) return;
     if (!/^image\//.test(file.type)) { toast.error(t("File harus berupa gambar")); return; }
-    setCropFile(file); // JANGAN langsung unggah — user atur posisi & ukuran dulu.
+    setCropFile(file); // JANGAN langsung unggah - user atur posisi & ukuran dulu.
   }
 
   async function saveCroppedAvatar(dataUrl) {
@@ -145,7 +145,7 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* ── Detail ringkas — 2 kolom agar tak memanjang penuh ke bawah (#1/#3).
+      {/* ── Detail ringkas - 2 kolom agar tak memanjang penuh ke bawah (#1/#3).
           Aksi interaktif (upload CV, ganti kompetensi, tambah bukti, ujian) ada di Dashboard;
           di sini fokus MELIHAT data & pencapaian. Picker/form tetap bisa dibuka via deep-link. ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
@@ -207,7 +207,7 @@ export default function Profile() {
           )}
         </div>
 
-        {/* Kompetensi SKKNI target — patokan semua fitur */}
+        {/* Kompetensi SKKNI target - patokan semua fitur */}
         <SkkniSection chosen={ov.chosenSkkni} doc={chosenDoc} onChanged={load} picking={skkniPicking} setPicking={setSkkniPicking} />
 
         {/* Ringkasan CV */}
@@ -223,7 +223,7 @@ export default function Profile() {
           ) : (
             <div className="space-y-3">
               <div className="grid grid-cols-3 gap-2">
-                <MiniStat icon={GraduationCap} label={t("Pendidikan")} value={cv.education || p.education || "—"} />
+                <MiniStat icon={GraduationCap} label={t("Pendidikan")} value={cv.education || p.education || "-"} />
                 <MiniStat icon={Clock} label={t("Pengalaman")} value={t("{n} tahun", { n: cv.experienceYears ?? p.experienceYears ?? 0 })} />
                 <MiniStat icon={Sparkles} label={t("Keahlian")} value={t("{n} item", { n: [...new Set([...(cv.skills || []), ...(cv.certifications || [])])].length })} />
               </div>
@@ -245,7 +245,7 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* ── Rincian panjang (Kesiapan/Rank + Bukti) — 2 kolom ── */}
+      {/* ── Rincian panjang (Kesiapan/Rank + Bukti) - 2 kolom ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         <ReadinessCard readiness={ov.readiness} rankInfo={ov.rankInfo} rank={ov.rank} level={ov.rank?.effective ?? p.currentKkniLevel} />
         <EvidenceCard rank={ov.rank} onChanged={load} open={evidenceOpen} setOpen={setEvidenceOpen} />
@@ -292,7 +292,7 @@ function ReadinessCard({ readiness, rankInfo, rank, level }) {
         {t("Kesiapan = CV (25) + Ujian (60) + Sertifikat (15, bonus).")}
       </p>
 
-      {/* Penjelasan Rank — diraih dari kompetensi, bukan ijazah */}
+      {/* Penjelasan Rank - diraih dari kompetensi, bukan ijazah */}
       <div className="mt-4 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
         <div className="flex items-center justify-between gap-2 mb-1.5">
           <span className="text-xs font-semibold" style={{ color: "var(--text-base)" }}>{t("Rank kamu")}</span>
@@ -300,7 +300,7 @@ function ReadinessCard({ readiness, rankInfo, rank, level }) {
         </div>
         {rankInfo ? (
           <p className="text-[11px]" style={{ color: "var(--text-3)" }}>
-            <b style={{ color: rk?.color }}>{rk?.name}</b> — {rankInfo.title} ({rankInfo.jobGroup}), {t("setara jenjang")} {rankInfo.educationMapping}.
+            <b style={{ color: rk?.color }}>{rk?.name}</b> - {rankInfo.title} ({rankInfo.jobGroup}), {t("setara jenjang")} {rankInfo.educationMapping}.
           </p>
         ) : (
           <p className="text-[11px]" style={{ color: "var(--text-4)" }}>{t("Rank belum terpetakan.")}</p>
@@ -317,7 +317,7 @@ function ReadinessCard({ readiness, rankInfo, rank, level }) {
             {/* Bobot kompetensi & cap rank (transparansi anti-overcapacity) */}
             {rank.weightCap && (
               <div className="mt-1.5 pt-1.5" style={{ borderTop: "1px dashed var(--border-2)" }}>
-                <span>{t("Bobot kompetensi:")} <b style={{ color: "var(--text-2)" }}>{rank.weightTier || "—"}</b> · {t("rank maks dari ujian:")} <b style={{ color: rankOf(rank.weightCap)?.color }}>{rankName(rank.weightCap)}</b></span>
+                <span>{t("Bobot kompetensi:")} <b style={{ color: "var(--text-2)" }}>{rank.weightTier || "-"}</b> · {t("rank maks dari ujian:")} <b style={{ color: rankOf(rank.weightCap)?.color }}>{rankName(rank.weightCap)}</b></span>
                 {rank.cappedByWeight && (
                   <p className="mt-1 text-amber-600">
                     {t("Rank ujianmu dibatasi bobot kompetensi ini. Untuk melampaui menuju ahli, tambahkan bukti eksternal: sertifikasi resmi (BNSP/nasional/internasional), portofolio, & pengalaman kerja.")}
@@ -353,7 +353,7 @@ function ReadinessCard({ readiness, rankInfo, rank, level }) {
           })}
         </div>
         <p className="text-[10px] mt-1.5" style={{ color: "var(--text-4)" }}>
-          {t("Rank ditentukan kompetensi yang dibuktikan — bukan ijazah. Tiap kompetensi punya bobot berbeda (petani ≠ ahli pertanian): rank via ujian dibatasi bobotnya. Menuju rank ahli butuh bukti eksternal (sertifikasi resmi, portofolio, pengalaman).")}
+          {t("Rank ditentukan kompetensi yang dibuktikan - bukan ijazah. Tiap kompetensi punya bobot berbeda (petani ≠ ahli pertanian): rank via ujian dibatasi bobotnya. Menuju rank ahli butuh bukti eksternal (sertifikasi resmi, portofolio, pengalaman).")}
         </p>
       </div>
     </div>
@@ -386,7 +386,7 @@ function SkkniSection({ chosen, doc, onChanged, picking, setPicking }) {
 
       {!chosen ? (
         <p className="text-sm" style={{ color: "var(--text-3)" }}>
-          {t("Belum ada kompetensi target. Pilih 1 bidang/profesi SKKNI resmi Kemnaker — ini menjadi")}
+          {t("Belum ada kompetensi target. Pilih 1 bidang/profesi SKKNI resmi Kemnaker - ini menjadi")}
           <b> {t("acuan semua fitur")}</b> {t("(skill yang diperlukan, soal ujian, syarat naik rank, analisis gap, mentor).")}
         </p>
       ) : (
@@ -418,7 +418,7 @@ function SkkniSection({ chosen, doc, onChanged, picking, setPicking }) {
           ) : (
             <p className="text-xs" style={{ color: "var(--text-4)" }}>{t("Dokumen ini belum memiliki daftar unit terdigitasi di Kemnaker.")}</p>
           )}
-          <p className="text-[11px]" style={{ color: "var(--text-4)" }}>{t("Sumber: API resmi SKKNI Kemnaker (data tersimpan lokal).")}</p>
+          <p className="text-[11px]" style={{ color: "var(--text-4)" }}>{t("Sumber: data resmi SKKNI Kemnaker.")}</p>
         </div>
       )}
 
@@ -462,12 +462,12 @@ function EditableIdentity({ profile, onSaved, compact = false }) {
   }
 
   const rows = [
-    { icon: User, label: t("Nama"), value: profile.name || "—" },
-    { icon: Building2, label: t("Departemen"), value: profile.department || "—" },
-    { icon: Briefcase, label: t("Posisi"), value: profile.position || "—" },
-    { icon: GraduationCap, label: t("Pendidikan"), value: profile.education || "—" },
+    { icon: User, label: t("Nama"), value: profile.name || "-" },
+    { icon: Building2, label: t("Departemen"), value: profile.department || "-" },
+    { icon: Briefcase, label: t("Posisi"), value: profile.position || "-" },
+    { icon: GraduationCap, label: t("Pendidikan"), value: profile.education || "-" },
     { icon: Clock, label: t("Pengalaman"), value: t("{n} tahun", { n: profile.experienceYears ?? 0 }) },
-    { icon: Target, label: t("Target Rank"), value: profile.targetKkniLevel ? rankName(profile.targetKkniLevel) : "—" },
+    { icon: Target, label: t("Target Rank"), value: profile.targetKkniLevel ? rankName(profile.targetKkniLevel) : "-" },
   ];
 
   return (
@@ -505,7 +505,7 @@ function EditableIdentity({ profile, onSaved, compact = false }) {
           <Field label={t("Pengalaman (tahun)")}><input type="number" min="0" className="input text-sm" value={form.experienceYears} onChange={(e) => setForm({ ...form, experienceYears: e.target.value })} /></Field>
           <Field label={t("Target Rank")}>
             <select className="input text-sm" value={form.targetKkniLevel} onChange={(e) => setForm({ ...form, targetKkniLevel: e.target.value })}>
-              <option value="">{t("— tidak diset —")}</option>
+              <option value="">{t("- tidak diset -")}</option>
               {RANKS.map((r) => <option key={r.level} value={r.level}>{r.name} (Rank {r.level})</option>)}
             </select>
           </Field>
@@ -556,7 +556,7 @@ function EvidenceCard({ rank, onChanged, open, setOpen }) {
       const r = await api.post("/evidence", form, { timeout: 60_000 });
       const st = r.item?.status;
       if (st === "verified") toast.success(t("Bukti terverifikasi AI ✓"));
-      else if (st === "rejected") toast.error(t("Bukti belum bisa diverifikasi — lengkapi detail"));
+      else if (st === "rejected") toast.error(t("Bukti belum bisa diverifikasi - lengkapi detail"));
       else toast(t("Bukti disimpan, menunggu tinjauan"), { icon: "🕓" });
       setForm({ type: "certification", title: "", issuer: "", description: "", url: "" });
       setOpen(false);
@@ -583,7 +583,7 @@ function EvidenceCard({ rank, onChanged, open, setOpen }) {
         <button onClick={() => setOpen(!open)} className="text-xs text-brand-600 hover:underline">{open ? t("Tutup") : t("+ Tambah bukti")}</button>
       </div>
       <p className="text-xs mb-3" style={{ color: "var(--text-4)" }}>
-        {t("Sertifikasi resmi (BNSP/nasional/internasional), portofolio, & pengalaman kerja — diverifikasi AI. Ini")} <b>{t("poin plus")}</b> {t("yang bisa menembus batas rank dari ujian menuju tingkat")} <b>{t("ahli")}</b>{rank?.cappedByWeight ? t(" — rank ujianmu sedang tercapai batasnya, tambahkan bukti untuk melampaui.") : "."}
+        {t("Sertifikasi resmi (BNSP/nasional/internasional), portofolio, & pengalaman kerja - diverifikasi AI. Ini")} <b>{t("poin plus")}</b> {t("yang bisa menembus batas rank dari ujian menuju tingkat")} <b>{t("ahli")}</b>{rank?.cappedByWeight ? t(" - rank ujianmu sedang tercapai batasnya, tambahkan bukti untuk melampaui.") : "."}
       </p>
 
       {open && (
@@ -613,7 +613,7 @@ function EvidenceCard({ rank, onChanged, open, setOpen }) {
             <p className="text-[11px] text-emerald-500">{t("Bukti terverifikasi menaikkan rank efektifmu di atas batas ujian. 💪")}</p>
           )}
           {items.map((it) => {
-            // JANGAN beri nama `t` — men-shadow fungsi terjemahan useLang.
+            // JANGAN beri nama `t` - men-shadow fungsi terjemahan useLang.
             const evType = EV_TYPE[it.type] || EV_TYPE.certification;
             const st = EV_STATUS[it.status] || EV_STATUS.pending;
             const TIcon = evType.icon;

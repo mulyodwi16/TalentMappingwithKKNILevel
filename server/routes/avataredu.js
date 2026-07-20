@@ -4,7 +4,7 @@ import { prisma } from "../prisma.js";
 
 // Integrasi AvatarEdu.ai (partner API). Base + header sesuai dokumentasi partner.
 // CATATAN: katalog AvatarEdu saat ini kecil (~10 course bertema AI/data). Param `q` MEMANG
-// memfilter berdasar judul — jadi query spesifik (mis. "video editing") bisa 0 hasil.
+// memfilter berdasar judul - jadi query spesifik (mis. "video editing") bisa 0 hasil.
 // Karena itu kita FALLBACK ke seluruh katalog bila query tak menemukan apa pun, agar course
 // selalu tampil. Validasi key & akses via `/me`.
 const router = express.Router();

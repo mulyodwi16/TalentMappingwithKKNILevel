@@ -7,7 +7,7 @@ import { rankName } from "../rank.js";
 const router = express.Router();
 router.use(requireAuth, requireRole("hrd", "admin"));
 
-// Ringkas data ujian/kompetensi (dari fitur ujian) untuk sekumpulan talenta — supaya HRD
+// Ringkas data ujian/kompetensi (dari fitur ujian) untuk sekumpulan talenta - supaya HRD
 // melihat data yang SINKRON dengan hasil ujian, bukan hanya profil statis (#13).
 async function competencySummary(userIds) {
   if (!userIds.length) return {};
@@ -36,7 +36,7 @@ router.get("/workers", async (req, res) => {
 });
 
 // Detail 1 talenta: kompetensi SKKNI target, penilaian per unit (dari ujian), sertifikat,
-// dan riwayat ujian terakhir — bukti kompetensi yang tersinkron ke HRD.
+// dan riwayat ujian terakhir - bukti kompetensi yang tersinkron ke HRD.
 router.get("/worker/:id", async (req, res) => {
   const u = await prisma.user.findFirst({ where: { id: req.params.id, role: "user" } });
   if (!u) return res.status(404).json({ error: "Talenta tidak ditemukan." });

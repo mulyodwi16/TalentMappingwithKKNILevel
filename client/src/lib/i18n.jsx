@@ -7,8 +7,8 @@ import EN from "./translations.en.js";
 // Pola kamus: TEKS INDONESIA DI KODE = KUNCI KAMUS.
 //   t("Peta Posisi") → "Position Map" saat lang=en,
 //   fallback ke teks Indonesia bila belum ada terjemahan
-//   (migrasi bertahap aman — halaman yang belum digarap tetap tampil ID).
-// Interpolasi: t("Selamat datang, {name}!", { name }) — placeholder {x}.
+//   (migrasi bertahap aman - halaman yang belum digarap tetap tampil ID).
+// Interpolasi: t("Selamat datang, {name}!", { name }) - placeholder {x}.
 // Pilihan bahasa juga dikirim ke server (header X-Lang) → server memilih
 // prompt AI versi ID/EN (pola sama dengan get_system_prompt(lang) di MBTI Game).
 // ============================================================

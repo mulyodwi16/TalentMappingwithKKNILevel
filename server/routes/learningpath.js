@@ -21,7 +21,7 @@ router.get("/", async (req, res) => {
 });
 
 // Susun / perbarui rencana (memanggil AI). Profesi target diturunkan otomatis dari kompetensi
-// yang dipilih — tidak ada input manual (permintaan #6).
+// yang dipilih - tidak ada input manual (permintaan #6).
 router.post("/generate", async (req, res) => {
   try {
     res.json(await generatePlan(req.user.id));
@@ -30,7 +30,7 @@ router.post("/generate", async (req, res) => {
   }
 });
 
-// Catatan: progres langkah TIDAK lagi diisi manual — dilacak otomatis dari aktivitas
+// Catatan: progres langkah TIDAK lagi diisi manual - dilacak otomatis dari aktivitas
 // user (unit lulus, kelas, CV, sertifikat, bukti) di deriveStepProgress. Endpoint /step dihapus.
 
 export default router;

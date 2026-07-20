@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-// Hook media-query reaktif — untuk perilaku responsif yang butuh cabang di JS (bukan sekadar CSS),
+// Hook media-query reaktif - untuk perilaku responsif yang butuh cabang di JS (bukan sekadar CSS),
 // mis. mengganti avatar companion besar → tombol quick-access di layar HP.
 export function useMediaQuery(query) {
   const [match, setMatch] = useState(

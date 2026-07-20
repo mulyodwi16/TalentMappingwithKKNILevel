@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-// Reaktif terhadap toggle mode gelap/terang (kelas .dark di <html>) — dipakai panel
+// Reaktif terhadap toggle mode gelap/terang (kelas .dark di <html>) - dipakai panel
 // yang latarnya berbeda per tema (RankHero, RankIdentityCard) agar berganti tanpa reload.
 export default function useIsDark() {
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));

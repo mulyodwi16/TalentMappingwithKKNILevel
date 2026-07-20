@@ -11,7 +11,7 @@ import {
 const router = express.Router();
 router.use(requireAuth);
 
-// Katalog "Kelas Premium" — dibuka/di-unlock dengan koin. Ini SINK koin (course AvatarEdu
+// Katalog "Kelas Premium" - dibuka/di-unlock dengan koin. Ini SINK koin (course AvatarEdu
 // gratis untuk diikuti & malah memberi koin; kelas premium di sini ditebus dengan koin).
 const SHOP_ITEMS = [
   { id: "kelas-uji-kompetensi", name: "Kelas Intensif: Persiapan Uji Kompetensi", desc: "Bimbingan terstruktur menghadapi ujian kompetensi SKKNI agar lulus di percobaan pertama.", cost: 300, category: "Kelas Premium", icon: "graduation" },
@@ -102,7 +102,7 @@ router.post("/coins/purchase", async (req, res) => {
   const method = PAY_METHODS.has(String(req.body?.method)) ? String(req.body.method) : "qris";
   const total = pkg.coins + pkg.bonus;
   const orderId = "TOPUP-" + randomBytes(5).toString("hex").toUpperCase();
-  const r = await award(req.user.id, total, `Top-up Koin — paket ${pkg.label} (${method}) [demo]`, { type: "topup", id: orderId });
+  const r = await award(req.user.id, total, `Top-up Koin - paket ${pkg.label} (${method}) [demo]`, { type: "topup", id: orderId });
   res.json({ ok: true, orderId, credited: total, coins: pkg.coins, bonus: pkg.bonus, price: pkg.price, method, balance: r.balance });
 });
 

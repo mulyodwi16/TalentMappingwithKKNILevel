@@ -52,7 +52,7 @@ export default function RuleManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-white">{t("Aturan Mapping Rank")}</h2>
-          <p className="text-slate-400 text-sm mt-0.5">{t("Aturan dicocokkan berurutan — aturan pertama yang cocok menang")}</p>
+          <p className="text-slate-400 text-sm mt-0.5">{t("Aturan dicocokkan berurutan - aturan pertama yang cocok menang")}</p>
         </div>
         <button onClick={openCreate} className="btn-primary text-sm py-2 px-4">{t("+ Tambah Aturan")}</button>
       </div>
@@ -72,9 +72,9 @@ export default function RuleManagement() {
                 <td className="px-4 py-3">
                   <span className="w-7 h-7 rounded-lg bg-slate-700 flex items-center justify-center text-xs font-bold">{r.order}</span>
                 </td>
-                <td className="px-4 py-3 font-medium text-white">{r.conditions?.education || "—"}</td>
-                <td className="px-4 py-3 text-slate-400">{r.conditions?.cert || "—"}</td>
-                <td className="px-4 py-3 text-slate-400">{r.conditions?.minExperience ? t("{n} thn", { n: r.conditions.minExperience }) : "—"}</td>
+                <td className="px-4 py-3 font-medium text-white">{r.conditions?.education || "-"}</td>
+                <td className="px-4 py-3 text-slate-400">{r.conditions?.cert || "-"}</td>
+                <td className="px-4 py-3 text-slate-400">{r.conditions?.minExperience ? t("{n} thn", { n: r.conditions.minExperience }) : "-"}</td>
                 <td className="px-4 py-3">
                   <RankBadge level={r.predictedLevel} />
                 </td>

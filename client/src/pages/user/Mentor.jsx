@@ -17,7 +17,7 @@ const CHIPS = [
 ];
 
 const GREETING =
-  "Halo! Saya **AI Mentor Karier** Anda. Saya memahami data pemetaan Anda — Skill Rank saat ini, target, " +
+  "Halo! Saya **AI Mentor Karier** Anda. Saya memahami data pemetaan Anda - Skill Rank saat ini, target, " +
   "hasil ujian, dan gap kompetensi. Saya bisa bantu menyusun langkah agar Anda **naik rank**. " +
   "Apa yang ingin Anda konsultasikan?";
 
@@ -39,7 +39,7 @@ export default function Mentor() {
   const boxRef = useRef(null);
   const initials = user?.name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() ?? "?";
 
-  // Onyen setengah badan di kanan (ala VN, #feedback 3) — jawaban AI dipecah per segmen
+  // Onyen setengah badan di kanan (ala VN, #feedback 3) - jawaban AI dipecah per segmen
   // ber-tag [EMOSI] (pola VN MBTI Game) dan dimunculkan bergiliran; ekspresi berganti PER
   // SEGMEN sehingga emosinya dinamis mengikuti alur bicara.
   const [emotion, setEmotion] = useState("neutral");
@@ -55,7 +55,7 @@ export default function Mentor() {
     if (busy) { clearTimeout(emoTimer.current); setEmotion("surprised"); } // menyimak pertanyaan
     else if (!messages.length) {
       // Sapaan awal happy → turun ke neutral (pose idle yang BERKEDIP) agar karakter tetap
-      // hidup — happy tak punya aset blink (di VN juga: matanya sudah tertutup tersenyum).
+      // hidup - happy tak punya aset blink (di VN juga: matanya sudah tertutup tersenyum).
       setEmotion("happy");
       clearTimeout(emoTimer.current);
       emoTimer.current = setTimeout(() => setEmotion("neutral"), 6000);
@@ -79,7 +79,7 @@ export default function Mentor() {
   }, [messages, busy, reveal]);
 
   function submit(text) {
-    // JANGAN beri nama `t` — men-shadow fungsi terjemahan useLang.
+    // JANGAN beri nama `t` - men-shadow fungsi terjemahan useLang.
     const q = (text || "").trim();
     if (!q || busy) return;
     setInput("");
@@ -88,9 +88,9 @@ export default function Mentor() {
 
   return (
     <div className="lg:grid lg:gap-5 lg:items-start" style={{ gridTemplateColumns: "minmax(0,1fr) 340px" }}>
-      {/* Kolom kiri: chat (feedback #3 — chat di kiri, karakter di kanan) */}
+      {/* Kolom kiri: chat (feedback #3 - chat di kiri, karakter di kanan) */}
       <div className="space-y-4 min-w-0">
-      {/* HP: panggung karakter DI ATAS chat (referensi UI) — sticky agar ekspresi Onyen selalu
+      {/* HP: panggung karakter DI ATAS chat (referensi UI) - sticky agar ekspresi Onyen selalu
           terlihat saat mengobrol. Di desktop karakter ada di kolom kanan (hidden lg:block),
           maka panggung ini lg:hidden. Ekspresi & kedip berbagi state dgn bust desktop. */}
       <div className="lg:hidden sticky top-0 z-20 -mx-4 -mt-4 mb-1 px-4 pt-3 pb-1" style={{ background: "var(--bg-page)" }}>
@@ -116,7 +116,7 @@ export default function Mentor() {
             <Bot className="w-6 h-6 text-brand-600" /> {t("AI Mentor Karier")}
           </h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-3)" }}>
-            {t("Konsultasi yang memahami data pemetaan skill-mu — fokus menutup gap kompetensi & naik Skill Rank.")}
+            {t("Konsultasi yang memahami data pemetaan skill-mu - fokus menutup gap kompetensi & naik Skill Rank.")}
           </p>
         </div>
         {messages.length > 0 && (
@@ -153,7 +153,7 @@ export default function Mentor() {
 
       <div className="flex flex-wrap gap-2">
         {CHIPS.map((c) => {
-          const label = t(c); // pertanyaan cepat ikut bahasa aktif — teks terkirim ke AI juga versi terjemahan
+          const label = t(c); // pertanyaan cepat ikut bahasa aktif - teks terkirim ke AI juga versi terjemahan
           return (
             <button
               key={c}
@@ -240,11 +240,11 @@ export default function Mentor() {
       </div>
 
       <p className="text-[11px] flex items-center gap-1" style={{ color: "var(--text-4)" }}>
-        <Sparkles className="w-3 h-3" /> {t("Riwayat tersimpan otomatis di perangkat ini. Jawaban AI memakai data pemetaan skill-mu — verifikasi info penting ke sumber resmi (Perpres 8/2012, SKKNI Kemnaker).")}
+        <Sparkles className="w-3 h-3" /> {t("Riwayat tersimpan otomatis di perangkat ini. Jawaban AI memakai data pemetaan skill-mu - verifikasi info penting ke sumber resmi (Perpres 8/2012, SKKNI Kemnaker).")}
       </p>
       </div>
 
-      {/* Kolom kanan: Onyen setengah badan ala VN (#3) — sticky DI TENGAH vertikal layar
+      {/* Kolom kanan: Onyen setengah badan ala VN (#3) - sticky DI TENGAH vertikal layar
           (bukan pojok atas) agar terasa duduk menemani percakapan; ekspresi ikut per segmen */}
       <div className="hidden lg:block sticky" style={{ top: "max(12px, calc(50vh - 260px))" }}>
         <div className="card p-0 overflow-hidden">
@@ -253,7 +253,7 @@ export default function Mentor() {
             style={{ background: "radial-gradient(120% 100% at 50% 30%, rgb(var(--brand-500) / 0.20) 0%, transparent 70%)" }}
           >
             {/* float idle di wrapper TERPISAH dari companion-pop (dua animasi transform saling
-                menimpa bila digabung di elemen yang sama) — pola sama dgn avatar kiri-bawah */}
+                menimpa bila digabung di elemen yang sama) - pola sama dgn avatar kiri-bawah */}
             <span className="companion-float block">
               <img
                 key={emotion}
@@ -272,7 +272,7 @@ export default function Mentor() {
                 {busy
                   ? t("Menyimak & menyusun jawaban…")
                   : emotion === "happy" ? t("Senang dengan progresmu!")
-                  : emotion === "sadness" ? t("Masih ada yang perlu ditutup — pelan-pelan, ya.")
+                  : emotion === "sadness" ? t("Masih ada yang perlu ditutup - pelan-pelan, ya.")
                   : emotion === "fear" ? t("Hmm, ada yang perlu diwaspadai…")
                   : t("Siap membantumu naik Skill Rank.")}
               </p>

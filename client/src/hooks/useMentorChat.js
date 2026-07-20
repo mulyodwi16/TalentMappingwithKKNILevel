@@ -20,7 +20,7 @@ function load(k) {
   return { messages: [], summary: "" };
 }
 
-// fetch ber-auth (Bearer token dari store) — pakai fetch mentah agar status HTTP (mis. 503) terbaca.
+// fetch ber-auth (Bearer token dari store) - pakai fetch mentah agar status HTTP (mis. 503) terbaca.
 async function postJson(url, body) {
   const token = useAuthStore.getState().token;
   const r = await fetch(url, {

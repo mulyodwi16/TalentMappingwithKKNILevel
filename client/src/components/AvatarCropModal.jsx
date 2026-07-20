@@ -3,10 +3,10 @@ import { X, ZoomIn, ZoomOut, Check, Loader2, Move } from "lucide-react";
 import { useLang } from "../lib/i18n.jsx";
 
 // Editor foto profil (#2): user bisa MENGATUR posisi (drag) & ukuran (zoom)
-// sebelum foto tersimpan — tidak langsung terunggah begitu saja.
+// sebelum foto tersimpan - tidak langsung terunggah begitu saja.
 // Output: data URI JPEG persegi `size`px lewat onSave(dataUrl).
 const VIEW = 280;   // sisi area pratinjau (px)
-const OUT = 320;    // sisi output (px) — cukup tajam untuk panel identitas besar
+const OUT = 320;    // sisi output (px) - cukup tajam untuk panel identitas besar
 
 export default function AvatarCropModal({ file, onSave, onClose, saving = false }) {
   const { t } = useLang();

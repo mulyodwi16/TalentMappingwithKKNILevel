@@ -31,13 +31,13 @@ export default function Register() {
   const [chosen, setChosen] = useState(null);          // kompetensi terpilih {id, title}
   const [experience, setExperience] = useState(null);  // objek EXPERIENCE
   const [picking, setPicking] = useState(false);
-  const [cvData, setCvData] = useState(null);          // { pdfBase64, fileName } — diproses saat finalisasi
+  const [cvData, setCvData] = useState(null);          // { pdfBase64, fileName } - diproses saat finalisasi
   const [finalizing, setFinalizing] = useState(false);
   const cvRef = useRef(null);
 
   const upd = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  // ── Fase 1: VALIDASI LOKAL saja — akun BELUM dibuat (baru disimpan saat finalisasi). ──
+  // ── Fase 1: VALIDASI LOKAL saja - akun BELUM dibuat (baru disimpan saat finalisasi). ──
   function submitStep1(e) {
     e.preventDefault();
     if (!form.name.trim()) return toast.error(t("Nama wajib diisi"));
@@ -172,7 +172,7 @@ export default function Register() {
               <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text-base)" }}>
                 <Target className="w-4 h-4 text-brand-600" /> {t("Kompetensi yang ingin dikuasai")}
               </h2>
-              <p className="text-xs mt-1" style={{ color: "var(--text-4)" }}>{t("Pilih 1 bidang/profesi SKKNI resmi Kemnaker — jadi acuan kelas, ujian, & rank.")}</p>
+              <p className="text-xs mt-1" style={{ color: "var(--text-4)" }}>{t("Pilih 1 bidang/profesi SKKNI resmi Kemnaker - jadi acuan kelas, ujian, & rank.")}</p>
             </div>
 
             {chosen ? (
@@ -203,7 +203,7 @@ export default function Register() {
                   );
                 })}
               </div>
-              <p className="text-[11px] mt-1.5" style={{ color: "var(--text-4)" }}>{t("Pengalaman jadi acuan awal — tetap perlu dibuktikan lewat kelas & ujian.")}</p>
+              <p className="text-[11px] mt-1.5" style={{ color: "var(--text-4)" }}>{t("Pengalaman jadi acuan awal - tetap perlu dibuktikan lewat kelas & ujian.")}</p>
             </div>
 
             <div className="flex items-center gap-2 pt-1">

@@ -28,7 +28,7 @@ async function verifyEvidence({ type, title, issuer, description, url }, compete
       status: accepted ? "verified" : "pending",
       credibility: accepted ? 60 : 30,
       rankImplied: accepted ? (type === "certification" ? 6 : 5) : 0,
-      verdict: accepted ? "Diterima sementara (verifikasi otomatis tanpa AI). Perlu tinjauan lanjutan." : "Detail kurang untuk diverifikasi — lengkapi penerbit & deskripsi.",
+      verdict: accepted ? "Diterima sementara (verifikasi otomatis tanpa AI). Perlu tinjauan lanjutan." : "Detail kurang untuk diverifikasi - lengkapi penerbit & deskripsi.",
     };
   }
   const prompt =

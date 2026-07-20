@@ -3,7 +3,7 @@ import { useLang } from "../lib/i18n.jsx";
 import useIsDark from "../lib/useIsDark.js";
 import { applyTheme } from "../lib/theme.js";
 
-// Toggle mode gelap/terang untuk halaman PRA-LOGIN (Login/Register). #9: hanya sesi — tak persist
+// Toggle mode gelap/terang untuk halaman PRA-LOGIN (Login/Register). #9: hanya sesi - tak persist
 // ke key global & tak menyentuh preferensi akun. Boot selalu default biru navy; toggle ini sementara.
 export default function ThemeToggle({ className = "" }) {
   const { t } = useLang();

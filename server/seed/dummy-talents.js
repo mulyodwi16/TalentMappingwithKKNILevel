@@ -1,5 +1,5 @@
 // Data dummy talenta demo (#14): variasi nilai atas kompetensi yang sama (Video Editing) agar
-// dashboard HRD terisi & bervariasi. Budi (patokan) & Reza (Desain Grafis) TIDAK disentuh —
+// dashboard HRD terisi & bervariasi. Budi (patokan) & Reza (Desain Grafis) TIDAK disentuh -
 // keduanya sudah punya data nyata. Idempoten: menimpa data unit Video Editing utk Andi & Dewi.
 // Jalankan: node seed/dummy-talents.js
 import "../env.js";
@@ -7,7 +7,7 @@ import { prisma } from "../prisma.js";
 import { refreshReadiness } from "../readiness.js";
 import { refreshRank } from "../rankcalc.js";
 
-// Skor per unit (index 0..10) — 0 = belum diuji, <60 = gap, >=60 = lulus (terbit sertifikat).
+// Skor per unit (index 0..10) - 0 = belum diuji, <60 = gap, >=60 = lulus (terbit sertifikat).
 const PLANS = {
   "andi@demo.id": { scores: [75, 68, 40, 35, 0, 0, 0, 0, 0, 0, 0] },              // SMK junior: 2 lulus, 2 gap
   "dewi@demo.id": { scores: [86, 82, 78, 72, 68, 64, 45, 40, 0, 0, 0] },          // D3: 6 lulus, 2 gap

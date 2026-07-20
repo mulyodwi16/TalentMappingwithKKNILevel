@@ -16,7 +16,7 @@ import { IMG, parseDialog, preloadCompanion, useBlink, useVnReveal } from "../li
 // MEMBESAR (tetap menemani) + panel chat AI Mentor terbuka di KANAN-bawah (menu kiri tak tertutup);
 // ekspresinya ikut bereaksi terhadap isi percakapan.
 
-// Label fitur dari path — dikirim sebagai konteks chat (sama dgn halaman mentor).
+// Label fitur dari path - dikirim sebagai konteks chat (sama dgn halaman mentor).
 const PAGE_LABELS = [
   { match: "/app/dashboard",     label: "Dashboard" },
   { match: "/app/cv-upload",     label: "Upload CV" },
@@ -30,39 +30,39 @@ const PAGE_LABELS = [
 ];
 const pageLabel = (loc) => PAGE_LABELS.find((p) => loc.startsWith(p.match))?.label ?? "TalentaAI";
 
-// Komentar pembuka saat pindah fitur (#15) — dipilih sesuai kondisi data user.
+// Komentar pembuka saat pindah fitur (#15) - dipilih sesuai kondisi data user.
 function routeComment(pathname, ov, t, name) {
   const hasCv = !!(ov?.cv?.parsedAt || ov?.cv?.education);
   const hasComp = !!ov?.chosenSkkni;
   if (pathname.startsWith("/app/dashboard")) {
     if (ov && !hasCv)   return { emotion: "sadness",   text: t("Hmm, CV-mu belum diunggah. Unggah dulu yuk, biar aku bisa membaca keahlianmu!") };
     if (ov && !hasComp) return { emotion: "surprised", text: t("Kamu belum punya kompetensi target. Pilih dulu di Profil, ya!") };
-    return { emotion: "happy", text: t("Selamat datang kembali, {name}! Semua terlihat rapi — lanjutkan progresmu.", { name }) };
+    return { emotion: "happy", text: t("Selamat datang kembali, {name}! Semua terlihat rapi - lanjutkan progresmu.", { name }) };
   }
   if (pathname.startsWith("/app/cv-upload"))
     return hasCv
       ? { emotion: "happy",   text: t("CV-mu sudah ada. Perbarui kapan saja kalau ada pencapaian baru!") }
-      : { emotion: "neutral", text: t("Unggah CV PDF-mu di sini — nanti kubantu petakan keahlianmu ke standar SKKNI.") };
+      : { emotion: "neutral", text: t("Unggah CV PDF-mu di sini - nanti kubantu petakan keahlianmu ke standar SKKNI.") };
   if (pathname.startsWith("/app/kelas"))
-    return { emotion: "neutral", text: t("Selesaikan materi kelasnya dulu — ujian unitnya terbuka otomatis setelah itu.") };
+    return { emotion: "neutral", text: t("Selesaikan materi kelasnya dulu - ujian unitnya terbuka otomatis setelah itu.") };
   if (pathname.startsWith("/app/exam"))
     return { emotion: "neutral", text: t("Tenang, skor 60% per unit sudah lulus dan langsung dapat sertifikat!") };
   if (pathname.startsWith("/app/skill-gap"))
-    return { emotion: "neutral", text: t("Tutup gap terbesar duluan — itu cara tercepat menaikkan Skill Rank-mu.") };
+    return { emotion: "neutral", text: t("Tutup gap terbesar duluan - itu cara tercepat menaikkan Skill Rank-mu.") };
   if (pathname.startsWith("/app/learning-path"))
-    return { emotion: "happy", text: t("Rencana ini kususun dari seluruh datamu — progresnya terlacak otomatis!") };
+    return { emotion: "happy", text: t("Rencana ini kususun dari seluruh datamu - progresnya terlacak otomatis!") };
   if (pathname.startsWith("/app/jobs"))
-    return { emotion: "neutral", text: t("Skill dari CV baru klaim — buktikan lewat ujian supaya sah di Peta Posisi.") };
+    return { emotion: "neutral", text: t("Skill dari CV baru klaim - buktikan lewat ujian supaya sah di Peta Posisi.") };
   if (pathname.startsWith("/app/toko"))
     return { emotion: "neutral", text: t("Ingat: koin membeli akses, bukan bukti. Sertifikat tetap dari lulus ujian!") };
   if (pathname.startsWith("/app/profile"))
     return hasComp
       ? { emotion: "neutral",   text: t("Ini pusat datamu: kompetensi, sertifikat, dan bukti eksternal.") }
-      : { emotion: "surprised", text: t("Pilih kompetensi SKKNI targetmu di sini — semua fitur akan mengikutinya.") };
+      : { emotion: "surprised", text: t("Pilih kompetensi SKKNI targetmu di sini - semua fitur akan mengikutinya.") };
   return null;
 }
 
-// Kolam saran idle (#feedback 2: companion TERUS memberi saran selagi idle) — disusun dari
+// Kolam saran idle (#feedback 2: companion TERUS memberi saran selagi idle) - disusun dari
 // kondisi data user, lalu dirotasi bergiliran oleh ticker. Makin lengkap data, makin personal.
 function buildIdleTips(ov, t, name) {
   const tips = [];
@@ -75,21 +75,21 @@ function buildIdleTips(ov, t, name) {
   if (ov && !hasComp) tips.push({ emotion: "surprised", text: t("Kamu belum punya kompetensi target. Pilih dulu di Profil, ya!") });
   if (readiness != null && hasComp) {
     if (readiness < 50) tips.push({ emotion: "fear",  text: t("Skor kesiapanmu baru {n}%. Tutup gap terbesar dulu, biar cepat naik!", { n: readiness }) });
-    else if (readiness >= 80) tips.push({ emotion: "happy", text: t("Kesiapanmu {n}% — kamu hampir siap penuh. Pertahankan, {name}!", { n: readiness, name }) });
+    else if (readiness >= 80) tips.push({ emotion: "happy", text: t("Kesiapanmu {n}% - kamu hampir siap penuh. Pertahankan, {name}!", { n: readiness, name }) });
   }
-  if (next?.need) tips.push({ emotion: "happy", text: t("Sedikit lagi! Butuh {need} poin kompetensi untuk naik ke tier berikutnya — semangat!", { need: next.need }) });
+  if (next?.need) tips.push({ emotion: "happy", text: t("Sedikit lagi! Butuh {need} poin kompetensi untuk naik ke tier berikutnya - semangat!", { need: next.need }) });
   // Saran umum (selalu ada agar rotasi tak pernah kosong).
   tips.push(
-    { emotion: "neutral", text: t("Jangan lupa Course Harian di Dashboard — soalnya baru setiap hari!") },
-    { emotion: "neutral", text: t("Tutup gap terbesar duluan — itu cara tercepat menaikkan Skill Rank-mu.") },
-    { emotion: "neutral", text: t("Bukti eksternal (sertifikasi BNSP, portofolio) bisa menembus batas rank — tambahkan di Profil!") },
+    { emotion: "neutral", text: t("Jangan lupa Course Harian di Dashboard - soalnya baru setiap hari!") },
+    { emotion: "neutral", text: t("Tutup gap terbesar duluan - itu cara tercepat menaikkan Skill Rank-mu.") },
+    { emotion: "neutral", text: t("Bukti eksternal (sertifikasi BNSP, portofolio) bisa menembus batas rank - tambahkan di Profil!") },
     { emotion: "neutral", text: t("Sudah cek Peta Posisi? Lihat seberapa siap kamu untuk posisi targetmu.") },
     { emotion: "neutral", text: t("Ingat: koin membeli akses, bukan bukti. Sertifikat tetap dari lulus ujian!") },
   );
   return tips;
 }
 
-// Sapaan saat kursor menyentuh avatar (dirotasi berurutan — muncul SETIAP kali hover).
+// Sapaan saat kursor menyentuh avatar (dirotasi berurutan - muncul SETIAP kali hover).
 const GREETINGS = [
   (t, name) => t("Hai {name}! Ada yang bisa kubantu?", { name }),
   (t) => t("Aku Onyen, pendamping belajarmu. Klik untuk ngobrol!"),
@@ -136,7 +136,7 @@ export default function CompanionAvatar() {
   const enabled = role === "user" && !(pathname.startsWith("/app/mentor") && isDesktop);
   const blink = useBlink(enabled);
 
-  // Data user untuk saran sadar-data — berbagi cache dgn Sidebar/Dashboard (["overview"]).
+  // Data user untuk saran sadar-data - berbagi cache dgn Sidebar/Dashboard (["overview"]).
   const { data: ov } = useQuery({
     queryKey: ["overview"],
     queryFn: () => api.get("/user/overview"),
@@ -159,7 +159,7 @@ export default function CompanionAvatar() {
     }, duration);
   }
 
-  // Komentar pembuka saat pindah halaman (setiap navigasi — bukan sekali per sesi).
+  // Komentar pembuka saat pindah halaman (setiap navigasi - bukan sekali per sesi).
   useEffect(() => {
     if (!enabled || open) return;
     const c = routeComment(pathname, ov, t, firstName);
@@ -170,7 +170,7 @@ export default function CompanionAvatar() {
   }, [enabled, open, pathname]);
 
   // Ticker saran idle (#feedback 2): selagi tidak chat & tidak hover, terus beri saran
-  // bergiliran sesuai data user — tak pernah berhenti.
+  // bergiliran sesuai data user - tak pernah berhenti.
   useEffect(() => {
     if (!enabled || open) return;
     let alive = true;
@@ -232,7 +232,7 @@ export default function CompanionAvatar() {
     if (open) { setOpen(false); setEmotion("neutral"); return; }
     setBubble(null);
     // Sambutan happy → turun ke neutral (pose idle yang berkedip) agar karakter tetap hidup
-    // walau belum ada percakapan — happy tak punya aset blink.
+    // walau belum ada percakapan - happy tak punya aset blink.
     setEmotion("happy");
     clearTimeout(emoTimer.current);
     emoTimer.current = setTimeout(() => setEmotion("neutral"), 6000);
@@ -240,7 +240,7 @@ export default function CompanionAvatar() {
   }
 
   function submit(text) {
-    // JANGAN beri nama `t` — men-shadow fungsi terjemahan useLang.
+    // JANGAN beri nama `t` - men-shadow fungsi terjemahan useLang.
     const q = (text || "").trim();
     if (!q || busy) return;
     setInput("");
@@ -249,7 +249,7 @@ export default function CompanionAvatar() {
 
   return (
     <>
-      {/* Avatar Onyen (kiri-bawah) saat idle — DESKTOP/tablet. Di HP diganti tombol quick-access
+      {/* Avatar Onyen (kiri-bawah) saat idle - DESKTOP/tablet. Di HP diganti tombol quick-access
           agar tak menutup konten. Sembunyi saat chat terbuka (pindah ke atas panel). */}
       {!open && !isPhone && (
         <div className="fixed bottom-0 left-2 z-40 flex items-end gap-2 select-none pointer-events-none">
@@ -262,7 +262,7 @@ export default function CompanionAvatar() {
             aria-label={t("Buka AI Mentor")}
             title={t("Ngobrol dengan Onyen (AI Mentor)")}
           >
-            {/* float di wrapper terpisah — animasi transform tak bentrok dgn hover scale di button */}
+            {/* float di wrapper terpisah - animasi transform tak bentrok dgn hover scale di button */}
             <span className="companion-float block">
               <img
                 src={IMG(emotion, blink)}
@@ -290,7 +290,7 @@ export default function CompanionAvatar() {
         </div>
       )}
 
-      {/* HP: tombol quick-access (FAB) di pojok kiri-bawah — memanggil Onyen tanpa menutup konten. */}
+      {/* HP: tombol quick-access (FAB) di pojok kiri-bawah - memanggil Onyen tanpa menutup konten. */}
       {!open && isPhone && (
         <button
           onClick={toggleChat}
@@ -309,7 +309,7 @@ export default function CompanionAvatar() {
         </button>
       )}
 
-      {/* Panel chat — KANAN-bawah; Onyen "nongol" dari balik tepi atas panel (kaki ter-clip),
+      {/* Panel chat - KANAN-bawah; Onyen "nongol" dari balik tepi atas panel (kaki ter-clip),
           ekspresinya bereaksi ke percakapan. Riwayat dibagi dgn /app/mentor */}
       {open && (
         <div className="fixed bottom-5 right-5 z-40 w-[min(94vw,380px)]">

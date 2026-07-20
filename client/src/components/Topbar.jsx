@@ -43,7 +43,7 @@ export default function Topbar({ onBurger }) {
   const [dark, setDark] = useState(() => (user?.themeMode || DEFAULT_THEME) === "dark");
   const qc = useQueryClient();
 
-  // Simpan preferensi tampilan ke AKUN (#9) — best-effort, tak boleh memblok UI.
+  // Simpan preferensi tampilan ke AKUN (#9) - best-effort, tak boleh memblok UI.
   const persistPrefs = (patch) => {
     updateUser(patch);
     api.put("/user/prefs", patch).catch(() => {});
@@ -86,7 +86,7 @@ export default function Topbar({ onBurger }) {
       className="h-14 flex items-center px-4 sm:px-6 gap-2 sm:gap-3 sticky top-0 z-20"
       style={{ backgroundColor: "var(--bg-surface)", borderBottom: "1px solid var(--border)" }}
     >
-      {/* Burger — mobile only */}
+      {/* Burger - mobile only */}
       <button
         onClick={onBurger}
         className={`lg:hidden ${iconBtn}`}
@@ -106,7 +106,7 @@ export default function Topbar({ onBurger }) {
       {/* Bantuan / tur fitur (khusus User) */}
       <HelpButton />
 
-      {/* Pilihan bahasa UI (ID|EN) — juga menentukan bahasa jawaban AI (#8: keluar dari dropdown) */}
+      {/* Pilihan bahasa UI (ID|EN) - juga menentukan bahasa jawaban AI (#8: keluar dari dropdown) */}
       <div className="flex items-center rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }} role="group" aria-label={t("Bahasa")}>
         {LANGS.map((l) => (
           <button

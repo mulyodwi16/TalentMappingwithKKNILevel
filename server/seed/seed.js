@@ -174,7 +174,7 @@ if (userCount === 0) {
   console.log("Users seeded (6: 3 demo + 3 workers)");
 }
 
-// Bahan Skill Gap demo (radar/gap/learning path) dari fixture — hanya mengisi bila DB fresh
+// Bahan Skill Gap demo (radar/gap/learning path) dari fixture - hanya mengisi bila DB fresh
 // (anti-clobber di dalam restoreSkillGap), agar clone baru tidak menampilkan Skill Gap kosong.
 try { await restoreSkillGap(); } catch (e) { console.error("Skill-gap restore gagal (non-fatal):", e.message); }
 

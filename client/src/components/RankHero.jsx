@@ -3,7 +3,7 @@ import RankIcon from "./RankIcon.jsx";
 import { useLang } from "../lib/i18n.jsx";
 import useIsDark from "../lib/useIsDark.js";
 
-// Panggung rank ala main-menu game ranked — komponen rank terbesar & tersorot.
+// Panggung rank ala main-menu game ranked - komponen rank terbesar & tersorot.
 // Dipakai di Dashboard (hero) & Profile (pusat). Selalu panel gelap dramatis;
 // warna aksen mengikuti tier rank (Bronze→Legend).
 //
@@ -15,7 +15,7 @@ import useIsDark from "../lib/useIsDark.js";
 //  size       : "lg" (default) | "md"
 //  footer     : node tambahan di bawah panggung (opsional)
 // Catatan: panel identitas (foto + data diri) kini KOMPONEN TERPISAH di LUAR frame
-// (kanan) — lihat RankIdentityCard.jsx. Jangan taruh foto di dalam frame lagi.
+// (kanan) - lihat RankIdentityCard.jsx. Jangan taruh foto di dalam frame lagi.
 export default function RankHero({
   rank, rankInfo, readiness, competency, size = "lg", footer,
 }) {
@@ -30,7 +30,7 @@ export default function RankHero({
   const emblemSize = size === "lg" ? 168 : 128;
 
   // Mode gelap: panggung near-black dramatis (seperti main-menu game).
-  // Mode terang: gradien biru brand yang kaya (tetap megah, serasi tema) — glow tier di atas.
+  // Mode terang: gradien biru brand yang kaya (tetap megah, serasi tema) - glow tier di atas.
   const bg = dark
     ? `radial-gradient(90% 80% at 50% 22%, ${c}33 0%, #0b1120 52%, #070b16 100%)`
     : `radial-gradient(100% 92% at 50% 15%, ${c}55 0%, #16408f 46%, #0c1f49 100%)`;
@@ -47,7 +47,7 @@ export default function RankHero({
       <div className="relative">
         {/* ── Panggung rank (tengah) ── */}
         <div className="flex flex-col items-center text-center min-w-0">
-          {/* Emblem — rays & glow terpusat TEPAT pada emblem */}
+          {/* Emblem - rays & glow terpusat TEPAT pada emblem */}
           <div className="relative flex items-center justify-center"
             style={{ width: emblemSize, height: emblemSize * 1.1 }}>
             {/* Pembungkus luar = centering STATIS; elemen dalam = rotasi.
@@ -69,7 +69,7 @@ export default function RankHero({
             </div>
           </div>
 
-          {/* Nama rank — teks tier + glow, plus bayangan gelap agar kontras di gradien terang */}
+          {/* Nama rank - teks tier + glow, plus bayangan gelap agar kontras di gradien terang */}
           <h2 className="mt-3 font-black tracking-[0.14em] uppercase"
             style={{ color: c, fontSize: size === "lg" ? "2.6rem" : "2rem", lineHeight: 1,
               textShadow: `0 0 22px ${c}aa, 0 2px 4px rgba(2,6,23,0.55), 0 0 2px rgba(2,6,23,0.6)`,

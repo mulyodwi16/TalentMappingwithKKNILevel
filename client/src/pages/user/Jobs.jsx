@@ -34,7 +34,7 @@ function ClaimForm({ jobId, skill, onDone }) {
     setBusy(true);
     try {
       const r = await api.post(`/jobs/${jobId}/detect-skill`, { skill, detail }, { timeout: 60_000 });
-      if (r.detected) toast.success(t("AI mendeteksi bukti skill ini — kini menunggu validasi ujian."));
+      if (r.detected) toast.success(t("AI mendeteksi bukti skill ini - kini menunggu validasi ujian."));
       else toast(r.note || t("Belum ada indikasi kuat di CV/portofolio."), { icon: "🔍" });
       onDone();
     } catch (e2) {
@@ -99,7 +99,7 @@ function FulfillmentPlan({ job, onChanged }) {
       {/* Penjelasan aturan validasi */}
       <div className="rounded-lg p-3 text-xs flex gap-2" style={{ background: "var(--bg-raised)", color: "var(--text-3)" }}>
         <Info className="w-4 h-4 shrink-0 text-brand-500 mt-0.5" />
-        <p>{t("Untuk memenuhi target ini:")} <b>{t("kuasai skill di Kelas")}</b>, {t("lalu")} <b>{t("buktikan lewat Ujian")}</b>. {t("CV/portofolio bisa dideteksi AI untuk mempercepat pengenalan skill-mu — tapi kompetensi")} <b>{t("hanya sah setelah lulus ujian")}</b>.</p>
+        <p>{t("Untuk memenuhi target ini:")} <b>{t("kuasai skill di Kelas")}</b>, {t("lalu")} <b>{t("buktikan lewat Ujian")}</b>. {t("CV/portofolio bisa dideteksi AI untuk mempercepat pengenalan skill-mu - tapi kompetensi")} <b>{t("hanya sah setelah lulus ujian")}</b>.</p>
       </div>
 
       {/* Level & pengalaman */}
@@ -191,8 +191,8 @@ function PositionCard({ job, onTarget, targeting }) {
           {m.eligible
             ? t("✓ Skill tervalidasi memenuhi posisi ini")
             : m.readyToValidate
-              ? t("Skill sudah dikenali — tinggal lulus ujian untuk memvalidasi")
-              : t("Belum memenuhi — buka untuk lihat langkah memenuhinya")}
+              ? t("Skill sudah dikenali - tinggal lulus ujian untuk memvalidasi")
+              : t("Belum memenuhi - buka untuk lihat langkah memenuhinya")}
         </div>
       )}
 
@@ -256,7 +256,7 @@ export default function Jobs() {
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: "var(--text-base)" }}><Compass className="w-5 h-5 text-brand-600" /> {t("Peta Posisi & Kesiapan")}</h2>
-        <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>{t("Posisi target dari HRD. Buka tiap posisi untuk melihat")} <b>{t("langkah konkret memenuhinya")}</b> {t("— dan ingat: kompetensi hanya")} <b>{t("tervalidasi lewat ujian")}</b>{t(", bukan sekadar tertulis di CV.")}</p>
+        <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>{t("Posisi target dari HRD. Buka tiap posisi untuk melihat")} <b>{t("langkah konkret memenuhinya")}</b> {t("- dan ingat: kompetensi hanya")} <b>{t("tervalidasi lewat ujian")}</b>{t(", bukan sekadar tertulis di CV.")}</p>
       </div>
 
       {/* Legend status skill */}

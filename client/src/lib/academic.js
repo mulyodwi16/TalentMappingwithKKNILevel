@@ -1,4 +1,4 @@
-// Status akademik/karier (mirror server/onboarding.js) — untuk form daftar & profil.
+// Status akademik/karier (mirror server/onboarding.js) - untuk form daftar & profil.
 // Platform menyiapkan siswa/mahasiswa/pencari kerja memenuhi standar SKKNI, bukan pekerja tetap.
 export const ACADEMIC_STATUS = [
   { key: "siswa_smk",   label: "Siswa SMA/SMK",         desc: "Masih menempuh SMA/SMK", education: "SMK", level: 3 },
@@ -8,4 +8,4 @@ export const ACADEMIC_STATUS = [
   { key: "lulusan_s2",  label: "Lulusan S2 (Magister)",  desc: "Sudah lulus Magister",  education: "S2",  level: 7 },
   { key: "lulusan_s3",  label: "Lulusan S3 (Doktor)",    desc: "Sudah lulus Doktor",    education: "S3",  level: 8 },
 ];
-export function statusLabel(key) { return ACADEMIC_STATUS.find((s) => s.key === key)?.label || "—"; }
+export function statusLabel(key) { return ACADEMIC_STATUS.find((s) => s.key === key)?.label || "-"; }

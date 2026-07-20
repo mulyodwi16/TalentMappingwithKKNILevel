@@ -1,11 +1,11 @@
 import { forwardRef } from "react";
 import { rankName, rankOf } from "../lib/rank.js";
 
-// Template sertifikat kompetensi (SVG, aset utama) — diisi data pemegang.
+// Template sertifikat kompetensi (SVG, aset utama) - diisi data pemegang.
 // Dipakai untuk setiap sertifikat hasil ujian; bisa dilihat & diunduh sebagai PNG.
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-");
 
-// Nama kompetensi bisa panjang (judul unit SKKNI) — penggal jadi maks 2 baris + kecilkan font
+// Nama kompetensi bisa panjang (judul unit SKKNI) - penggal jadi maks 2 baris + kecilkan font
 // agar tak meluber keluar bingkai. <text> SVG tak auto-wrap.
 function layoutTitle(t) {
   const title = (t || "Unit Kompetensi").trim();
@@ -50,7 +50,7 @@ const CertificateArt = forwardRef(function CertificateArt({ holder, competency, 
         <circle key={i} cx={x} cy={y} r="5" fill="url(#cg-brand)" />
       ))}
 
-      {/* Header: logo + wordmark — sejajar & rata tengah */}
+      {/* Header: logo + wordmark - sejajar & rata tengah */}
       <g transform="translate(431 70)">
         <g>
           <path d="M17 2 L30 7.5 L30 19 C30 27.5 23.5 32 17 34 C10.5 32 4 27.5 4 19 L4 7.5 Z" fill="url(#cg-brand)" />
@@ -93,14 +93,14 @@ const CertificateArt = forwardRef(function CertificateArt({ holder, competency, 
         <text x="0" y="52" textAnchor="middle" fontFamily="Segoe UI, sans-serif" fontSize="9.5" letterSpacing="1.5" fill="#7c5310" fontWeight="700">TERVERIFIKASI</text>
       </g>
 
-      {/* Footer — diberi jarak jelas di bawah baris segel */}
+      {/* Footer - diberi jarak jelas di bawah baris segel */}
       <g fontFamily="Segoe UI, sans-serif" fill="#475569">
         <text x="120" y="606" fontSize="13">Tanggal terbit</text>
         <text x="120" y="626" fontSize="15" fontWeight="700" fill="#1e293b">{fmtDate(date)}</text>
         <line x1="120" y1="638" x2="300" y2="638" stroke="#cbd5e1" />
 
         <text x="880" y="606" textAnchor="end" fontSize="13">Kode verifikasi</text>
-        <text x="880" y="626" textAnchor="end" fontSize="15" fontWeight="700" fill="#1e293b" fontFamily="'Courier New', monospace">{code || "—"}</text>
+        <text x="880" y="626" textAnchor="end" fontSize="15" fontWeight="700" fill="#1e293b" fontFamily="'Courier New', monospace">{code || "-"}</text>
         <line x1="700" y1="638" x2="880" y2="638" stroke="#cbd5e1" />
       </g>
       <text x="500" y="662" textAnchor="middle" fontFamily="Segoe UI, sans-serif" fontSize="11" fill="#94a3b8">

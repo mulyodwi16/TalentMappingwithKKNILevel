@@ -60,13 +60,13 @@ export default function AuditLogPage() {
                 <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">
                   {new Date(log.createdAt).toLocaleString(dateLocale(lang))}
                 </td>
-                <td className="px-4 py-3 text-slate-300 text-xs">{log.actorEmail || "—"}</td>
+                <td className="px-4 py-3 text-slate-300 text-xs">{log.actorEmail || "-"}</td>
                 <td className="px-4 py-3">
                   <span className={`text-xs font-semibold font-mono ${getActionColor(log.action)}`}>
                     {log.action}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-slate-400 text-xs max-w-xs truncate">{log.target || "—"}</td>
+                <td className="px-4 py-3 text-slate-400 text-xs max-w-xs truncate">{log.target || "-"}</td>
               </tr>
             ))}
           </tbody>

@@ -4,7 +4,7 @@ import { chatComplete, isLlmConfigured } from "./llm.js";
 // Profil skill pengguna untuk mencocokkan dengan kriteria posisi (Peta Posisi).
 // PENTING (#5): pisahkan skill yang TERVALIDASI (lulus ujian / sertifikat proyek ini)
 // dari yang hanya DIKLAIM (CV, portofolio, pendidikan). Klaim TIDAK dianggap memenuhi
-// kompetensi sampai divalidasi lewat ujian — ini menjaga rank/kesiapan tetap terbukti.
+// kompetensi sampai divalidasi lewat ujian - ini menjaga rank/kesiapan tetap terbukti.
 export async function buildSkillProfile(userId) {
   const [u, assessments, certs, claims] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId } }),
@@ -48,7 +48,7 @@ function has(list, needle) {
 }
 
 // Hitung kecocokan profil terhadap sebuah posisi. Skor 0–100 + rincian per-skill.
-// Skill dipilah 3: matched (tervalidasi ujian), claimed (terdeteksi CV/portofolio — perlu ujian), missing.
+// Skill dipilah 3: matched (tervalidasi ujian), claimed (terdeteksi CV/portofolio - perlu ujian), missing.
 export function matchJob(job, profile) {
   const jobSkills = Array.isArray(job.skills) ? job.skills : safeArr(job.skills);
   const jobCerts = Array.isArray(job.certifications) ? job.certifications : safeArr(job.certifications);
@@ -96,7 +96,7 @@ export function safeArr(json) { try { const a = JSON.parse(json || "[]"); return
 // ── Deteksi bukti skill dari CV + portofolio (Peta Posisi #5) ────────────────
 // AI membaca ringkasan CV pengguna + deskripsi/tautan portofolio yang dikirim,
 // lalu menilai apakah ADA indikasi kuat penguasaan `skill`. Hasil ini HANYA "klaim
-// terdeteksi" — bukan validasi kompetensi (validasi tetap dari lulus ujian).
+// terdeteksi" - bukan validasi kompetensi (validasi tetap dari lulus ujian).
 function heuristicDetect(skill, cvText, detail) {
   const hay = `${cvText} ${detail || ""}`.toLowerCase();
   const k = String(skill || "").toLowerCase();
@@ -131,7 +131,7 @@ export async function detectSkillEvidence({ skill, cvMeta, detail }) {
       `Kamu penilai bukti kompetensi di platform karier TalentaAI. Diberi RINGKASAN CV + DESKRIPSI PORTOFOLIO, ` +
       `nilai apakah ada INDIKASI KUAT & RELEVAN bahwa pengguna menguasai skill target. ` +
       `Bersikap KRITIS: klaim umum/tanpa bukti konkret = tidak terdeteksi. ` +
-      `Ingat, ini hanya deteksi klaim awal — validasi sebenarnya lewat ujian, jadi jangan terlalu longgar. ` +
+      `Ingat, ini hanya deteksi klaim awal - validasi sebenarnya lewat ujian, jadi jangan terlalu longgar. ` +
       `Balas HANYA JSON: {"detected":true|false,"confidence":0-100,"note":"1 kalimat alasan singkat (Indonesia)"}.`,
   };
   const usr = {

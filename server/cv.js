@@ -1,9 +1,9 @@
 // CV PDF -> structured profile (education, certifications, experience).
-// Deterministic heuristics — works offline; LLM can sharpen later. User can edit results.
+// Deterministic heuristics - works offline; LLM can sharpen later. User can edit results.
 import { PDFParse } from "pdf-parse";
 import { fileURLToPath } from "node:url";
 
-// education patterns, HIGHEST first — first hit wins.
+// education patterns, HIGHEST first - first hit wins.
 const EDU = [
   ["S3", /\b(s-?3|doktor|ph\.?\s?d|doctoral)\b/i],
   ["S2", /\b(s-?2|magister|master|m\.(sc|kom|t|m|pd))\b/i],
@@ -41,7 +41,7 @@ function detectExperience(text) {
 
   // date ranges: "2019 - 2024", "2019–2024", "2019 s/d 2024", "2019 sampai 2024"
   const cur = new Date().getFullYear();
-  const re = /\b(19[7-9]\d|20[0-2]\d)\b\s*(?:[-–—]|s\/d|sampai|hingga|to)\s*(?:\w+\s+)?\b(19[7-9]\d|20[0-2]\d|sekarang|present|now)\b/gi;
+  const re = /\b(19[7-9]\d|20[0-2]\d)\b\s*(?:[-–-]|s\/d|sampai|hingga|to)\s*(?:\w+\s+)?\b(19[7-9]\d|20[0-2]\d|sekarang|present|now)\b/gi;
   const spans = [...text.matchAll(re)].map((m) => {
     const s = +m[1];
     const e = /sekarang|present|now/i.test(m[2]) ? cur : +m[2];

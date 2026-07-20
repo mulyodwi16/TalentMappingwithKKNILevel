@@ -1,4 +1,4 @@
-// Sistem "Skill Rank" (gamifikasi) — memetakan 9 jenjang internal (selaras KKNI) ke tier
+// Sistem "Skill Rank" (gamifikasi) - memetakan 9 jenjang internal (selaras KKNI) ke tier
 // ala esports. Cermin dari client/src/lib/rank.js. Jaga tetap sinkron.
 export const RANKS = [
   { level: 1, name: "Bronze" },

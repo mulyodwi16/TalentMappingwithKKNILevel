@@ -1,4 +1,4 @@
-// Ilustrasi SVG per fitur untuk tur bantuan — line-art putih di atas header bergradien.
+// Ilustrasi SVG per fitur untuk tur bantuan - line-art putih di atas header bergradien.
 // Skalabel, ringan, tanpa aset eksternal. Satu <TourArt kind="..." /> per langkah.
 const W = "#ffffff";
 

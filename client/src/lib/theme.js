@@ -1,6 +1,6 @@
 // Kustomisasi tampilan (mode gelap/terang + warna aksen). #9: tema DEFAULT = biru navy dan
 // berlaku di SEMUA halaman termasuk pra-login (beranda/login/daftar). Kustomisasi warna aksen &
-// mode adalah OPSI PER-AKUN — hanya diterapkan saat user login (dari DB), TIDAK disimpan di key
+// mode adalah OPSI PER-AKUN - hanya diterapkan saat user login (dari DB), TIDAK disimpan di key
 // global localStorage, sehingga tak bocor ke halaman pra-login maupun antar-akun.
 
 // Aksen "blue" = basis CSS di index.css (tanpa atribut data-accent) = biru navy (default).
@@ -30,7 +30,7 @@ export function applyTheme(mode) {
   document.documentElement.classList.toggle("dark", (mode || DEFAULT_THEME) === "dark");
 }
 
-// Tampilan DEFAULT (biru navy). Dipakai di boot pra-login & saat logout — supaya kustomisasi
+// Tampilan DEFAULT (biru navy). Dipakai di boot pra-login & saat logout - supaya kustomisasi
 // akun tidak menetap di halaman umum.
 export function applyDefaultTheme() {
   applyTheme(DEFAULT_THEME);

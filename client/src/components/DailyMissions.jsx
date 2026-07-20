@@ -23,7 +23,7 @@ export default function DailyMissions() {
     setClaiming(true);
     try {
       const d = await api.post("/missions/daily/claim");
-      if (d.ok) { if (typeof d.balance === "number") setBalance(d.balance); toast.success(t("+{n} Koin — misi harian lengkap!", { n: d.awarded })); }
+      if (d.ok) { if (typeof d.balance === "number") setBalance(d.balance); toast.success(t("+{n} Koin - misi harian lengkap!", { n: d.awarded })); }
       await load(); refresh();
     } catch (e) {
       toast.error(typeof e === "string" ? e : t("Gagal klaim"));
@@ -58,7 +58,7 @@ export default function DailyMissions() {
               {t.done ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" /> : <Circle className="w-4 h-4 shrink-0" style={{ color: "var(--text-4)" }} />}
               <span className={`text-sm flex-1 ${t.done ? "line-through" : ""}`} style={{ color: t.done ? "var(--text-4)" : "var(--text-2)" }}>{t.label}</span>
               {!t.done && <ArrowRight className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-4)" }} />}
-              {/* label misi berasal dari server (lib/missions) — terjemahan menyusul saat konten server dwibahasa */}
+              {/* label misi berasal dari server (lib/missions) - terjemahan menyusul saat konten server dwibahasa */}
             </div>
           </Link>
         ))}

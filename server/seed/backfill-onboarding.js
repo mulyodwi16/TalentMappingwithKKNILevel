@@ -7,7 +7,7 @@ import { refreshReadiness } from "../readiness.js";
 import { refreshRank } from "../rankcalc.js";
 
 const DEMO = {
-  "user@demo.id": "lulusan_s1",   // Budi (patokan) — Video Editing, sudah ada data ujian
+  "user@demo.id": "lulusan_s1",   // Budi (patokan) - Video Editing, sudah ada data ujian
   "andi@demo.id": "lulusan_smk",
   "dewi@demo.id": "lulusan_s1",
   "reza@demo.id": "lulusan_s1",

@@ -54,7 +54,7 @@ router.get("/documents/:id", async (req, res) => {
 });
 
 // User menetapkan kompetensi target. Menetapkan pilihan SEKETIKA (dari katalog lokal),
-// lalu menarik unit di LATAR BELAKANG bila belum ter-cache — agar klien tak perlu menunggu
+// lalu menarik unit di LATAR BELAKANG bila belum ter-cache - agar klien tak perlu menunggu
 // throttle Kemnaker (yang bisa >30dtk dan memicu timeout). Klien poll /skkni/chosen.
 router.post("/choose", async (req, res) => {
   const docId = String(req.body?.docId ?? "").trim();
@@ -304,7 +304,7 @@ router.post("/exam/:code/submit", async (req, res) => {
     const passed = score >= 60;
     // Review ala Quizizz (#3): sertakan jawaban USER + jawaban BENAR (MC) agar user tahu
     // persis apa yang salah & bisa dipelajari ulang. Untuk isian/urutan: jawaban user +
-    // feedback AI (rubrik keyPoints/idealSteps tetap privat — menjaga keabsahan tes ulang).
+    // feedback AI (rubrik keyPoints/idealSteps tetap privat - menjaga keabsahan tes ulang).
     const breakdown = questions.map((q, i) => {
       const type = q.type || "mc";
       const base = { question: q.q, type, score: perQ[i]?.score ?? 0, feedback: perQ[i]?.feedback || null };
@@ -353,7 +353,7 @@ router.post("/exam/:code/submit", async (req, res) => {
 
     let coin = null;
     try { coin = await awardOnce(userId, COIN.exam, `Ujian unit: ${inst.unitTitle}`, { type: "unitexam", id: attempt.id }); } catch { /* non-fatal */ }
-    await prisma.notification.create({ data: { userId, type: "exam_result", message: `Ujian unit "${inst.unitTitle}": skor ${score}%${passed ? " — LULUS, sertifikat terbit" : ""}` } }).catch(() => {});
+    await prisma.notification.create({ data: { userId, type: "exam_result", message: `Ujian unit "${inst.unitTitle}": skor ${score}%${passed ? " - LULUS, sertifikat terbit" : ""}` } }).catch(() => {});
 
     const rank = await refreshRank(userId).catch(() => null);
     const overall = await refreshReadiness(userId).catch(() => null);
@@ -361,7 +361,7 @@ router.post("/exam/:code/submit", async (req, res) => {
     await prisma.unitExamInstance.delete({ where: { id: inst.id } }).catch(() => {});
     const states = await unitStates(userId, u.chosenSkkniId);
 
-    // Simpan review ke riwayat (#3) — bisa dibuka kembali untuk dipelajari.
+    // Simpan review ke riwayat (#3) - bisa dibuka kembali untuk dipelajari.
     let reviewId = null;
     try {
       const rev = await prisma.unitExamReview.create({
@@ -380,7 +380,7 @@ router.post("/exam/:code/submit", async (req, res) => {
   }
 });
 
-// ── Riwayat ujian unit (#3) — daftar + detail review untuk dipelajari kembali ──
+// ── Riwayat ujian unit (#3) - daftar + detail review untuk dipelajari kembali ──
 router.get("/exam-history", async (req, res) => {
   const rows = await prisma.unitExamReview.findMany({
     where: { userId: req.user.id },
@@ -397,7 +397,7 @@ router.get("/exam-history/:id", async (req, res) => {
   res.json({ ...row, breakdown: JSON.parse(row.breakdown) });
 });
 
-// Trigger manual sinkron katalog (mis. dari admin) — jalan di latar belakang.
+// Trigger manual sinkron katalog (mis. dari admin) - jalan di latar belakang.
 router.post("/sync-catalog", async (req, res) => {
   if (req.user.role !== "admin") return res.status(403).json({ error: "Hanya admin." });
   syncCatalog().catch((e) => console.warn("[skkni] sync:", e.message));

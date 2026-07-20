@@ -71,7 +71,7 @@ function AvatarEduForUnit({ query }) {
     setBusy(c.slug);
     try {
       const r = await api.post("/coins/course-start", { slug: c.slug });
-      if (r.awarded > 0) { toast.success(t("+{n} Koin — selamat belajar!", { n: r.awarded })); if (typeof r.balance === "number") setBalance(r.balance); }
+      if (r.awarded > 0) { toast.success(t("+{n} Koin - selamat belajar!", { n: r.awarded })); if (typeof r.balance === "number") setBalance(r.balance); }
       const d = await api.get(`/avataredu/embed-url/${encodeURIComponent(c.slug)}`);
       setModal({ title: c.title, url: d.url });
     } catch (e) {
@@ -88,7 +88,7 @@ function AvatarEduForUnit({ query }) {
     <div className="space-y-2">
       {fallback && (
         <p className="text-[11px]" style={{ color: "var(--text-4)" }}>
-          {t("Belum ada kursus AvatarEdu khusus untuk unit ini — menampilkan kursus umum yang tersedia.")}
+          {t("Belum ada kursus AvatarEdu khusus untuk unit ini - menampilkan kursus umum yang tersedia.")}
         </p>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -450,7 +450,7 @@ export default function Kelas() {
   const complete = useMutation({
     mutationFn: (code) => api.post(`/kelas/unit/${encodeURIComponent(code)}/complete`),
     onMutate: () => setBusy(true),
-    onSuccess: (r) => { refresh(r); if (r.coin?.awarded > 0) { toast.success(t("+{n} Koin — ujian unit terbuka!", { n: r.coin.awarded })); } else toast.success(t("Kelas selesai — ujian terbuka!")); },
+    onSuccess: (r) => { refresh(r); if (r.coin?.awarded > 0) { toast.success(t("+{n} Koin - ujian unit terbuka!", { n: r.coin.awarded })); } else toast.success(t("Kelas selesai - ujian terbuka!")); },
     onError: (e) => toast.error(typeof e === "string" ? e : t("Gagal")),
     onSettled: () => setBusy(false),
   });
@@ -494,7 +494,7 @@ export default function Kelas() {
       <div className="rounded-2xl bg-gradient-to-br from-brand-600 via-brand-600/90 to-tosca-500 text-white p-6 shadow-lg">
         <div className="flex items-center gap-2 mb-1"><GraduationCap className="w-5 h-5" /><h1 className="text-xl font-bold text-white">{t("Kelas Kompetensi")}</h1></div>
         <p className="text-sm text-white/80 max-w-2xl">
-          {t("Belajar per unit dari")} <b>{chosen.title}</b> — {t("klik")} <b>{t("Ikuti Kelas")}</b> {t("untuk masuk course bertahap (materi mendalam + sumber tepercaya + video). Selesaikan kelas untuk membuka ujian unit; lulus menerbitkan sertifikat.")}
+          {t("Belajar per unit dari")} <b>{chosen.title}</b> - {t("klik")} <b>{t("Ikuti Kelas")}</b> {t("untuk masuk course bertahap (materi mendalam + sumber tepercaya + video). Selesaikan kelas untuk membuka ujian unit; lulus menerbitkan sertifikat.")}
         </p>
         {s && (
           <div className="flex gap-2 mt-3 flex-wrap text-xs">
@@ -518,7 +518,7 @@ export default function Kelas() {
       <p className="text-xs text-center" style={{ color: "var(--text-4)" }}>
         {t("Materi disusun AI selaras SKKNI (disusun sekali, lalu tersimpan permanen) + rujukan sumber tepercaya & video.")}
         {" "}{t("Kursus interaktif oleh")} <a href="https://avataredu.ai" target="_blank" rel="noopener noreferrer" className="text-brand-500 hover:underline">AvatarEdu.ai</a>.
-        {" "}{t("Sertifikat hanya terbit dari")} <b>{t("lulus ujian")}</b> — {t("Koin hanya mempercepat akses.")}
+        {" "}{t("Sertifikat hanya terbit dari")} <b>{t("lulus ujian")}</b> - {t("Koin hanya mempercepat akses.")}
       </p>
     </div>
   );

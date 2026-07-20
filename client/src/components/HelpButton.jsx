@@ -9,7 +9,7 @@ import useAuthStore from "../store/authStore.js";
 import TourArt from "./TourArt.jsx";
 import { useLang } from "../lib/i18n.jsx";
 
-// Flag "sudah lihat tur" DI-KUNCI PER-AKUN (bukan global per-browser) — agar TIAP pengguna baru
+// Flag "sudah lihat tur" DI-KUNCI PER-AKUN (bukan global per-browser) - agar TIAP pengguna baru
 // (mis. usai daftar akun) tetap mendapat tur sekali, walau browser yang sama pernah memicunya.
 const SEEN_PREFIX = "kkni-tour-seen:";
 const seenKey = (email) => SEEN_PREFIX + (email || "anon");
@@ -25,7 +25,7 @@ function steps(name, t) {
     },
     {
       art: "dashboard", Icon: LayoutDashboard, color: "from-brand-600 to-brand-400",
-      title: t("Dashboard — Panggung Rank"),
+      title: t("Dashboard - Panggung Rank"),
       body: t("Skill Rank kamu ditonjolkan ala main-menu game ranked: emblem, progres menuju rank berikutnya, ladder 9 tier, dan statistik (unit lulus, sertifikat, kesiapan). Saat kamu naik rank, ada animasi perayaan."),
       tip: t("Klaim Bonus Login Harian & kerjakan Course Harian di sini untuk kumpulkan Koin."),
       href: "/app/dashboard", hrefLabel: t("Buka Dashboard"),
@@ -33,8 +33,8 @@ function steps(name, t) {
     {
       art: "cv", Icon: Upload, color: "from-amber-500 to-orange-500",
       title: t("Upload CV & Data Validasi"),
-      body: t("Unggah CV (PDF) — sistem mengekstrak pendidikan, keahlian, & pengalaman lalu memprediksi seed rank. Lengkapi juga portofolio, LinkedIn/medsos, & sertifikat sebagai data pendukung validasi."),
-      tip: t("CV cuma jadi bahan pembanding & seed — kompetensi sebenarnya divalidasi lewat ujian."),
+      body: t("Unggah CV (PDF) - sistem mengekstrak pendidikan, keahlian, & pengalaman lalu memperkirakan rank awalmu. Lengkapi juga portofolio, LinkedIn/medsos, & sertifikat sebagai data pendukung validasi."),
+      tip: t("CV cuma jadi bahan pembanding & titik awal - kompetensi sebenarnya divalidasi lewat ujian."),
       href: "/app/cv-upload", hrefLabel: t("Unggah CV"),
     },
     {
@@ -48,7 +48,7 @@ function steps(name, t) {
       art: "exam", Icon: ClipboardCheck, color: "from-brand-500 to-indigo-500",
       title: t("Ujian Kompetensi per Unit"),
       body: t("Ujian dibuka per unit (10–15 soal) dengan 3 tipe: pilihan ganda, studi kasus situasional, & urutan langkah. Isian dinilai AI. Lulus (≥60%) menerbitkan sertifikat unit & menaikkan rank."),
-      tip: t("Soal diacak tiap percobaan — menguji pemahaman, bukan keberuntungan."),
+      tip: t("Soal diacak tiap percobaan - menguji pemahaman, bukan keberuntungan."),
       href: "/app/exam", hrefLabel: t("Mulai Ujian"),
     },
     {
@@ -60,7 +60,7 @@ function steps(name, t) {
     {
       art: "path", Icon: BookOpen, color: "from-blue-500 to-sky-500",
       title: t("Learning Path Personal"),
-      body: t("AI menyusun rencana bertahap dari SELURUH datamu (CV, kelas, ujian, unit lulus, keahlian, bukti). Progres tiap langkah dilacak OTOMATIS dari aktivitasmu — tak perlu centang manual."),
+      body: t("AI menyusun rencana bertahap dari SELURUH datamu (CV, kelas, ujian, unit lulus, keahlian, bukti). Progres tiap langkah dilacak OTOMATIS dari aktivitasmu - tak perlu centang manual."),
       tip: t("Tiap langkah punya tautan ke fitur untuk mengerjakannya (Kelas/Ujian/Bukti)."),
       href: "/app/learning-path", hrefLabel: t("Buka Learning Path"),
     },
@@ -68,13 +68,13 @@ function steps(name, t) {
       art: "gap", Icon: Compass, color: "from-cyan-500 to-brand-500",
       title: t("Peta Posisi & Kesiapan"),
       body: t("Posisi target dari HRD + langkah konkret memenuhinya. Skill dipilah: tervalidasi (lulus ujian), terdeteksi CV/portofolio (menunggu ujian), atau belum ada bukti."),
-      tip: t("CV/portofolio bisa dideteksi AI sebagai klaim — tapi kompetensi sah hanya setelah lulus ujian."),
+      tip: t("CV/portofolio bisa dideteksi AI sebagai klaim - tapi kompetensi sah hanya setelah lulus ujian."),
       href: "/app/jobs", hrefLabel: t("Buka Peta Posisi"),
     },
     {
       art: "mentor", Icon: Bot, color: "from-slate-700 to-brand-600",
       title: t("AI Mentor Karier"),
-      body: t("Tanya apa saja soal Skill Rank & kompetensimu — AI Mentor memahami data pemetaanmu dan memberi langkah konkret. Tombol chat cepat tersedia di pojok kanan bawah semua halaman."),
+      body: t("Tanya apa saja soal Skill Rank & kompetensimu - AI Mentor memahami data pemetaanmu dan memberi langkah konkret. Tombol chat cepat tersedia di pojok kanan bawah semua halaman."),
       tip: t("Coba tanya: 'Kompetensi apa yang jadi gap saya?'"),
       href: "/app/mentor", hrefLabel: t("Tanya AI Mentor"),
     },
@@ -82,7 +82,7 @@ function steps(name, t) {
       art: "coins", Icon: Coins, color: "from-amber-400 to-amber-600",
       title: t("Koin Talenta & Toko"),
       body: t("Kumpulkan Koin dari login harian (streak!), memetakan CV, menyelesaikan ujian & kelas. Tukar Koin untuk membuka akses kelas/ujian lebih cepat."),
-      tip: t("Penting: Koin membeli AKSES, bukan BUKTI — sertifikat & rank tetap hanya dari lulus ujian."),
+      tip: t("Penting: Koin membeli AKSES, bukan BUKTI - sertifikat & rank tetap hanya dari lulus ujian."),
       href: "/app/toko", hrefLabel: t("Buka Toko"),
     },
     {
@@ -101,8 +101,8 @@ const SYSTEMS = [
     Icon: Trophy, color: "#a855f7", title: "Skill Rank (Bronze → Legend)",
     points: [
       "9 tier: Bronze, Silver, Gold, Platinum, Emerald, Diamond, Master, Grandmaster, Legend.",
-      "Rank ditentukan KOMPETENSI yang dibuktikan — bukan ijazah. Lulusan SMK terampil bisa menyalip S3.",
-      "Pendidikan hanya jadi 'seed' (titik awal); rank efektif = maksimum dari seed, kompetensi, & bukti.",
+      "Rank ditentukan KOMPETENSI yang dibuktikan - bukan ijazah. Lulusan SMK terampil bisa menyalip S3.",
+      "Pendidikan hanya jadi titik awal; rank efektif = nilai tertinggi dari titik awal, kompetensi, & bukti.",
     ],
   },
   {
@@ -110,13 +110,13 @@ const SYSTEMS = [
     points: [
       "Skor penguasaan = (unit lulus × 8) + (sertifikat × 10) + (kelas selesai × 4).",
       "Skor itu dipetakan ke tier: mis. Gold mulai 0, Emerald 32, Diamond 55, Master 85, Legend 160.",
-      "Rank efektif = MAX(seed pendidikan, rank dari kompetensi [dibatasi bobot], rank dari bukti eksternal).",
+      "Rank efektif = nilai TERTINGGI dari: rank awal pendidikan, rank dari kompetensi (dibatasi bobot), dan rank dari bukti eksternal.",
     ],
   },
   {
     Icon: Scale, color: "#f59e0b", title: "Bobot Kompetensi & Batas Rank",
     points: [
-      "Tiap kompetensi punya bobot kesulitan berbeda — petani ≠ ahli pertanian.",
+      "Tiap kompetensi punya bobot kesulitan berbeda - petani ≠ ahli pertanian.",
       "Rank hasil ujian DIBATASI bobot kompetensi (cap), mencegah 'overcapacity' (rank ahli dari skill dasar).",
       "AI mengklasifikasikan bobot tiap kompetensi (rank maksimal 5–9) secara otomatis.",
     ],
@@ -126,13 +126,13 @@ const SYSTEMS = [
     points: [
       "Sertifikasi resmi (BNSP/nasional/internasional), portofolio, & pengalaman bisa MENEMBUS batas bobot.",
       "AI menilai kredibilitas & relevansinya; hanya yang terverifikasi yang menaikkan rank.",
-      "Tetap butuh koroborasi ujian — bukti menaikkan maksimal +2 tier di atas rank ujian.",
+      "Tetap butuh koroborasi ujian - bukti menaikkan maksimal +2 tier di atas rank ujian.",
     ],
   },
   {
     Icon: ClipboardCheck, color: "#6366f1", title: "Ujian 3 Tipe (Validasi Nyata)",
     points: [
-      "Tiap unit: 10–15 soal campuran — pilihan ganda, studi kasus situasional, & urutan langkah.",
+      "Tiap unit: 10–15 soal campuran - pilihan ganda, studi kasus situasional, & urutan langkah.",
       "Isian & urutan dinilai AI (skor + umpan balik); pilihan ganda dinilai otomatis.",
       "Lulus = skor ≥ 60% per unit → sertifikat unit terbit & rank diperbarui. Soal diacak tiap percobaan.",
     ],
@@ -140,7 +140,7 @@ const SYSTEMS = [
   {
     Icon: ShieldCheck, color: "#ef4444", title: "Validasi Kompetensi",
     points: [
-      "Kompetensi hanya SAH setelah lulus ujian proyek ini — bukan karena tertulis di CV.",
+      "Kompetensi hanya SAH setelah lulus ujian proyek ini - bukan karena tertulis di CV.",
       "CV/portofolio bisa dideteksi AI sebagai 'klaim' (mempercepat pengenalan), tapi belum tervalidasi.",
       "Di Peta Posisi, skill ditandai: tervalidasi / terdeteksi-menunggu-ujian / belum ada bukti.",
     ],
@@ -158,7 +158,7 @@ const SYSTEMS = [
     points: [
       "AI menyusun materi kelas, membuat soal ujian, menilai jawaban isian, & mengklasifikasi bobot kompetensi.",
       "AI juga memverifikasi bukti eksternal, mendeteksi klaim skill dari CV/portofolio, & menyusun Learning Path.",
-      "AI memakai datamu sebagai konteks — tapi tidak menggantikan ujian sebagai penentu kompetensi.",
+      "AI memakai datamu sebagai konteks - tapi tidak menggantikan ujian sebagai penentu kompetensi.",
     ],
   },
   {
@@ -166,7 +166,7 @@ const SYSTEMS = [
     points: [
       "Didapat dari login harian (streak), memetakan CV, menyelesaikan ujian & kelas.",
       "Dipakai untuk membuka akses kelas/ujian lebih cepat (lompati urutan).",
-      "Koin membeli AKSES, bukan BUKTI — tidak pernah memberi sertifikat atau menaikkan rank langsung.",
+      "Koin membeli AKSES, bukan BUKTI - tidak pernah memberi sertifikat atau menaikkan rank langsung.",
     ],
   },
 ];
@@ -239,7 +239,7 @@ function SystemsView({ onClose, onSwitch }) {
           <div className="rounded-lg bg-white/15 w-9 h-9 flex items-center justify-center shrink-0"><ListChecks className="w-5 h-5" /></div>
           <div>
             <h2 className="text-lg font-bold leading-snug text-white">{t("Cara Kerja Sistem")}</h2>
-            <p className="text-xs text-white/80">{t("Skoring, ranking, ujian, validasi & AI — bagaimana semuanya bekerja.")}</p>
+            <p className="text-xs text-white/80">{t("Skoring, ranking, ujian, validasi & AI - bagaimana semuanya bekerja.")}</p>
           </div>
         </div>
       </div>

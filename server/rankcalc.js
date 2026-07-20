@@ -4,7 +4,7 @@ import { chosenUnitCodeSet } from "./competencyScope.js";
 
 // Rank efektif = MAX( seed pendidikan (rendah), rank yang DIRAIH dari kompetensi ).
 // Rank diraih dari BUKTI kompetensi: unit kompetensi yang LULUS + sertifikat + course selesai.
-// Ini membuat keahlian (bukan ijazah) jadi penentu utama — SMK terampil bisa menyalip S3.
+// Ini membuat keahlian (bukan ijazah) jadi penentu utama - SMK terampil bisa menyalip S3.
 //
 // masteryScore = unitLulus*8 + sertifikat*10 + course*4  → dipetakan ke tier:
 const TIERS = [
@@ -31,7 +31,7 @@ export function nextTierInfo(score) {
 
 export async function computeRank(userId) {
   const u = await prisma.user.findUnique({ where: { id: userId } });
-  // Batasi bukti kompetensi ke kompetensi yang SEDANG dipilih — ganti kompetensi = analisa
+  // Batasi bukti kompetensi ke kompetensi yang SEDANG dipilih - ganti kompetensi = analisa
   // berganti; kompetensi baru mulai dari 0 (data lama tetap tersimpan & pulih bila kembali).
   const codes = await chosenUnitCodeSet(userId, u?.chosenSkkniId || null);
   const [assessAll, certRows, learnedRows] = await Promise.all([
