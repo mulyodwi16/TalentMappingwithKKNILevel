@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard, Upload, ClipboardCheck, Target, BookOpen,
   Users, Settings2, Mail, ScrollText, X, Bot, ShoppingBag, Compass,
-  GraduationCap, ChevronDown,
+  GraduationCap, ChevronDown, Award,
 } from "lucide-react";
 import api from "../api/client.js";
 import useAuthStore from "../store/authStore.js";
@@ -14,8 +14,10 @@ import { useLang } from "../lib/i18n.jsx";
 // Item nav (Profil dipindah ke dropdown ikon profil di Topbar - #16).
 const USER_MAIN   = { to: "/app/dashboard", label: "Dashboard", Icon: LayoutDashboard };
 const USER_LEARN  = [
+  { to: "/app/placement",     label: "Tes Penempatan", Icon: Target },
   { to: "/app/kelas",         label: "Kelas",         Icon: GraduationCap },
-  { to: "/app/exam",          label: "Ujian",         Icon: ClipboardCheck },
+  { to: "/app/exam",          label: "Latihan Unit",  Icon: ClipboardCheck },
+  { to: "/app/final-exam",    label: "Ujian Kompetensi", Icon: Award },
   { to: "/app/skill-gap",     label: "Skill Gap",     Icon: Target },
   { to: "/app/learning-path", label: "Learning Path", Icon: BookOpen },
 ];

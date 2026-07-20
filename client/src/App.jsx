@@ -11,6 +11,8 @@ import CVUpload from "./pages/user/CVUpload.jsx";
 import Exam from "./pages/user/Exam.jsx";
 import Kelas from "./pages/user/Kelas.jsx";
 import SkillGap from "./pages/user/SkillGap.jsx";
+import Placement from "./pages/user/Placement.jsx";
+import FinalExam from "./pages/user/FinalExam.jsx";
 import LearningPath from "./pages/user/LearningPath.jsx";
 import Mentor from "./pages/user/Mentor.jsx";
 import Toko from "./pages/user/Toko.jsx";
@@ -70,6 +72,8 @@ export default function App() {
           <Route path="kelas" element={<Kelas />} />
           <Route path="exam" element={<Exam />} />
           <Route path="skill-gap" element={<SkillGap />} />
+          <Route path="placement" element={<Placement />} />
+          <Route path="final-exam" element={<FinalExam />} />
           <Route path="learning-path" element={<LearningPath />} />
           <Route path="mentor" element={<Mentor />} />
           <Route path="toko" element={<Toko />} />

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import api from "../../api/client.js";
 import { rankName, rankColor } from "../../lib/rank.js";
+import RankIcon from "../../components/RankIcon.jsx";
 import { useLang, dateLocale } from "../../lib/i18n.jsx";
 
 const DIFF = {
@@ -250,8 +251,10 @@ function AiCheckCard({ aiCheck, inputs, source }) {
         {cur != null && (
           <div className="flex items-center gap-2 pt-3">
             <span className="text-xs" style={{ color: "var(--text-4)" }}>Rank</span>
+            <RankIcon level={cur} size={22} title={rankName(cur)} />
             <span className="text-sm font-bold" style={{ color: rankColor(cur) }}>{rankName(cur)}</span>
             <ArrowRight size={14} style={{ color: "var(--text-4)" }} />
+            <RankIcon level={tgt} size={22} title={rankName(tgt)} />
             <span className="text-sm font-bold" style={{ color: rankColor(tgt) }}>{rankName(tgt)}</span>
           </div>
         )}
@@ -279,7 +282,8 @@ export default function LearningPath() {
   const generate = useMutation({
     mutationFn: () => api.post("/learning-path/generate", {}, { timeout: 90_000 }),
     onSuccess: (res) => {
-      qc.setQueryData(["learning-path"], (old) => ({ ...(old || {}), ...res, llmAvailable: old?.llmAvailable }));
+      // stale ikut dinolkan: rencana ini baru saja disusun dari data terkini.
+      qc.setQueryData(["learning-path"], (old) => ({ ...(old || {}), ...res, stale: false, llmAvailable: old?.llmAvailable }));
       toast.success(res.source === "ai" ? t("Learning Path disusun oleh AI") : t("Learning Path disusun"));
     },
     onError: (e) => toast.error(typeof e === "string" ? e : t("Gagal menyusun rencana")),
@@ -293,16 +297,21 @@ export default function LearningPath() {
   const total = plan?.steps?.length || 0;
 
   // OTOMATIS: begitu kompetensi dipilih & belum ada rencana, susun sendiri (tanpa tombol manual).
-  // Fire sekali per kompetensi (guard autoKey) agar tak berulang & tak me-reset progres.
+  // JUGA disusun ulang saat `stale` - ada nilai unit yang lebih baru dari rencana ini (mis.
+  // baru selesai tes penempatan), jadi rencana lama bisa menyuruh mengulang unit yang sudah
+  // dikuasai. Kunci penjaga memakai waktu penyusunan supaya tiap versi rencana hanya dicoba
+  // sekali: kalau AI gagal, halaman tidak terjebak memanggil ulang tanpa henti.
   const autoKey = useRef(null);
   useEffect(() => {
     if (isLoading || generate.isPending) return;
     const compId = inputs?.competency?.id || null;
-    if (!plan && compId && autoKey.current !== compId) {
-      autoKey.current = compId;
+    if (!compId) return;
+    const key = plan ? (data?.stale ? `stale:${compId}:${data.generatedAt}` : null) : `new:${compId}`;
+    if (key && autoKey.current !== key) {
+      autoKey.current = key;
       generate.mutate();
     }
-  }, [isLoading, plan, inputs?.competency?.id, generate.isPending]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isLoading, plan, data?.stale, data?.generatedAt, inputs?.competency?.id, generate.isPending]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isLoading) return <div className="flex items-center justify-center h-64" style={{ color: "var(--text-4)" }}>{t("Memuat…")}</div>;
 
@@ -354,9 +363,12 @@ export default function LearningPath() {
             </span>
           ) : plan ? (
             // Escape hatch opsional & AMAN (tak me-reset progres - unit lulus tetap tercakup).
+            // `stale` = ada nilai unit yang lebih baru dari rencana ini (mis. baru selesai tes
+            // penempatan), jadi ajakannya ditegaskan - bukan sekadar tautan samar.
             <button onClick={() => generate.mutate()} disabled={noComp}
-              className="text-[11px] flex items-center gap-1 hover:underline whitespace-nowrap disabled:opacity-50" style={{ color: "var(--text-4)" }}>
-              <RefreshCw className="w-3.5 h-3.5" /> {t("Susun ulang")}
+              className={`flex items-center gap-1 whitespace-nowrap disabled:opacity-50 ${data?.stale ? "btn-outline text-xs px-3 py-1.5 border-brand-500 text-brand-600" : "text-[11px] hover:underline"}`}
+              style={data?.stale ? undefined : { color: "var(--text-4)" }}>
+              <RefreshCw className="w-3.5 h-3.5" /> {data?.stale ? t("Ada data baru - susun ulang") : t("Susun ulang")}
             </button>
           ) : !noComp ? (
             <span className="text-xs flex items-center gap-2 whitespace-nowrap" style={{ color: "var(--text-4)" }}>

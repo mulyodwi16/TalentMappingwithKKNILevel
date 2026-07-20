@@ -8,6 +8,7 @@ import { ACADEMIC_STATUS } from "../lib/academic.js";
 import LangToggle from "../components/LangToggle.jsx";
 import ThemeToggle from "../components/ThemeToggle.jsx";
 import SkkniPicker from "../components/SkkniPicker.jsx";
+import CompetencyPreparing from "../components/CompetencyPreparing.jsx";
 import { useLang } from "../lib/i18n.jsx";
 
 // Pengalaman di bidang kompetensi (nilai = perkiraan tahun untuk seed).
@@ -33,6 +34,7 @@ export default function Register() {
   const [picking, setPicking] = useState(false);
   const [cvData, setCvData] = useState(null);          // { pdfBase64, fileName } - diproses saat finalisasi
   const [finalizing, setFinalizing] = useState(false);
+  const [preparing, setPreparing] = useState(null);    // {docId, title} - menunggu unit kompetensi siap
   const cvRef = useRef(null);
 
   const upd = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -69,10 +71,17 @@ export default function Register() {
         name: form.name, email: form.email, password: form.password, academicStatus: form.academicStatus,
       });
       setAuth(token, user);
-      if (chosen?.id) { try { await api.post("/skkni/choose", { docId: chosen.id }); } catch { /* non-fatal */ } }
+      let chooseRes = null;
+      if (chosen?.id) { try { chooseRes = await api.post("/skkni/choose", { docId: chosen.id }); } catch { /* non-fatal */ } }
       if (experience) { try { await api.put("/user/profile", { experienceYears: experience.years }); } catch { /* non-fatal */ } }
       if (cvData)     { try { await api.post("/user/cv-parse", cvData); } catch { /* non-fatal */ } }
       toast.success(t("Selamat datang di TalentaAI! 🎉"));
+      // Unit kompetensi masih ditarik dari Kemnaker: tahan di layar tunggu dulu, supaya
+      // dashboard tidak menyambut user baru dengan Skill Gap & Kelas yang kosong.
+      if (chosen?.id && chooseRes && !chooseRes.ready) {
+        setPreparing({ docId: chosen.id, title: chooseRes.chosen?.title || chosen.title });
+        return;
+      }
       navigate("/app/dashboard");
     } catch (err) {
       toast.error(err || t("Registrasi gagal"));
@@ -103,6 +112,17 @@ export default function Register() {
           <p className="mt-1 text-sm" style={{ color: "var(--text-3)" }}>{t("Siapkan diri memenuhi standar kompetensi SKKNI")}</p>
         </div>
 
+        {/* Kompetensi belum siap: tahan di sini dulu, jangan masuk dashboard dengan data kosong. */}
+        {preparing ? (
+          <CompetencyPreparing
+            docId={preparing.docId}
+            title={preparing.title}
+            onReady={() => navigate("/app/dashboard")}
+            onSkip={() => navigate("/app/dashboard")}
+            onPickOther={() => navigate("/app/profile?pick=1")}
+          />
+        ) : (
+        <>
         {/* Stepper */}
         <div className="flex items-center justify-center gap-2 mb-5">
           {STEPS.map((label, i) => {
@@ -258,6 +278,8 @@ export default function Register() {
               </button>
             </div>
           </div>
+        )}
+        </>
         )}
 
         <p className="text-center mt-4">

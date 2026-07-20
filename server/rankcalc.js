@@ -1,6 +1,7 @@
 import { prisma } from "./prisma.js";
 import { educationSeed, clampRank } from "./onboarding.js";
 import { chosenUnitCodeSet } from "./competencyScope.js";
+import { buildRankLadder, evaluateLadder } from "./unitrank.js";
 
 // Rank efektif = MAX( seed pendidikan (rendah), rank yang DIRAIH dari kompetensi ).
 // Rank diraih dari BUKTI kompetensi: unit kompetensi yang LULUS + sertifikat + course selesai.
@@ -34,11 +35,14 @@ export async function computeRank(userId) {
   // Batasi bukti kompetensi ke kompetensi yang SEDANG dipilih - ganti kompetensi = analisa
   // berganti; kompetensi baru mulai dari 0 (data lama tetap tersimpan & pulih bila kembali).
   const codes = await chosenUnitCodeSet(userId, u?.chosenSkkniId || null);
-  const [assessAll, certRows, learnedRows] = await Promise.all([
+  const [assessAll, certRows, learnedRows, unitRows] = await Promise.all([
     prisma.skillAssessment.findMany({ where: { userId } }),
     prisma.certificate.findMany({ where: { userId }, select: { competencyCode: true } }),
     u?.chosenSkkniId
       ? prisma.unitProgress.findMany({ where: { userId, docId: u.chosenSkkniId, learned: true }, select: { unitCode: true } }).catch(() => [])
+      : Promise.resolve([]),
+    u?.chosenSkkniId
+      ? prisma.skkniUnit.findMany({ where: { documentId: u.chosenSkkniId }, orderBy: { code: "asc" }, select: { code: true, title: true } }).catch(() => [])
       : Promise.resolve([]),
   ]);
   const inScope = (code) => (codes ? codes.has(code) : false);
@@ -48,7 +52,7 @@ export async function computeRank(userId) {
   // "Course" = kelas kompetensi ini yang sudah dipelajari tapi BELUM lulus (hindari dobel hitung).
   const courses = learnedRows.filter((p) => !passedCodes.has(p.unitCode)).length;
   const seed = educationSeed(u);
-  const earned = earnedFromMastery(passedUnits, certs, courses);
+  const mastery = earnedFromMastery(passedUnits, certs, courses); // dipertahankan sbg info, bukan penentu
 
   // Cap rank hasil-ujian oleh BOBOT kompetensi yang dipilih (cegah overcapacity).
   // Kompetensi basic tak bisa mengangkat ke rank ahli hanya lewat ujian kita.
@@ -60,7 +64,12 @@ export async function computeRank(userId) {
     }).catch(() => null);
   }
   const cap = doc?.weightMaxRank || 9;
-  const cappedEarned = Math.min(earned.level, cap);
+
+  // Rank diraih = tangga unit per tier (syaratnya bisa ditunjuk), bukan skor gabungan.
+  // Unit dikelompokkan dasar → teknikal → softskill/mutu, lalu dibagi ke tier sampai cap.
+  const ladder = buildRankLadder(unitRows, cap);
+  const lad = evaluateLadder(ladder, passedCodes);
+  const cappedEarned = lad.earned; // sudah otomatis terbatas cap lewat susunan tangga
 
   // Bukti eksternal terverifikasi bisa melampaui cap kompetensi (menuju "ahli"),
   // tapi tetap harus didukung ujian: headroom hanya +2 di atas rank ujian (koroborasi).
@@ -73,11 +82,19 @@ export async function computeRank(userId) {
 
   const effective = clampRank(Math.max(seed, withEvidence));
   return {
-    seed, earned: earned.level, cappedEarned, masteryScore: earned.score, effective,
+    seed, earned: cappedEarned, cappedEarned, masteryScore: mastery.score, effective,
     weightCap: cap, weightTier: doc?.weightTier || null, weightReason: doc?.weightReason || null,
-    cappedByWeight: earned.level > cap,
+    // Tangga sudah mentok di cap: tandai bila seluruh unit dikuasai tapi tier lebih tinggi
+    // memang tak tersedia untuk kompetensi ini.
+    cappedByWeight: cap < 9 && cappedEarned >= cap,
     evidenceLevel, evidenceCount, boostedByEvidence: withEvidence > cappedEarned,
-    passedUnits, certs, courses, next: nextTierInfo(earned.score),
+    passedUnits, certs, courses,
+    // Tangga rank per unit: dipakai UI untuk menunjukkan syarat naik secara konkret.
+    ladder: lad.steps,
+    next: lad.next
+      ? { level: lad.next.level, done: lad.next.done, total: lad.next.total, need: lad.next.need,
+          cumDone: lad.next.cumDone, cumTotal: lad.next.cumTotal, units: lad.next.units }
+      : null,
   };
 }
 

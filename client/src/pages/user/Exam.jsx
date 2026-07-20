@@ -193,11 +193,11 @@ function UnitPicker({ chosen, onPick }) {
       <div className="card p-5">
         <div className="flex items-center gap-2 mb-1">
           <GraduationCap className="w-5 h-5 text-brand-500" />
-          <h2 className="text-lg font-bold" style={{ color: "var(--text-base)" }}>{t("Ujian per Unit Kompetensi")}</h2>
+          <h2 className="text-lg font-bold" style={{ color: "var(--text-base)" }}>{t("Latihan per Unit Kompetensi")}</h2>
         </div>
         <p className="text-sm mb-1" style={{ color: "var(--text-3)" }}>{chosen.title}</p>
         <p className="text-xs" style={{ color: "var(--text-4)" }}>
-          {t("Tiap unit diuji terpisah dengan jumlah soal berbeda sesuai kompleksitasnya. Selesaikan")} <b>{t("Kelas")}</b> {t("unit untuk membuka ujiannya - lulus (≥60%) menerbitkan sertifikat unit.")}
+          {t("Tiap unit dilatih terpisah dengan jumlah soal berbeda sesuai kompleksitasnya. Selesaikan")} <b>{t("Kelas")}</b> {t("unit untuk membuka latihannya - lulus (≥60%) menandai unit dikuasai dan menaikkan rank.")}
         </p>
         {s && (
           <div className="flex gap-2 mt-3 flex-wrap text-xs">
@@ -311,7 +311,7 @@ export default function Exam() {
           <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-base)" }}>{t("Ujian Kompetensi")}</h2>
           <p className="text-sm mb-4" style={{ color: "var(--text-3)" }}>{t("Ujian ini menilai kompetensi Anda berdasarkan standar SKKNI.")}</p>
           <div className="rounded-xl p-3 mb-5 text-sm" style={{ background: "var(--bg-muted)", color: "var(--text-3)" }}>
-            {t("Belum memilih kompetensi target.")} <Link to="/app/profile" className="text-brand-500 font-medium hover:underline">{t("Pilih kompetensi SKKNI")}</Link> {t("agar ujian menjadi per unit & menerbitkan sertifikat.")}
+            {t("Belum memilih kompetensi target.")} <Link to="/app/profile" className="text-brand-500 font-medium hover:underline">{t("Pilih kompetensi SKKNI")}</Link> {t("agar latihan menjadi per unit & terhubung ke tangga rank.")}
           </div>
           <button onClick={() => setStarted(true)} className="btn-primary w-full py-3 inline-flex items-center justify-center gap-2">{t("Mulai Ujian")} <ArrowRight size={16} /></button>
         </div>

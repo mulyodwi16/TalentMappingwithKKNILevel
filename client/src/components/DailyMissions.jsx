@@ -54,7 +54,7 @@ export default function DailyMissions() {
       <div className="space-y-2">
         {daily.tasks.map((t) => (
           <Link key={t.key} to={t.href}>
-            <div className="flex items-center gap-2.5 rounded-lg p-2 transition-colors hover:bg-brand-50" style={{ border: "1px solid var(--border)" }}>
+            <div className="flex items-center gap-2.5 rounded-lg p-2 transition-colors hover:bg-brand-500/10" style={{ border: "1px solid var(--border)" }}>
               {t.done ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" /> : <Circle className="w-4 h-4 shrink-0" style={{ color: "var(--text-4)" }} />}
               <span className={`text-sm flex-1 ${t.done ? "line-through" : ""}`} style={{ color: t.done ? "var(--text-4)" : "var(--text-2)" }}>{t.label}</span>
               {!t.done && <ArrowRight className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-4)" }} />}

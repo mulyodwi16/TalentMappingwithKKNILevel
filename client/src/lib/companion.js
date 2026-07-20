@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { extractTools } from "./mentorTools.js";
 
 // ── Helper bersama AI Companion "Onyen" (#14/#15) ─────────────────────────────
 // Dipakai CompanionAvatar (avatar kecil kiri-bawah) & halaman Mentor (bust besar kanan).
@@ -60,6 +61,9 @@ export function stripEmotionTags(text = "") {
 // berganti / sudah 2 kalimat / terlalu panjang. Tanpa tag sama sekali → 1 segmen dengan
 // emosi hasil heuristik (riwayat lama tetap tampil normal).
 export function parseDialog(text = "") {
+  // Buang tag alat ([BUKA:…]/[DATA:…]) lebih dulu - itu urusan MentorTools, bukan dialog.
+  // Dilakukan DI SINI supaya jumlah segmen selalu sama dgn yang dipakai useVnReveal.
+  text = extractTools(text).text;
   const hasTag = /\[[a-z]+\]/i.test(text);
   if (!hasTag) {
     const clean = text.trim();
@@ -70,7 +74,9 @@ export function parseDialog(text = "") {
   for (const line of text.split(/\r?\n/)) {
     const l = line.trim().replace(/^"|"$/g, "").trim();
     if (!l) continue;
-    for (const p of l.split(/(?<=[.!?])(?<!\.\.\.)"?\s+|(?=\[)/)) {
+    // `(?<!\d\.)` menjaga penanda daftar ("… berikut: 1. Periksa CV") tetap menyatu -
+    // tanpa itu angkanya tertinggal sendirian di ujung gelembung sebelumnya.
+    for (const p of l.split(/(?<=[.!?])(?<!\.\.\.)(?<!\d\.)"?\s+|(?=\[)/)) {
       const s = p.trim().replace(/^"|"$/g, "").trim();
       if (s) parts.push(s);
     }
@@ -121,8 +127,10 @@ export function useVnReveal(messages, onEmotion) {
       i += 1;
       setRevealed({ idx, count: i });
       emoRef.current?.(seg.emotion);
-      // Jeda ala pacing VN: proporsional panjang kalimat (baca manusiawi), dibatasi 2.4 dtk.
-      timer = setTimeout(step, Math.min(2400, 500 + seg.text.length * 22));
+      // Jeda ala pacing VN: proporsional panjang kalimat supaya sempat DIBACA, bukan
+      // sekadar muncul. ~38 ms/karakter mendekati kecepatan baca santai; dibatasi 5,2 dtk
+      // agar kalimat panjang tak terasa menggantung.
+      timer = setTimeout(step, Math.min(5200, 900 + seg.text.length * 38));
     };
     step();
     return () => { alive = false; clearTimeout(timer); };

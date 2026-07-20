@@ -14,8 +14,10 @@ const ROLE_LABEL = { user: "Talenta", hrd: "HRD", admin: "Admin" };
 const TITLES = {
   "/app/dashboard":       "Dashboard",
   "/app/cv-upload":       "Upload CV",
-  "/app/exam":            "Ujian Kompetensi",
+  "/app/exam":            "Latihan Unit",
   "/app/skill-gap":       "Skill Gap Analyzer",
+  "/app/placement":       "Tes Penempatan",
+  "/app/final-exam":      "Ujian Kompetensi Utama",
   "/app/learning-path":   "Learning Path",
   "/app/mentor":          "AI Mentor Karier",
   "/app/toko":            "Toko & Kelas",
@@ -112,7 +114,7 @@ export default function Topbar({ onBurger }) {
           <button
             key={l.key}
             onClick={() => setLang(l.key)}
-            className={`px-2 py-1 text-[11px] font-bold transition-colors ${lang === l.key ? "bg-brand-600 text-white" : "hover:bg-brand-50"}`}
+            className={`px-2 py-1 text-[11px] font-bold transition-colors ${lang === l.key ? "bg-brand-600 text-white" : "hover:bg-brand-500/10"}`}
             style={lang === l.key ? {} : { color: "var(--text-3)" }}
             aria-pressed={lang === l.key}
             title={l.label}
@@ -202,7 +204,7 @@ export default function Topbar({ onBurger }) {
               <Link
                 to="/app/profile"
                 onClick={() => setShowProfile(false)}
-                className="flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-brand-50 transition-colors"
+                className="flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-brand-500/10 transition-colors"
                 style={{ color: "var(--text-2)" }}
               >
                 <UserCircle size={16} /> {t("Profil Saya")}

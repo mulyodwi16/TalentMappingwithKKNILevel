@@ -6,8 +6,11 @@ import api from "../api/client.js";
 import { useMentorChat } from "../hooks/useMentorChat.js";
 import { useMediaQuery } from "../hooks/useMediaQuery.js";
 import useAuthStore from "../store/authStore.js";
+import useExamStore from "../store/examStore.js";
 import { useLang } from "../lib/i18n.jsx";
 import { IMG, parseDialog, preloadCompanion, useBlink, useVnReveal } from "../lib/companion.js";
+import { extractTools } from "../lib/mentorTools.js";
+import MentorTools from "./MentorTools.jsx";
 
 // ── AI Companion "Onyen" (#14/#15) ────────────────────────────────────────────
 // Avatar pendamping di kiri-bawah (menggantikan tombol AI Mentor kanan-bawah yang menggantung).
@@ -46,7 +49,7 @@ function routeComment(pathname, ov, t, name) {
   if (pathname.startsWith("/app/kelas"))
     return { emotion: "neutral", text: t("Selesaikan materi kelasnya dulu - ujian unitnya terbuka otomatis setelah itu.") };
   if (pathname.startsWith("/app/exam"))
-    return { emotion: "neutral", text: t("Tenang, skor 60% per unit sudah lulus dan langsung dapat sertifikat!") };
+    return { emotion: "neutral", text: t("Ini latihan, jadi santai saja. Skor 60% sudah dihitung kuasai, dan rank-mu ikut naik.") };
   if (pathname.startsWith("/app/skill-gap"))
     return { emotion: "neutral", text: t("Tutup gap terbesar duluan - itu cara tercepat menaikkan Skill Rank-mu.") };
   if (pathname.startsWith("/app/learning-path"))
@@ -77,7 +80,7 @@ function buildIdleTips(ov, t, name) {
     if (readiness < 50) tips.push({ emotion: "fear",  text: t("Skor kesiapanmu baru {n}%. Tutup gap terbesar dulu, biar cepat naik!", { n: readiness }) });
     else if (readiness >= 80) tips.push({ emotion: "happy", text: t("Kesiapanmu {n}% - kamu hampir siap penuh. Pertahankan, {name}!", { n: readiness, name }) });
   }
-  if (next?.need) tips.push({ emotion: "happy", text: t("Sedikit lagi! Butuh {need} poin kompetensi untuk naik ke tier berikutnya - semangat!", { need: next.need }) });
+  if (next?.need) tips.push({ emotion: "happy", text: t("Sedikit lagi! Kuasai {need} unit lagi untuk naik ke tier berikutnya - semangat!", { need: next.need }) });
   // Saran umum (selalu ada agar rotasi tak pernah kosong).
   tips.push(
     { emotion: "neutral", text: t("Jangan lupa Course Harian di Dashboard - soalnya baru setiap hari!") },
@@ -94,6 +97,15 @@ const GREETINGS = [
   (t, name) => t("Hai {name}! Ada yang bisa kubantu?", { name }),
   (t) => t("Aku Onyen, pendamping belajarmu. Klik untuk ngobrol!"),
   (t) => t("Halo! Klik aku kalau mau tanya-tanya soal kariermu."),
+];
+
+// Saat ujian berlangsung Onyen tak boleh membantu (itu curang), jadi dia merengut.
+// Tetap menyemangati - marahnya soal fokus, bukan soal orangnya.
+const EXAM_SCOLDS = [
+  (t) => t("Hei! Lagi ujian, tahu. Aku tidak akan membantu sekarang. Meow!"),
+  (t, name) => t("Fokus, {name}. Kerjakan sendiri dulu - aku percaya kamu bisa.", { name }),
+  (t) => t("Tidak. Nanti saja kalau sudah selesai. Kamu lebih tahu dari yang kamu kira!"),
+  (t) => t("Jangan curi-curi pandang ke arahku. Ayo, satu soal lagi!"),
 ];
 
 const IDLE_FIRST_DELAY = 12_000; // saran idle pertama setelah komentar pembuka
@@ -115,6 +127,7 @@ export default function CompanionAvatar() {
   const role = user?.role;
   const firstName = (user?.name || "").split(/\s+/)[0] || "";
 
+  const examLocked = useExamStore((s) => s.locked);
   const { messages, busy, send, clear } = useMentorChat();
   const [open, setOpen] = useState(false);        // panel chat (kanan-bawah)
   const [input, setInput] = useState("");
@@ -127,6 +140,7 @@ export default function CompanionAvatar() {
   const greetIdx = useRef(0);
   const tipIdx = useRef(0);
   const hoverRef = useRef(false);
+  const lockedRef = useRef(false);   // cermin examLocked untuk dibaca callback timer lama
 
   // Di HP companion tampil sebagai tombol quick-access kecil (tak menutup konten). Di desktop,
   // halaman Mentor punya Onyen sendiri (kolom kanan) → matikan di sana agar tak dobel; namun di
@@ -147,8 +161,10 @@ export default function CompanionAvatar() {
   useEffect(() => { if (enabled) preloadCompanion(false); }, [enabled]);
 
   // Satu pintu untuk menampilkan bubble + emosi (mencegah timer saling tumpang).
+  // Selama ujian HANYA dialog ujian yang boleh tampil. Penjagaan lewat ref, bukan state,
+  // karena callback timer yang sudah terlanjur dijadwalkan memegang nilai lama (stale closure).
   function showBubble(c, duration = IDLE_SHOW) {
-    if (!c) return;
+    if (!c || lockedRef.current) return;
     clearTimeout(hideTimer.current);
     setEmotion(c.emotion || "neutral");
     setBubble({ text: c.text });
@@ -159,20 +175,32 @@ export default function CompanionAvatar() {
     }, duration);
   }
 
+  // Ujian dimulai: tutup paksa panel chat & buang bubble idle yang masih tersisa di layar,
+  // termasuk timer sembunyi yang sudah terjadwal.
+  useEffect(() => {
+    lockedRef.current = examLocked;
+    if (!examLocked) return;
+    clearTimeout(hideTimer.current);
+    clearTimeout(emoTimer.current);
+    setOpen(false);
+    setBubble(null);
+    setEmotion("neutral");
+  }, [examLocked]);
+
   // Komentar pembuka saat pindah halaman (setiap navigasi - bukan sekali per sesi).
   useEffect(() => {
-    if (!enabled || open) return;
+    if (!enabled || open || examLocked) return;
     const c = routeComment(pathname, ov, t, firstName);
     if (!c) return;
     const show = setTimeout(() => showBubble(c), 800);
     return () => clearTimeout(show);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, open, pathname]);
+  }, [enabled, open, examLocked, pathname]);
 
   // Ticker saran idle (#feedback 2): selagi tidak chat & tidak hover, terus beri saran
   // bergiliran sesuai data user - tak pernah berhenti.
   useEffect(() => {
-    if (!enabled || open) return;
+    if (!enabled || open || examLocked) return;   // saat ujian: jangan ganggu fokus
     let alive = true;
     let timer;
     const tick = (delay) => {
@@ -188,8 +216,10 @@ export default function CompanionAvatar() {
     };
     tick(IDLE_FIRST_DELAY);
     return () => { alive = false; clearTimeout(timer); };
+    // examLocked WAJIB ada di sini: tanpa itu efek tak dijalankan ulang saat ujian mulai,
+    // timer lama tetap hidup, dan saran idle menembus ke layar ujian.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, open, pathname, ov, t, firstName]);
+  }, [enabled, open, examLocked, pathname, ov, t, firstName]);
 
   // Saat chat: jawaban Onyen dipecah per segmen ber-tag [EMOSI] (ala VN) & muncul bergiliran;
   // ekspresi avatar berganti PER SEGMEN (#feedback: emosi dinamis per kalimat).
@@ -209,10 +239,22 @@ export default function CompanionAvatar() {
 
   const ctx = pageLabel(pathname);
 
+  // Saat ujian: Onyen menolak diajak bicara. Dia merengut, tapi tetap menyemangati.
+  function scold() {
+    const s = EXAM_SCOLDS[greetIdx.current % EXAM_SCOLDS.length];
+    greetIdx.current += 1;
+    clearTimeout(hideTimer.current);
+    clearTimeout(emoTimer.current);
+    setEmotion("anger");
+    setBubble({ text: s(t, firstName) });
+    hideTimer.current = setTimeout(() => { setBubble(null); setEmotion("neutral"); }, 4500);
+  }
+
   // Deteksi hover (#15): menyapa SETIAP kali kursor menyentuh (sapaan dirotasi).
   function onEnter() {
     setHover(true);
     hoverRef.current = true;
+    if (examLocked) { scold(); return; }
     if (open) return; // saat chat terbuka, ekspresi dikendalikan percakapan
     const g = GREETINGS[greetIdx.current % GREETINGS.length];
     greetIdx.current += 1;
@@ -229,6 +271,8 @@ export default function CompanionAvatar() {
   }
 
   function toggleChat() {
+    // Ujian sedang berlangsung: panel chat TIDAK boleh dibuka (bantuan = curang).
+    if (examLocked) { scold(); return; }
     if (open) { setOpen(false); setEmotion("neutral"); return; }
     setBubble(null);
     // Sambutan happy → turun ke neutral (pose idle yang berkedip) agar karakter tetap hidup
@@ -250,9 +294,11 @@ export default function CompanionAvatar() {
   return (
     <>
       {/* Avatar Onyen (kiri-bawah) saat idle - DESKTOP/tablet. Di HP diganti tombol quick-access
-          agar tak menutup konten. Sembunyi saat chat terbuka (pindah ke atas panel). */}
+          agar tak menutup konten. Sembunyi saat chat terbuka (pindah ke atas panel).
+          Saat ujian, overlay tes menutup layar (z-60) sehingga Onyen dinaikkan ke atasnya -
+          justru dia yang menolak membantu & menyemangati di situ. */}
       {!open && !isPhone && (
-        <div className="fixed bottom-0 left-2 z-40 flex items-end gap-2 select-none pointer-events-none">
+        <div className={`fixed bottom-0 left-2 ${examLocked ? "z-[70]" : "z-40"} flex items-end gap-2 select-none pointer-events-none`}>
           <button
             onClick={toggleChat}
             onMouseEnter={onEnter}
@@ -296,7 +342,7 @@ export default function CompanionAvatar() {
           onClick={toggleChat}
           aria-label={t("Buka AI Mentor")}
           title={t("Ngobrol dengan Onyen (AI Mentor)")}
-          className="companion-float fixed bottom-4 left-3 z-40 pointer-events-auto rounded-full shadow-xl p-[3px] bg-gradient-to-br from-brand-600 to-tosca-500 active:scale-95 transition-transform"
+          className={`companion-float fixed bottom-4 left-3 ${examLocked ? "z-[70]" : "z-40"} pointer-events-auto rounded-full shadow-xl p-[3px] bg-gradient-to-br from-brand-600 to-tosca-500 active:scale-95 transition-transform`}
         >
           <img
             src={IMG("happy", false)}
@@ -365,6 +411,7 @@ export default function CompanionAvatar() {
                 );
               }
               // Bubble pendek per segmen ala VN; pesan terbaru muncul bergiliran.
+              const { actions, widgets } = extractTools(m.content);
               const segs = parseDialog(m.content);
               const visible = i === reveal.idx ? reveal.count : segs.length;
               const revealing = i === reveal.idx && reveal.count < segs.length;
@@ -382,6 +429,7 @@ export default function CompanionAvatar() {
                         <Loader2 className="w-3.5 h-3.5 animate-spin text-brand-600" />
                       </div>
                     )}
+                    <MentorTools actions={actions} widgets={widgets} compact />
                   </div>
                 </div>
               );

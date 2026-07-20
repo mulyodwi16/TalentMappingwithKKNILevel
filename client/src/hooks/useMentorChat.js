@@ -12,6 +12,15 @@ const SUMMARIZE_EVERY = 16;  // lalu ringkas ulang tiap +16 pesan (~8 tanya-jawa
 
 function keyFor(email) { return `kkni-mentor-chat:${email || "anon"}`; }
 
+// Riwayat dipakai DUA komponen sekaligus (halaman AI Mentor & panel Onyen mengambang) yang
+// hidup bersamaan. localStorage saja tidak cukup: masing-masing punya useState sendiri, jadi
+// pesan yang dikirim di satu sisi tak pernah muncul di sisi lain sampai halaman dimuat ulang.
+// Papan pengumuman kecil ini menyiarkan perubahan ke semua pemakai hook.
+const subscribers = new Set();
+function broadcast(key, msgs) {
+  subscribers.forEach((fn) => fn(key, msgs));
+}
+
 function load(k) {
   try {
     const s = JSON.parse(localStorage.getItem(k) || "");
@@ -52,8 +61,16 @@ export function useMentorChat() {
     }
   }, [k]);
 
+  // Ikut mendengar perubahan dari komponen lain (panel ↔ halaman).
+  useEffect(() => {
+    const onChange = (key, msgs) => { if (key === kRef.current) setMessages(msgs); };
+    subscribers.add(onChange);
+    return () => { subscribers.delete(onChange); };
+  }, []);
+
   const persist = useCallback((msgs, summary) => {
     try { localStorage.setItem(kRef.current, JSON.stringify({ messages: msgs, summary })); } catch { /* quota */ }
+    broadcast(kRef.current, msgs);
   }, []);
 
   const summarize = useCallback(async (all) => {

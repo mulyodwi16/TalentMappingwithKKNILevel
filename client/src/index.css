@@ -297,3 +297,13 @@ html:not(.dark) .app-root .hover\:bg-slate-600:hover     { background-color: var
 html:not(.dark) .app-root .hover\:bg-slate-500:hover     { background-color: var(--border-2) !important; }
 html:not(.dark) .app-root .hover\:text-white:hover       { color: var(--text-base) !important; }
 
+
+/* Bar tak tentu untuk layar tunggu penyiapan kompetensi (durasi tak bisa diprediksi). */
+@keyframes prep-sweep {
+  0%   { transform: translateX(-110%); }
+  100% { transform: translateX(320%); }
+}
+.prep-sweep { animation: prep-sweep 1.5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .prep-sweep { animation: none; width: 100%; opacity: 0.5; }
+}

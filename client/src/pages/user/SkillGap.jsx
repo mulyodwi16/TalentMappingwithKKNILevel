@@ -119,8 +119,8 @@ export default function SkillGap() {
       <div className="max-w-xl mx-auto text-center py-16">
         <div className="w-14 h-14 rounded-2xl bg-brand-500/15 grid place-items-center mx-auto mb-4"><Target className="w-7 h-7 text-brand-500" /></div>
         <h2 className="text-xl font-bold mb-2" style={{ color: "var(--text-base)" }}>{t("Belum Ada Data Skill Gap")}</h2>
-        <p className="text-sm mb-6" style={{ color: "var(--text-4)" }}>{t("Selesaikan ujian kompetensi untuk melihat analisis gap & rencana menutupnya.")}</p>
-        <Link to="/app/exam" className="btn-primary inline-flex items-center gap-2">{t("Mulai Ujian")} <ArrowRight size={16} /></Link>
+        <p className="text-sm mb-6" style={{ color: "var(--text-4)" }}>{t("Ambil Tes Penempatan untuk mengukur kemampuan awalmu sekali jalan, lalu gap-nya langsung terlihat.")}</p>
+        <Link to="/app/placement" className="btn-primary inline-flex items-center gap-2">{t("Mulai Tes Penempatan")} <ArrowRight size={16} /></Link>
       </div>
     );
   }
@@ -131,6 +131,17 @@ export default function SkillGap() {
         <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: "var(--text-base)" }}><Target className="w-5 h-5 text-brand-500" /> {t("Analisis Skill Gap")}</h2>
         <p className="text-sm mt-1" style={{ color: "var(--text-4)" }}>{t("Perbandingan kompetensimu dengan standar target - lengkap dengan")} <b>{t("langkah menutupnya")}</b> {t("dari Learning Path.")}</p>
       </div>
+
+      {/* Belum ada satupun unit yang dinilai: arahkan ke Tes Penempatan supaya radar tak nol semua. */}
+      {assessments.every((a) => !a.currentScore) && (
+        <div className="card p-4 flex flex-wrap items-center gap-3" style={{ borderLeft: "3px solid rgb(var(--brand-500))" }}>
+          <Target className="w-5 h-5 text-brand-500 shrink-0" />
+          <p className="text-sm flex-1 min-w-0" style={{ color: "var(--text-3)" }}>
+            {t("Semua unit masih bernilai nol. Ambil Tes Penempatan supaya kemampuan yang sudah kamu punya langsung terhitung.")}
+          </p>
+          <Link to="/app/placement" className="btn-primary text-sm inline-flex items-center gap-1.5">{t("Tes Penempatan")} <ArrowRight size={14} /></Link>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -9,3 +9,6 @@ dist/
 
 # Catatan kerja lokal — jangan di-commit
 CLAUDE.md
+
+# Cadangan data hasil skrip perbaikan (isinya data pengguna) — jangan di-commit
+server/backup/

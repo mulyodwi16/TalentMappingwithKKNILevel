@@ -1,25 +1,49 @@
 import { useState, useRef, useEffect } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   Linkedin, Instagram, Globe, Link2, Award, Plus, Trash2, Save, Loader2, ShieldCheck, Info,
 } from "lucide-react";
 import api from "../../api/client.js";
-import { rankName } from "../../lib/rank.js";
-import { useLang } from "../../lib/i18n.jsx";
+import { rankName, rankColor } from "../../lib/rank.js";
+import RankIcon from "../../components/RankIcon.jsx";
+import { useLang, getLang, dateLocale } from "../../lib/i18n.jsx";
 
-const LEVEL_COLORS = ["","#64748b","#6b7280","#3b82f6","#06b6d4","#0ea5e9","#2563eb","#8b5cf6","#7c3aed","#6d28d9"];
+const fmtDate = (d) => (d ? new Date(d).toLocaleDateString(dateLocale(getLang()), { day: "numeric", month: "short", year: "numeric" }) : "-");
 
 export default function CVUpload() {
   const { t } = useLang();
+  const qc = useQueryClient();
   const [result, setResult] = useState(null);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef();
 
+  // CV yang pernah diunggah tetap tampil walau pindah halaman (tersimpan di profil,
+  // bukan hanya di state layar ini). Sumbernya /user/overview yang sudah dipakai bersama.
+  const { data: ov } = useQuery({ queryKey: ["overview"], queryFn: () => api.get("/user/overview") });
+  const saved = ov?.cv?.parsedAt
+    ? {
+        profile: {
+          education: ov.cv.education,
+          experienceYears: ov.cv.experienceYears,
+          certifications: ov.cv.certifications || [],
+        },
+        predictedLevel: ov.rank?.effective,
+        levelInfo: ov.rankInfo,
+        fileName: ov.cv.fileName,
+        parsedAt: ov.cv.parsedAt,
+      }
+    : null;
+  const shown = result || saved;
+
   const parse = useMutation({
     mutationFn: ({ pdfBase64, fileName }) => api.post("/user/cv-parse", { pdfBase64, fileName }),
-    onSuccess: (data) => { setResult(data); toast.success(t("CV berhasil dianalisis & disimpan ke profil!")); },
+    onSuccess: (data) => {
+      setResult(data);
+      qc.invalidateQueries({ queryKey: ["overview"] });
+      toast.success(t("CV berhasil dianalisis & disimpan ke profil!"));
+    },
     onError: (err) => toast.error(err || t("Gagal membaca CV")),
   });
 
@@ -65,46 +89,51 @@ export default function CVUpload() {
       </div>
 
       {/* Result */}
-      {result && (
+      {shown && (
         <div className="space-y-4">
           <div className="card p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black flex-shrink-0"
-                style={{ background: `${LEVEL_COLORS[result.predictedLevel]}22`, color: LEVEL_COLORS[result.predictedLevel] }}>
-                {result.predictedLevel}
-              </div>
-              <div>
-                <p className="text-xs mb-0.5" style={{ color: "var(--text-4)" }}>{t("Skill Rank Terprediksi (perkiraan dari pendidikan)")}</p>
-                <p className="text-xl font-bold" style={{ color: "var(--text-base)" }}>{rankName(result.predictedLevel)}<span className="text-sm font-normal" style={{ color: "var(--text-4)" }}> · {result.levelInfo?.title}</span></p>
-                <p className="text-sm" style={{ color: "var(--text-4)" }}>{result.levelInfo?.jobGroup}</p>
+            {/* Rank ditampilkan lewat emblem (visual utama); namanya di bawah sebagai penjelas. */}
+            <div className="flex flex-col items-center text-center gap-2">
+              <p className="text-xs" style={{ color: "var(--text-4)" }}>{t("Skill Rank Terprediksi (perkiraan dari pendidikan)")}</p>
+              <RankIcon level={shown.predictedLevel} size={84} title={rankName(shown.predictedLevel)} />
+              <div className="min-w-0">
+                <p className="text-xl font-bold" style={{ color: rankColor(shown.predictedLevel) }}>{rankName(shown.predictedLevel)}</p>
+                <p className="text-sm" style={{ color: "var(--text-3)" }}>{shown.levelInfo?.title}</p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--text-4)" }}>{shown.levelInfo?.jobGroup}</p>
               </div>
             </div>
             <p className="text-[11px] mt-3 flex items-start gap-1.5" style={{ color: "var(--text-4)" }}>
-              <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" /> {t("CV jadi")} <b>{t("bahan pembanding")}</b> {t("& mengangkat rank awal - tapi rank & kompetensi sebenarnya")} <b>{t("divalidasi lewat ujian")}</b>{t(", bukan dari CV.")}
+              <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              <span>{t("CV jadi")} <b>{t("bahan pembanding")}</b> {t("& mengangkat rank awal - tapi rank & kompetensi sebenarnya")} <b>{t("divalidasi lewat ujian")}</b>{t(", bukan dari CV.")}</span>
             </p>
           </div>
 
           <div className="card p-6">
-            <h3 className="font-semibold mb-4" style={{ color: "var(--text-base)" }}>{t("Profil Diekstrak dari CV")}</h3>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 mb-4">
+              <h3 className="font-semibold" style={{ color: "var(--text-base)" }}>{t("Profil Diekstrak dari CV")}</h3>
+              {(shown.fileName || ov?.cv?.fileName) && (
+                <span className="text-xs truncate max-w-full" style={{ color: "var(--text-4)" }}>{shown.fileName || ov?.cv?.fileName}</span>
+              )}
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="rounded-xl p-4" style={{ background: "var(--bg-raised)" }}>
                 <p className="text-xs mb-1" style={{ color: "var(--text-4)" }}>{t("Pendidikan")}</p>
-                <p className="font-semibold" style={{ color: "var(--text-base)" }}>{result.profile?.education || "-"}</p>
+                <p className="font-semibold" style={{ color: "var(--text-base)" }}>{shown.profile?.education || "-"}</p>
               </div>
               <div className="rounded-xl p-4" style={{ background: "var(--bg-raised)" }}>
                 <p className="text-xs mb-1" style={{ color: "var(--text-4)" }}>{t("Pengalaman")}</p>
-                <p className="font-semibold" style={{ color: "var(--text-base)" }}>{t("{n} tahun", { n: result.profile?.experienceYears || 0 })}</p>
+                <p className="font-semibold" style={{ color: "var(--text-base)" }}>{t("{n} tahun", { n: shown.profile?.experienceYears || 0 })}</p>
               </div>
               <div className="rounded-xl p-4" style={{ background: "var(--bg-raised)" }}>
-                <p className="text-xs mb-1" style={{ color: "var(--text-4)" }}>{t("Karakter CV")}</p>
-                <p className="font-semibold" style={{ color: "var(--text-base)" }}>{(result.textChars || 0).toLocaleString()}</p>
+                <p className="text-xs mb-1" style={{ color: "var(--text-4)" }}>{t("Terakhir diperbarui")}</p>
+                <p className="font-semibold" style={{ color: "var(--text-base)" }}>{fmtDate(shown.parsedAt || ov?.cv?.parsedAt)}</p>
               </div>
             </div>
-            {result.profile?.certifications?.length > 0 && (
+            {shown.profile?.certifications?.length > 0 && (
               <div className="mt-4">
                 <p className="text-xs mb-2" style={{ color: "var(--text-4)" }}>{t("Sertifikasi/Keahlian Terdeteksi")}</p>
                 <div className="flex flex-wrap gap-2">
-                  {result.profile.certifications.map((c) => (
+                  {shown.profile.certifications.map((c) => (
                     <span key={c} className="text-xs bg-brand-600/20 text-brand-400 border border-brand-500/30 rounded-lg px-2.5 py-1">{c}</span>
                   ))}
                 </div>
@@ -112,7 +141,7 @@ export default function CVUpload() {
             )}
           </div>
 
-          <button onClick={() => { setResult(null); inputRef.current && (inputRef.current.value = ""); }} className="btn-outline w-full">
+          <button onClick={() => inputRef.current?.click()} className="btn-outline w-full">
             {t("Upload CV Lain")}
           </button>
         </div>
@@ -132,11 +161,22 @@ function SupportingData() {
   const [links, setLinks] = useState({ linkedin: "", instagram: "", portfolio: "", other: "" });
   const [certs, setCerts] = useState([]);
   const [busy, setBusy] = useState(false);
+  const hydrated = useRef(false);
+  const [baseline, setBaseline] = useState("");
 
+  const snapshot = JSON.stringify({ links, certs: certs.filter((c) => c.name?.trim()) });
+  const dirty = baseline !== "" && snapshot !== baseline;
+
+  // Isi form dari data tersimpan HANYA sekali. Tanpa penjaga ini, setiap refetch
+  // (mis. balik fokus ke tab) menimpa isian yang sedang diketik tapi belum disimpan.
   useEffect(() => {
-    if (!data) return;
-    setLinks({ linkedin: "", instagram: "", portfolio: "", other: "", ...(data.links || {}) });
-    setCerts(data.extraCertifications || []);
+    if (!data || hydrated.current) return;
+    const l = { linkedin: "", instagram: "", portfolio: "", other: "", ...(data.links || {}) };
+    const c = data.extraCertifications || [];
+    setLinks(l);
+    setCerts(c);
+    setBaseline(JSON.stringify({ links: l, certs: c.filter((x) => x.name?.trim()) }));
+    hydrated.current = true;
   }, [data]);
 
   const LINK_FIELDS = [
@@ -150,6 +190,7 @@ function SupportingData() {
     setBusy(true);
     try {
       await api.put("/user/cv-links", { ...links, certifications: certs.filter((c) => c.name.trim()) });
+      setBaseline(snapshot);
       toast.success(t("Data pendukung validasi disimpan"));
     } catch (e) {
       toast.error(typeof e === "string" ? e : t("Gagal menyimpan"));
@@ -161,6 +202,11 @@ function SupportingData() {
       <div>
         <h3 className="font-semibold flex items-center gap-2" style={{ color: "var(--text-base)" }}>
           <ShieldCheck className="w-4 h-4 text-brand-500" /> {t("Data Pendukung Validasi")}
+          {dirty && (
+            <span className="text-[11px] font-medium rounded-full px-2 py-0.5 bg-amber-500/15 text-amber-500 border border-amber-500/30">
+              {t("Belum disimpan")}
+            </span>
+          )}
         </h3>
         <p className="text-xs mt-1" style={{ color: "var(--text-4)" }}>
           {t("Portofolio, media sosial, & sertifikat memperkuat")} <b>{t("klaim skill")}</b>{t("-mu - dipakai AI saat kamu mengajukan bukti di")} <Link to="/app/jobs" className="text-brand-500 hover:underline">{t("Peta Posisi")}</Link>. {t("Ingat: kompetensi baru")} <b>{t("sah setelah lulus ujian")}</b>.

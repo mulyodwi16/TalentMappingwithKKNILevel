@@ -7,6 +7,8 @@ import useAuthStore from "../../store/authStore.js";
 import { useMentorChat } from "../../hooks/useMentorChat.js";
 import { useLang } from "../../lib/i18n.jsx";
 import { BUST, parseDialog, preloadCompanion, useBlink, useVnReveal } from "../../lib/companion.js";
+import { extractTools } from "../../lib/mentorTools.js";
+import MentorTools from "../../components/MentorTools.jsx";
 
 const CHIPS = [
   "Apa langkah prioritas untuk naik Skill Rank saya?",
@@ -188,7 +190,10 @@ export default function Mentor() {
             }
             // Jawaban Onyen dipecah jadi bubble pendek per segmen (ala textbox VN);
             // pesan terbaru muncul bergiliran, riwayat lama tampil langsung penuh.
-            const segs = parseDialog(m.content);
+            // Tag alat dipisah DULU, baru dialognya dipecah - supaya [BUKA:…]/[DATA:…]
+            // tak pernah ikut terbaca sebagai kalimat.
+            const { text: spoken, actions, widgets } = extractTools(m.content);
+            const segs = parseDialog(spoken);
             const visible = i === reveal.idx ? reveal.count : segs.length;
             const revealing = i === reveal.idx && reveal.count < segs.length;
             return (
@@ -210,6 +215,9 @@ export default function Mentor() {
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-brand-600" />
                     </div>
                   )}
+                  {/* Alat tampil begitu jawaban tiba, tidak menunggu semua kalimat selesai
+                      dimunculkan - jawaban panjang butuh puluhan detik untuk selesai. */}
+                  <MentorTools actions={actions} widgets={widgets} />
                 </div>
               </div>
             );

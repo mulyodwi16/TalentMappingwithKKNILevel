@@ -41,10 +41,35 @@ export async function buildSkillProfile(userId) {
 }
 
 const norm = (s) => String(s || "").toLowerCase().trim();
-function has(list, needle) {
+
+// Kata umum yang tak membedakan apa pun - kalau ikut dihitung, hampir semua unit SKKNI
+// akan terlihat "cocok" dengan hampir semua syarat posisi.
+const STOP = new Set([
+  "melakukan", "melaksanakan", "menerapkan", "menguasai", "mampu", "dapat", "bisa", "membuat",
+  "dengan", "yang", "dan", "atau", "untuk", "pada", "sesuai", "dalam", "serta", "dari", "hasil",
+  "able", "with", "and", "the", "for", "from", "using",
+]);
+const tokens = (s) => norm(s).split(/[^a-z0-9]+/).filter((w) => w.length >= 4 && !STOP.has(w));
+
+// Nama unit SKKNI berupa kalimat panjang ("Menyunting audio dan atau video sesuai tuntutan
+// naskah"), sedangkan HRD menulis syarat singkat ("Menyunting Audio/Video"). Pencocokan
+// substring utuh saja MELEWATKAN pasangan itu - kompetensi yang sudah dibuktikan pengguna
+// terbaca sebagai "belum ada bukti". Maka dicocokkan juga per kata penting.
+function similar(candidate, needle) {
+  const c = norm(candidate);
   const n = norm(needle);
-  if (!n) return false;
-  return list.some((s) => { const x = norm(s); return x.includes(n) || n.includes(x); });
+  if (!c || !n) return false;
+  if (c.includes(n) || n.includes(c)) return true;
+  const nt = tokens(n);
+  if (!nt.length) return false;
+  const hit = nt.filter((w) => c.includes(w)).length;
+  // Satu kata kunci harus tepat; lebih dari itu boleh meleset sebagian (min. 2 kata cocok).
+  return nt.length === 1 ? hit === 1 : hit >= 2 && hit / nt.length >= 0.7;
+}
+
+function has(list, needle) {
+  if (!norm(needle)) return false;
+  return list.some((s) => similar(s, needle));
 }
 
 // Hitung kecocokan profil terhadap sebuah posisi. Skor 0–100 + rincian per-skill.

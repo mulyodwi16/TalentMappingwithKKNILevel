@@ -15,5 +15,10 @@ export async function chosenUnitCodeSet(userId, chosenSkkniId = undefined) {
   }
   if (!docId) return null;
   const units = await prisma.skkniUnit.findMany({ where: { documentId: docId }, select: { code: true } });
-  return new Set(units.map((x) => x.code));
+  const set = new Set(units.map((x) => x.code));
+  // Sertifikat kompetensi (satu per kompetensi) memakai docId sebagai competencyCode, BUKAN
+  // kode unit. Tanpa docId di dalam set ini, sertifikat yang sah tidak terhitung di kesiapan,
+  // rank, maupun Learning Path - persis yang terjadi setelah sertifikat dikonsolidasi.
+  set.add(docId);
+  return set;
 }

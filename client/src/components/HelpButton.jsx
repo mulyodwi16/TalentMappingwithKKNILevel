@@ -40,16 +40,16 @@ function steps(name, t) {
     {
       art: "path", Icon: GraduationCap, color: "from-emerald-500 to-teal-500",
       title: t("Kelas per Unit Kompetensi"),
-      body: t("Tiap unit SKKNI punya materi belajar (disusun AI) + kursus AvatarEdu. Selesaikan kelas untuk membuka ujian unitnya. Koin bisa membuka unit lebih cepat, tapi tak memberi sertifikat."),
+      body: t("Tiap unit SKKNI punya materi belajar (disusun AI) + kursus AvatarEdu. Selesaikan kelas untuk membuka latihan unitnya. Koin bisa membuka unit lebih cepat, tapi tak menggantikan bukti kompetensi."),
       tip: t("Belajar berurutan, atau lompati dengan Koin bila ingin cepat."),
       href: "/app/kelas", hrefLabel: t("Buka Kelas"),
     },
     {
       art: "exam", Icon: ClipboardCheck, color: "from-brand-500 to-indigo-500",
-      title: t("Ujian Kompetensi per Unit"),
-      body: t("Ujian dibuka per unit (10–15 soal) dengan 3 tipe: pilihan ganda, studi kasus situasional, & urutan langkah. Isian dinilai AI. Lulus (≥60%) menerbitkan sertifikat unit & menaikkan rank."),
+      title: t("Latihan Unit & Ujian Kompetensi"),
+      body: t("Latihan dibuka per unit (10-15 soal) dengan 3 tipe: pilihan ganda, studi kasus situasional, & urutan langkah. Isian dinilai AI. Lulus (≥60%) menandai unit dikuasai & menaikkan rank. Sertifikat hanya terbit dari Ujian Kompetensi Utama, satu untuk seluruh kompetensi."),
       tip: t("Soal diacak tiap percobaan - menguji pemahaman, bukan keberuntungan."),
-      href: "/app/exam", hrefLabel: t("Mulai Ujian"),
+      href: "/app/exam", hrefLabel: t("Mulai Latihan"),
     },
     {
       art: "gap", Icon: Target, color: "from-rose-500 to-red-500",
@@ -305,7 +305,7 @@ export default function HelpButton() {
   return (
     <>
       <button onClick={() => setOpen(true)} title={t("Panduan fitur & cara kerja sistem")}
-        className="flex items-center gap-1.5 py-1.5 px-2.5 rounded-xl text-xs font-semibold transition-colors hover:bg-brand-50 hover:text-brand-600"
+        className="flex items-center gap-1.5 py-1.5 px-2.5 rounded-xl text-xs font-semibold transition-colors hover:bg-brand-500/10 hover:text-brand-600 dark:hover:text-brand-400"
         style={{ color: "var(--text-3)", border: "1px solid var(--border)" }} aria-label={t("Bantuan")}>
         <HelpCircle size={16} /> <span className="hidden sm:inline">{t("Bantuan")}</span>
       </button>

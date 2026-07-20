@@ -62,6 +62,72 @@ model User {
   unitProgress    UnitProgress[]
   evidence        ExternalEvidence[]
   skillClaims     SkillClaim[]
+  placements      PlacementAttempt[]
+}
+
+// ── Tes Penempatan ───────────────────────────────────────────────────────────
+// Baseline awal kompetensi: 2 soal per unit (1 pilihan ganda + 1 isian situasional,
+// kesulitan dinaikkan). Tujuannya mengisi Skill Gap & memberi acuan Learning Path
+// sejak awal, dan membebaskan user dari mengulang unit yang sudah dikuasai.
+// TIDAK menerbitkan sertifikat - sertifikat hanya dari ujian kompetensi utama.
+
+// Paket soal per kompetensi, digenerate AI SEKALI lalu dipakai bersama (seperti ExamPackage).
+model PlacementPackage {
+  id        String   @id @default(cuid())
+  docId     String   @unique
+  questions String   @default("[]") // JSON [{unitCode, unitTitle, type, q, options?, answerKey?, keyPoints?}]
+  unitCount Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+// Instance teracak milik user (kunci jawaban tetap di server). Dihapus setelah dikumpulkan.
+model PlacementInstance {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  docId     String
+  questions String    @default("[]")
+  // Tenggat disimpan di server, bukan dihitung ulang di klien: kalau halaman di-refresh
+  // di tengah tes, sisa waktunya harus tetap sama - bukan mulai dari awal lagi.
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+}
+
+// ── Ujian Kompetensi Utama ───────────────────────────────────────────────────
+// Satu-satunya yang menerbitkan SERTIFIKAT, dan sertifikatnya SATU per kompetensi
+// (bukan per unit - itu membanjiri user). Ujian per unit turun status jadi latihan.
+model CompetencyExamPackage {
+  id        String   @id @default(cuid())
+  docId     String   @unique
+  questions String   @default("[]")
+  unitCount Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model CompetencyExamInstance {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  docId     String
+  questions String    @default("[]")
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+}
+
+// Riwayat tes penempatan per kompetensi. Boleh diulang (menimpa baseline lama).
+model PlacementAttempt {
+  id          String   @id @default(cuid())
+  userId      String
+  docId       String
+  score       Int      @default(0) // rata-rata skor unit
+  unitCount   Int      @default(0)
+  passedUnits Int      @default(0)
+  breakdown   String   @default("[]") // JSON per unit: {unitCode, unitTitle, score, mcCorrect, feedback}
+  review      String?                 // ulasan menyeluruh dari AI
+  takenAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, docId])
+  @@index([userId])
 }
 
 // ── Bukti kompetensi EKSTERNAL (poin plus untuk menembus cap bobot kompetensi) ──

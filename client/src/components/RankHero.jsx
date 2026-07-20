@@ -1,4 +1,4 @@
-import { rankOf, rankName, tierProgress, RANKS } from "../lib/rank.js";
+import { rankOf, rankName, RANKS } from "../lib/rank.js";
 import RankIcon from "./RankIcon.jsx";
 import { useLang } from "../lib/i18n.jsx";
 import useIsDark from "../lib/useIsDark.js";
@@ -25,7 +25,13 @@ export default function RankHero({
   const r = rankOf(level) || RANKS[0];
   const c = r.color;
   const cap = rank?.weightCap || 9;
-  const prog = tierProgress(rank?.masteryScore || 0, cap);
+  // Progres rank kini berbasis TANGGA UNIT (rank.next dari server), bukan poin gabungan:
+  // syarat naik harus bisa ditunjuk sebagai unit yang perlu dikuasai.
+  const nx = rank?.next || null;
+  const req = nx ? Math.max(1, Math.ceil(0.8 * (nx.cumTotal || nx.total || 1))) : 0;
+  const prog = nx
+    ? { atCap: false, nextLevel: nx.level, need: nx.need, pct: Math.min(100, Math.round(((nx.cumDone ?? nx.done) / req) * 100)) }
+    : { atCap: true, nextLevel: null, need: 0, pct: 100 };
   const nextName = prog.nextLevel ? rankName(prog.nextLevel) : null;
   const emblemSize = size === "lg" ? 168 : 128;
 
@@ -112,7 +118,7 @@ export default function RankHero({
               {prog.atCap
                 ? t("Untuk melampaui, tambahkan bukti eksternal (sertifikasi resmi, portofolio, pengalaman).")
                 : prog.nextLevel
-                  ? <>{t("Kumpulkan")} <b className="text-slate-200">{t("{n} poin", { n: prog.need })}</b> {t("kompetensi lagi (≈ {a} unit lulus / {b} sertifikat).", { a: Math.ceil(prog.need / 8), b: Math.ceil(prog.need / 10) })}</>
+                  ? <>{t("Kuasai")} <b className="text-slate-200">{t("{n} unit", { n: prog.need })}</b> {t("lagi lewat ujian untuk naik rank.")}</>
                   : t("Kamu berada di puncak jenjang kompetensi. 🎉")}
             </p>
           </div>

@@ -6,6 +6,9 @@ import {
   getCatalogStatus, syncCatalog, SkkniError, listCategories,
   ensureExamPackage, buildShuffledInstance, courseCoverage, COURSE_UNITS,
   ensureUnitExamPackage, buildUnitExamInstance, unitStates, ensureCompetencyWeight, gradeFreeText,
+  prepareDoc, getPrepareState,
+  ensurePlacementPackage, buildPlacementInstance, reviewPlacement, PLACEMENT_MINUTES_PER_UNIT,
+  ensureFinalExamPackage, FINAL_PASS_SCORE, FINAL_MINUTES_PER_UNIT,
 } from "../skkni.js";
 import { isLlmConfigured } from "../llm.js";
 import { awardOnce, COIN } from "../gamification.js";
@@ -75,13 +78,34 @@ router.post("/choose", async (req, res) => {
       return res.json({ ok: true, ready: true, chosen: { id: doc.id, title, unitCount: doc.unitCount } });
     }
     // Belum ada unit → tarik di latar belakang (lewat antrean throttle). Tidak menunggu.
-    // Setelah unit ter-cache, klasifikasi bobot kompetensi (cap rank).
-    ingestUnits(doc.id).then(() => ensureCompetencyWeight(doc.id)).catch((e) => console.warn("[skkni] ingest/weight bg:", e.message));
+    // Klien memantau lewat GET /skkni/prepare/:docId sampai siap.
+    prepareDoc(doc.id);
     res.json({ ok: true, ready: false, chosen: { id: doc.id, title } });
   } catch (e) {
     const status = e instanceof SkkniError ? e.status : 502;
     res.status(status).json({ error: e.message || "Gagal menetapkan kompetensi." });
   }
+});
+
+// Status penyiapan kompetensi. Dipakai layar tunggu di klien supaya user baru tidak
+// masuk dashboard sebelum unit kompetensinya benar-benar terpasang.
+router.get("/prepare/:docId", async (req, res) => {
+  const docId = String(req.params.docId || "").trim();
+  const doc = await prisma.skkniDocument.findUnique({
+    where: { id: docId },
+    select: { title: true, unitsCached: true, unitCount: true },
+  });
+  if (!doc) return res.status(404).json({ error: "Dokumen SKKNI tidak ditemukan." });
+  const st = getPrepareState(docId);
+  const ready = !!doc.unitsCached;
+  res.json({
+    ready,
+    unitCount: doc.unitCount || 0,
+    // Dokumen terbitan terbaru kadang belum dirinci Kemnaker: siap, tapi tanpa unit.
+    empty: ready && (doc.unitCount || 0) === 0,
+    state: st?.state || (ready ? "done" : "idle"),
+    error: st?.state === "error" ? st.error : null,
+  });
 });
 
 // Kompetensi yang sedang dipilih user + unit-unitnya.
@@ -90,6 +114,311 @@ router.get("/chosen", async (req, res) => {
   if (!u?.chosenSkkniId) return res.json({ chosen: null });
   const doc = await getDocWithUnits(u.chosenSkkniId);
   res.json({ chosen: { id: u.chosenSkkniId, title: u.chosenSkkniTitle }, doc });
+});
+
+// ── Tes Penempatan ───────────────────────────────────────────────────────────
+// Baseline awal: 2 soal per unit (1 pilihan ganda + 1 isian). Mengisi Skill Gap &
+// memberi acuan Learning Path, serta membebaskan user dari mengulang yang sudah dikuasai.
+// TIDAK menerbitkan sertifikat - sertifikat hanya dari ujian kompetensi utama.
+
+function safeArr(s) {
+  try { const v = JSON.parse(s || "[]"); return Array.isArray(v) ? v : []; } catch { return []; }
+}
+
+async function chosenDoc(userId) {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { chosenSkkniId: true, chosenSkkniTitle: true } });
+  return u?.chosenSkkniId ? u : null;
+}
+
+// Status tes penempatan untuk kompetensi yang sedang dipilih.
+router.get("/placement", async (req, res) => {
+  const u = await chosenDoc(req.user.id);
+  if (!u) return res.json({ available: false, reason: "no-competency" });
+  const [attempt, inst, unitCount] = await Promise.all([
+    prisma.placementAttempt.findUnique({ where: { userId_docId: { userId: req.user.id, docId: u.chosenSkkniId } } }).catch(() => null),
+    prisma.placementInstance.findUnique({ where: { userId: req.user.id } }).catch(() => null),
+    prisma.skkniUnit.count({ where: { documentId: u.chosenSkkniId } }),
+  ]);
+  res.json({
+    available: unitCount > 0 && isLlmConfigured(),
+    reason: unitCount === 0 ? "no-units" : !isLlmConfigured() ? "no-llm" : null,
+    competencyTitle: u.chosenSkkniTitle,
+    unitCount,
+    inProgress: !!inst && inst.docId === u.chosenSkkniId,
+    expiresAt: inst && inst.docId === u.chosenSkkniId ? inst.expiresAt : null,
+    minutesPerUnit: PLACEMENT_MINUTES_PER_UNIT,
+    taken: attempt
+      ? { score: attempt.score, unitCount: attempt.unitCount, passedUnits: attempt.passedUnits, takenAt: attempt.takenAt, breakdown: safeArr(attempt.breakdown), review: attempt.review }
+      : null,
+  });
+});
+
+// Mulai / lanjutkan tes. Kunci jawaban TIDAK pernah dikirim ke klien.
+router.post("/placement/start", async (req, res) => {
+  const u = await chosenDoc(req.user.id);
+  if (!u) return res.status(400).json({ error: "Pilih kompetensi target dulu." });
+  if (!isLlmConfigured()) return res.status(503).json({ error: "Penyusun soal sedang tidak tersedia. Coba lagi nanti." });
+  try {
+    let inst = await prisma.placementInstance.findUnique({ where: { userId: req.user.id } });
+    if (!inst || inst.docId !== u.chosenSkkniId) {
+      const pkg = await ensurePlacementPackage(u.chosenSkkniId);
+      if (!pkg) return res.status(503).json({ error: "Belum bisa menyusun soal untuk kompetensi ini." });
+      const questions = buildPlacementInstance(pkg);
+      // Waktu mengikuti jumlah unit, bukan angka tetap: kompetensi 5 unit dan 12 unit
+      // jelas tak layak diberi durasi sama.
+      const unitCount = new Set(questions.map((q) => q.unitCode)).size;
+      const expiresAt = new Date(Date.now() + unitCount * PLACEMENT_MINUTES_PER_UNIT * 60_000);
+      inst = await prisma.placementInstance.upsert({
+        where: { userId: req.user.id },
+        update: { docId: u.chosenSkkniId, questions: JSON.stringify(questions), expiresAt, createdAt: new Date() },
+        create: { userId: req.user.id, docId: u.chosenSkkniId, questions: JSON.stringify(questions), expiresAt },
+      });
+    }
+    res.json({
+      competencyTitle: u.chosenSkkniTitle,
+      // Tenggat dari server: refresh di tengah tes melanjutkan sisa waktu, bukan mengulang.
+      expiresAt: inst.expiresAt,
+      questions: stripPlacementKeys(safeArr(inst.questions)),
+    });
+  } catch (e) {
+    console.warn("[placement] start gagal:", e.message);
+    res.status(502).json({ error: "Gagal menyiapkan tes penempatan." });
+  }
+});
+
+// Buang kunci jawaban & poin acuan sebelum dikirim ke klien (jaga keabsahan tes ulang).
+function stripPlacementKeys(qs) {
+  return qs.map((q, i) => ({
+    index: i,
+    unitCode: q.unitCode,
+    unitTitle: q.unitTitle,
+    type: q.type,
+    q: q.q,
+    ...(q.type === "mc" ? { options: q.options } : {}),
+  }));
+}
+
+router.post("/placement/submit", async (req, res) => {
+  const userId = req.user.id;
+  const u = await chosenDoc(userId);
+  if (!u) return res.status(400).json({ error: "Pilih kompetensi target dulu." });
+  const inst = await prisma.placementInstance.findUnique({ where: { userId } });
+  if (!inst || inst.docId !== u.chosenSkkniId) return res.status(400).json({ error: "Tes penempatan belum dimulai." });
+
+  const questions = safeArr(inst.questions);
+  const answers = req.body?.answers || {};
+  const lang = String(req.headers["x-lang"] || req.body?.lang || "id").toLowerCase().startsWith("en") ? "en" : "id";
+  try {
+    // Pilihan ganda dinilai otomatis; isian dinilai AI terhadap poin acuan (server-side).
+    const perQuestion = new Array(questions.length).fill(0);
+    const feedbacks = {};
+    const freeItems = [];
+    questions.forEach((q, i) => {
+      if (q.type === "mc") {
+        perQuestion[i] = Number(answers[i]) === Number(q.answerKey) ? 100 : 0;
+      } else {
+        freeItems.push({ index: i, type: "situational", q: q.q, keyPoints: q.keyPoints || [], answer: String(answers[i] ?? "") });
+      }
+    });
+    if (freeItems.length) {
+      const graded = await gradeFreeText(u.chosenSkkniTitle || "Kompetensi", freeItems, lang).catch(() => ({}));
+      for (const it of freeItems) {
+        perQuestion[it.index] = graded[it.index]?.score ?? 0;
+        if (graded[it.index]?.feedback) feedbacks[it.index] = graded[it.index].feedback;
+      }
+    }
+
+    // Skor unit = rata-rata soal milik unit itu. Simpan juga catatan AI atas jawaban uraian
+    // dan benar/salahnya pilihan ganda, supaya user tahu ALASAN nilainya.
+    const byUnit = new Map();
+    questions.forEach((q, i) => {
+      const e = byUnit.get(q.unitCode) || { unitCode: q.unitCode, unitTitle: q.unitTitle, sum: 0, n: 0, mcCorrect: null, feedback: null };
+      e.sum += perQuestion[i]; e.n += 1;
+      if (q.type === "mc") e.mcCorrect = perQuestion[i] === 100;
+      else if (feedbacks[i]) e.feedback = feedbacks[i];
+      byUnit.set(q.unitCode, e);
+    });
+    const breakdown = [...byUnit.values()].map((e) => ({
+      unitCode: e.unitCode, unitTitle: e.unitTitle, score: Math.round(e.sum / Math.max(1, e.n)),
+      mcCorrect: e.mcCorrect, feedback: e.feedback,
+    }));
+
+    // Tulis baseline ke SkillAssessment (dipakai Skill Gap, tangga rank, Learning Path).
+    for (const b of breakdown) {
+      await prisma.skillAssessment.upsert({
+        where: { userId_competencyCode: { userId, competencyCode: b.unitCode } },
+        update: { currentScore: b.score, gap: Math.max(0, 100 - b.score), competencyName: b.unitTitle },
+        create: { userId, competencyCode: b.unitCode, competencyName: b.unitTitle, currentScore: b.score, requiredScore: 100, gap: Math.max(0, 100 - b.score) },
+      });
+    }
+
+    const passedUnits = breakdown.filter((b) => b.score >= 60).length;
+    const overall = Math.round(breakdown.reduce((s, b) => s + b.score, 0) / Math.max(1, breakdown.length));
+    const review = await reviewPlacement(u.chosenSkkniTitle || "Kompetensi", breakdown, lang);
+    await prisma.placementAttempt.upsert({
+      where: { userId_docId: { userId, docId: u.chosenSkkniId } },
+      update: { score: overall, unitCount: breakdown.length, passedUnits, breakdown: JSON.stringify(breakdown), review, takenAt: new Date() },
+      create: { userId, docId: u.chosenSkkniId, score: overall, unitCount: breakdown.length, passedUnits, breakdown: JSON.stringify(breakdown), review },
+    });
+    await prisma.placementInstance.delete({ where: { userId } }).catch(() => {});
+
+    // Sengaja TIDAK menerbitkan sertifikat. Rank & kesiapan ikut baseline ini.
+    const rank = await refreshRank(userId).catch(() => null);
+    await refreshReadiness(userId).catch(() => {});
+    try { await awardOnce(userId, COIN.classComplete, "Menyelesaikan Tes Penempatan", { type: "placement", id: u.chosenSkkniId }); } catch { /* non-fatal */ }
+
+    res.json({ score: overall, passedUnits, unitCount: breakdown.length, breakdown, review, rank });
+  } catch (e) {
+    console.warn("[placement] submit gagal:", e.message);
+    res.status(502).json({ error: "Gagal menilai tes penempatan." });
+  }
+});
+
+// ── Ujian Kompetensi Utama ───────────────────────────────────────────────────
+// SATU-SATUNYA penerbit sertifikat, dan sertifikatnya SATU per kompetensi.
+// Boleh diambil kapan saja - user yang merasa sudah mampu tidak wajib melewati
+// latihan unit satu per satu.
+
+router.get("/final", async (req, res) => {
+  const u = await chosenDoc(req.user.id);
+  if (!u) return res.json({ available: false, reason: "no-competency" });
+  const [cert, inst, unitCount] = await Promise.all([
+    prisma.certificate.findUnique({
+      where: { userId_competencyCode_source: { userId: req.user.id, competencyCode: u.chosenSkkniId, source: "competency" } },
+    }).catch(() => null),
+    prisma.competencyExamInstance.findUnique({ where: { userId: req.user.id } }).catch(() => null),
+    prisma.skkniUnit.count({ where: { documentId: u.chosenSkkniId } }),
+  ]);
+  res.json({
+    available: unitCount > 0 && isLlmConfigured(),
+    reason: unitCount === 0 ? "no-units" : !isLlmConfigured() ? "no-llm" : null,
+    competencyTitle: u.chosenSkkniTitle,
+    unitCount,
+    passScore: FINAL_PASS_SCORE,
+    minutesPerUnit: FINAL_MINUTES_PER_UNIT,
+    inProgress: !!inst && inst.docId === u.chosenSkkniId,
+    expiresAt: inst && inst.docId === u.chosenSkkniId ? inst.expiresAt : null,
+    certificate: cert ? { id: cert.id, name: cert.name, score: cert.score, issuedAt: cert.issuedAt } : null,
+  });
+});
+
+router.post("/final/start", async (req, res) => {
+  const u = await chosenDoc(req.user.id);
+  if (!u) return res.status(400).json({ error: "Pilih kompetensi target dulu." });
+  if (!isLlmConfigured()) return res.status(503).json({ error: "Penyusun soal sedang tidak tersedia. Coba lagi nanti." });
+  try {
+    let inst = await prisma.competencyExamInstance.findUnique({ where: { userId: req.user.id } });
+    if (!inst || inst.docId !== u.chosenSkkniId) {
+      const pkg = await ensureFinalExamPackage(u.chosenSkkniId);
+      if (!pkg) return res.status(503).json({ error: "Belum bisa menyusun soal untuk kompetensi ini." });
+      const questions = buildPlacementInstance(pkg);   // pengacakan opsi MC yang sama
+      const unitCount = new Set(questions.map((q) => q.unitCode)).size;
+      const expiresAt = new Date(Date.now() + unitCount * FINAL_MINUTES_PER_UNIT * 60_000);
+      inst = await prisma.competencyExamInstance.upsert({
+        where: { userId: req.user.id },
+        update: { docId: u.chosenSkkniId, questions: JSON.stringify(questions), expiresAt, createdAt: new Date() },
+        create: { userId: req.user.id, docId: u.chosenSkkniId, questions: JSON.stringify(questions), expiresAt },
+      });
+    }
+    res.json({
+      competencyTitle: u.chosenSkkniTitle,
+      passScore: FINAL_PASS_SCORE,
+      expiresAt: inst.expiresAt,
+      questions: stripPlacementKeys(safeArr(inst.questions)),
+    });
+  } catch (e) {
+    console.warn("[final] start gagal:", e.message);
+    res.status(502).json({ error: "Gagal menyiapkan ujian kompetensi." });
+  }
+});
+
+router.post("/final/submit", async (req, res) => {
+  const userId = req.user.id;
+  const u = await chosenDoc(userId);
+  if (!u) return res.status(400).json({ error: "Pilih kompetensi target dulu." });
+  const inst = await prisma.competencyExamInstance.findUnique({ where: { userId } });
+  if (!inst || inst.docId !== u.chosenSkkniId) return res.status(400).json({ error: "Ujian belum dimulai." });
+
+  const questions = safeArr(inst.questions);
+  const answers = req.body?.answers || {};
+  const lang = String(req.headers["x-lang"] || req.body?.lang || "id").toLowerCase().startsWith("en") ? "en" : "id";
+  try {
+    const perQuestion = new Array(questions.length).fill(0);
+    const feedbacks = {};
+    const freeItems = [];
+    questions.forEach((q, i) => {
+      if (q.type === "mc") perQuestion[i] = Number(answers[i]) === Number(q.answerKey) ? 100 : 0;
+      else freeItems.push({ index: i, type: "situational", q: q.q, keyPoints: q.keyPoints || [], answer: String(answers[i] ?? "") });
+    });
+    if (freeItems.length) {
+      const graded = await gradeFreeText(u.chosenSkkniTitle || "Kompetensi", freeItems, lang).catch(() => ({}));
+      for (const it of freeItems) {
+        perQuestion[it.index] = graded[it.index]?.score ?? 0;
+        if (graded[it.index]?.feedback) feedbacks[it.index] = graded[it.index].feedback;
+      }
+    }
+
+    const byUnit = new Map();
+    questions.forEach((q, i) => {
+      const e = byUnit.get(q.unitCode) || { unitCode: q.unitCode, unitTitle: q.unitTitle, sum: 0, n: 0, mcCorrect: null, feedback: null };
+      e.sum += perQuestion[i]; e.n += 1;
+      if (q.type === "mc") e.mcCorrect = perQuestion[i] === 100;
+      else if (feedbacks[i]) e.feedback = feedbacks[i];
+      byUnit.set(q.unitCode, e);
+    });
+    const breakdown = [...byUnit.values()].map((e) => ({
+      unitCode: e.unitCode, unitTitle: e.unitTitle, score: Math.round(e.sum / Math.max(1, e.n)),
+      mcCorrect: e.mcCorrect, feedback: e.feedback,
+    }));
+
+    // Skor unit tetap ditulis: ujian ini juga bukti penguasaan untuk Skill Gap & tangga rank.
+    // Hanya ditulis bila LEBIH BAIK dari nilai yang sudah ada, agar hasil buruk di ujian
+    // sertifikasi tidak menghapus penguasaan yang sudah terbukti sebelumnya.
+    for (const b of breakdown) {
+      const prev = await prisma.skillAssessment.findUnique({
+        where: { userId_competencyCode: { userId, competencyCode: b.unitCode } },
+      }).catch(() => null);
+      if (prev && prev.currentScore >= b.score) continue;
+      await prisma.skillAssessment.upsert({
+        where: { userId_competencyCode: { userId, competencyCode: b.unitCode } },
+        update: { currentScore: b.score, gap: Math.max(0, 100 - b.score), competencyName: b.unitTitle },
+        create: { userId, competencyCode: b.unitCode, competencyName: b.unitTitle, currentScore: b.score, requiredScore: 100, gap: Math.max(0, 100 - b.score) },
+      });
+    }
+
+    const score = Math.round(breakdown.reduce((s, b) => s + b.score, 0) / Math.max(1, breakdown.length));
+    const passed = score >= FINAL_PASS_SCORE;
+
+    // SATU sertifikat per kompetensi (kunci = docId + source "competency").
+    let certificate = null;
+    if (passed) {
+      try {
+        const rankNow = await prisma.user.findUnique({ where: { id: userId }, select: { currentKkniLevel: true } });
+        certificate = await prisma.certificate.upsert({
+          where: { userId_competencyCode_source: { userId, competencyCode: u.chosenSkkniId, source: "competency" } },
+          update: { score, name: u.chosenSkkniTitle || "Kompetensi", kkniLevel: rankNow?.currentKkniLevel || null },
+          create: {
+            userId, competencyCode: u.chosenSkkniId, name: u.chosenSkkniTitle || "Kompetensi",
+            kkniLevel: rankNow?.currentKkniLevel || null, score, source: "competency",
+          },
+        });
+      } catch (e) { console.error("[final] sertifikat:", e.message); }
+    }
+
+    const review = await reviewPlacement(u.chosenSkkniTitle || "Kompetensi", breakdown, lang);
+    await prisma.competencyExamInstance.delete({ where: { userId } }).catch(() => {});
+    const rank = await refreshRank(userId).catch(() => null);
+    await refreshReadiness(userId).catch(() => {});
+    try { await awardOnce(userId, COIN.exam, "Ujian Kompetensi Utama", { type: "finalexam", id: u.chosenSkkniId }); } catch { /* non-fatal */ }
+    await prisma.notification.create({
+      data: { userId, type: "exam_result", message: `Ujian Kompetensi Utama: skor ${score}%${passed ? " - LULUS, sertifikat terbit" : ""}` },
+    }).catch(() => {});
+
+    res.json({ score, passed, passScore: FINAL_PASS_SCORE, breakdown, review, rank, certificate });
+  } catch (e) {
+    console.warn("[final] submit gagal:", e.message);
+    res.status(502).json({ error: "Gagal menilai ujian kompetensi." });
+  }
 });
 
 // ── Ujian kompetensi berbasis unit SKKNI pilihan user ────────────────────────
@@ -187,18 +516,10 @@ router.post("/exam/submit", async (req, res) => {
       },
     });
 
-    // Sertifikat per unit yang lulus (idempoten per unit).
+    // Ujian per unit = LATIHAN: memberi koin, progres, dan skor untuk Skill Gap & rank,
+    // tapi TIDAK menerbitkan sertifikat. Sertifikat hanya satu per kompetensi, dari
+    // Ujian Kompetensi Utama (lihat /skkni/final).
     const newCerts = [];
-    try {
-      for (const r of results.filter((r) => r.passed)) {
-        const c = await prisma.certificate.upsert({
-          where: { userId_competencyCode_source: { userId, competencyCode: r.competencyCode, source: "exam" } },
-          update: { score: r.score },
-          create: { userId, competencyCode: r.competencyCode, name: r.name, kkniLevel: u.currentKkniLevel || null, score: r.score, source: "exam" },
-        });
-        newCerts.push(c.name);
-      }
-    } catch (e) { console.error("skkni cert:", e.message); }
 
     let coin = null;
     try { coin = await awardOnce(userId, COIN.exam, "Ujian kompetensi SKKNI", { type: "skkniexam", id: attempt.id }); } catch { /* non-fatal */ }
@@ -338,22 +659,13 @@ router.post("/exam/:code/submit", async (req, res) => {
       },
     });
 
-    // Sertifikat unit HANYA bila lulus ujian (idempoten per unit).
-    let certificate = null;
-    if (passed) {
-      try {
-        const c = await prisma.certificate.upsert({
-          where: { userId_competencyCode_source: { userId, competencyCode: code, source: "exam" } },
-          update: { score },
-          create: { userId, competencyCode: code, name: inst.unitTitle, kkniLevel: u.currentKkniLevel || null, score, source: "exam" },
-        });
-        certificate = c.name;
-      } catch (e) { console.error("unit cert:", e.message); }
-    }
+    // Ujian unit = LATIHAN. Tidak menerbitkan sertifikat; nilainya tetap dipakai
+    // Skill Gap & tangga rank. Sertifikat hanya dari Ujian Kompetensi Utama.
+    const certificate = null;
 
     let coin = null;
-    try { coin = await awardOnce(userId, COIN.exam, `Ujian unit: ${inst.unitTitle}`, { type: "unitexam", id: attempt.id }); } catch { /* non-fatal */ }
-    await prisma.notification.create({ data: { userId, type: "exam_result", message: `Ujian unit "${inst.unitTitle}": skor ${score}%${passed ? " - LULUS, sertifikat terbit" : ""}` } }).catch(() => {});
+    try { coin = await awardOnce(userId, COIN.exam, `Latihan unit: ${inst.unitTitle}`, { type: "unitexam", id: attempt.id }); } catch { /* non-fatal */ }
+    await prisma.notification.create({ data: { userId, type: "exam_result", message: `Latihan unit "${inst.unitTitle}": skor ${score}%${passed ? " - unit dikuasai" : ""}` } }).catch(() => {});
 
     const rank = await refreshRank(userId).catch(() => null);
     const overall = await refreshReadiness(userId).catch(() => null);

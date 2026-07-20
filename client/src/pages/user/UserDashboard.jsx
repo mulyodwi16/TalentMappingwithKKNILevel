@@ -11,6 +11,7 @@ import DailyMissions from "../../components/DailyMissions.jsx";
 import DailyQuiz from "../../components/DailyQuiz.jsx";
 import RankHero from "../../components/RankHero.jsx";
 import RankUpOverlay from "../../components/RankUpOverlay.jsx";
+import JourneySummary from "../../components/JourneySummary.jsx";
 import { rankName } from "../../lib/rank.js";
 import { useLang, dateLocale } from "../../lib/i18n.jsx";
 
@@ -292,11 +293,20 @@ export default function UserDashboard() {
         <div className="card p-8 text-center text-sm" style={{ color: "var(--text-4)" }}>{t("Memuat rank…")}</div>
       )}
 
+      {/* Ringkasan seluruh perjalanan - ditaruh TEPAT di bawah hero karena inilah yang
+          dicari pengguna saat mendarat: posisiku sekarang di mana, dan apa berikutnya. */}
+      <JourneySummary overview={overview} assessments={assessments} />
+
       {/* Gamifikasi harian - Course Harian di bawah bonus login (mengisi ruang kosong) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-        <div className="space-y-4">
+      {/* Kolom kiri dibiarkan MEMANJANG mengikuti tinggi Misi Harian (tanpa items-start),
+          lalu kartu Course Harian yang mengisi sisa ruangnya - kalau tidak, ada celah
+          kosong menganga di bawah kolom kiri. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-4">
           <DailyLoginCard />
-          <DailyQuiz />
+          <div className="flex-1 [&>.card]:h-full [&>.card]:flex [&>.card]:flex-col [&>.card]:justify-center">
+            <DailyQuiz />
+          </div>
         </div>
         <DailyMissions />
       </div>

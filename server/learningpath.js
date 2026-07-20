@@ -137,6 +137,23 @@ export async function buildInputs(userId) {
 //   unit lulus (skor≥60) → done · sedang dipelajari/diuji (<60 / kelas dibuka) → doing · lainnya → todo.
 function normalizeTitle(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); }
 
+// Ambang "langkah tuntas" di Learning Path. Sengaja lebih tinggi dari ambang lulus unit (60%)
+// dan disamakan dengan ambang status "Siap Naik" - langkah rencana bertugas MENUTUP gap,
+// bukan sekadar melewatinya.
+const PLAN_MASTERY = 80;
+
+// AI kadang salah memberi trackType (mis. langkah "Verifikasi Bukti Eksternal" diberi
+// trackType "cv"), sehingga langkahnya dinyatakan selesai hanya karena CV sudah diunggah.
+// Isi langkah lebih dipercaya daripada labelnya.
+const EVIDENCE_RE = /bukti eksternal|external evidence|verifikasi bukti|portofolio terverifikasi/i;
+const CERT_RE = /sertifikat|certificate/i;
+function realTrackType(step) {
+  const text = `${step?.title || ""} ${step?.objective || ""} ${step?.why || ""}`;
+  if (EVIDENCE_RE.test(text)) return "evidence";
+  if (step?.trackType === "cv" && CERT_RE.test(text)) return "certificate";
+  return step?.trackType || "unit";
+}
+
 export async function deriveStepProgress(userId, steps) {
   if (!Array.isArray(steps) || !steps.length) return steps || [];
   const [assessments, unitProgAll, u, certRows, classesRedeem, courseTx, evidence, attempts] = await Promise.all([
@@ -169,7 +186,11 @@ export async function deriveStepProgress(userId, steps) {
     if (!a && step.competencyRef) a = byTitle.get(normalizeTitle(step.competencyRef));
     if (!a && step.title) a = byTitle.get(normalizeTitle(step.title));
     const code = step.unitCode || a?.competencyCode;
-    if (a && a.currentScore >= 60) return mark("done", `Lulus ujian ${a.currentScore}%`);
+    // Langkah Learning Path ADA untuk menutup gap, jadi "selesai" tidak boleh berarti
+    // sekadar lulus. Unit dengan skor 75% masih menyisakan gap -25%, dan menandainya
+    // selesai membuat rencana terlihat beres padahal gap-nya masih terpampang.
+    if (a && a.currentScore >= PLAN_MASTERY) return mark("done", `Dikuasai ${a.currentScore}%`);
+    if (a && a.currentScore >= 60) return mark("doing", `Dikuasai ${a.currentScore}% - tutup sisa gap ke ${PLAN_MASTERY}%`);
     if (a && a.currentScore > 0) return mark("doing", `Ujian ${a.currentScore}% - belum lulus (min 60%)`);
     if (code && learnedCodes.has(code)) return mark("doing", "Materi kelas selesai - tinggal lulus ujiannya");
     if (code && learningCodes.has(code)) return mark("doing", "Kelas sedang berjalan");
@@ -177,7 +198,7 @@ export async function deriveStepProgress(userId, steps) {
   };
 
   return steps.map((s) => {
-    const t = s.trackType || "unit";
+    const t = realTrackType(s);
     let r;
     switch (t) {
       case "cv":          r = hasCv ? mark("done", "CV sudah diunggah") : mark("todo"); break;
@@ -351,9 +372,9 @@ function generateFallback(inputs) {
 
   // 3) Langkah penutup: ambil ujian ulang untuk mengunci kenaikan rank.
   steps.push({
-    title: "Ambil ujian & raih sertifikat",
-    objective: `Buktikan kompetensi lewat ujian (soal diacak) untuk naik menuju ${inputs.rank.targetName}.`,
-    why: "Rank & kesiapan naik dari BUKTI kompetensi (unit lulus + sertifikat), bukan sekadar belajar.",
+    title: "Ambil Ujian Kompetensi Utama",
+    objective: `Buktikan kompetensimu secara menyeluruh (lulus 70%) untuk meraih sertifikat dan naik menuju ${inputs.rank.targetName}.`,
+    why: "Rank & kesiapan naik dari BUKTI kompetensi, bukan sekadar belajar. Ujian utama ini satu-satunya yang menerbitkan sertifikat - satu untuk seluruh kompetensi.",
     difficulty: bump(base),
     competencyRef: inputs.competency?.title || null, unitCode: null,
     trackType: "exam", feature: "ujian",
@@ -449,7 +470,17 @@ export async function getPlan(userId) {
   let plan = null;
   try { plan = JSON.parse(row.plan); } catch { /* corrupt */ }
   if (plan?.steps) plan = { ...plan, steps: await deriveStepProgress(userId, plan.steps) };
-  return { plan, source: row.source, targetRole: row.targetRole, generatedAt: row.generatedAt, inputs, llmAvailable: isLlmConfigured() };
+
+  // Progres tiap langkah memang dihitung ulang tiap kali, TAPI isi rencananya beku sejak
+  // disusun. Setelah tes penempatan (atau ujian) mengubah baseline, rencana lama bisa
+  // menyuruh mengulang unit yang sudah dikuasai - jadi ditandai supaya pengguna tahu
+  // rencananya perlu disusun ulang.
+  const newest = await prisma.skillAssessment.findFirst({
+    where: { userId }, orderBy: { updatedAt: "desc" }, select: { updatedAt: true },
+  }).catch(() => null);
+  const stale = !!newest && newest.updatedAt > row.generatedAt;
+
+  return { plan, source: row.source, targetRole: row.targetRole, generatedAt: row.generatedAt, stale, inputs, llmAvailable: isLlmConfigured() };
 }
 
 // (DIHAPUS) Progres langkah tidak lagi diisi manual - dilacak otomatis oleh deriveStepProgress.

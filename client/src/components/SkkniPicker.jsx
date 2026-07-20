@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import toast from "react-hot-toast";
 import { Search, Loader2, X, CheckCircle2 } from "lucide-react";
 import api from "../api/client.js";
+import CompetencyPreparing from "./CompetencyPreparing.jsx";
 import { useLang } from "../lib/i18n.jsx";
 
 // Modal pencarian & pemilihan kompetensi SKKNI - kategori + infinite scroll (muat per 100,
@@ -20,6 +21,7 @@ export default function SkkniPicker({ onClose, onChosen, selectOnly = false }) {
   const [searching, setSearching] = useState(false);   // pencarian/replace awal
   const [loadingMore, setLoadingMore] = useState(false);
   const [choosing, setChoosing] = useState(null);
+  const [preparing, setPreparing] = useState(null);    // {docId, title, chosen} - menunggu skill siap
   const listRef = useRef(null);
   // Simpan q/kategori terbaru untuk loadMore tanpa stale closure.
   const stateRef = useRef({ q: "", cat: "all", len: 0, total: 0, loading: false });
@@ -73,9 +75,14 @@ export default function SkkniPicker({ onClose, onChosen, selectOnly = false }) {
     setChoosing(item.id);
     try {
       const r = await api.post("/skkni/choose", { docId: item.id });
-      if (r.ready) toast.success(t("Kompetensi target: {title} ({n} skill)", { title: r.chosen?.title, n: r.chosen?.unitCount }));
-      else toast.success(t("Kompetensi dipilih: {title}. Menyiapkan skill dari Kemnaker…", { title: r.chosen?.title }));
-      onChosen(r.chosen);
+      if (r.ready) {
+        toast.success(t("Kompetensi target: {title} ({n} skill)", { title: r.chosen?.title, n: r.chosen?.unitCount }));
+        onChosen(r.chosen);
+        return;
+      }
+      // Skill-nya masih ditarik dari data resmi SKKNI: tahan modal di layar tunggu
+      // supaya user tak menutupnya lalu melihat analisis yang masih kosong.
+      setPreparing({ docId: item.id, title: r.chosen?.title || item.title, chosen: r.chosen });
     } catch (e) {
       toast.error(typeof e === "string" ? e : t("Gagal menetapkan kompetensi"));
     } finally {
@@ -102,6 +109,16 @@ export default function SkkniPicker({ onClose, onChosen, selectOnly = false }) {
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-red-50 hover:text-red-500" style={{ color: "var(--text-4)" }}><X className="w-4 h-4" /></button>
         </div>
 
+        {preparing ? (
+          <CompetencyPreparing
+            docId={preparing.docId}
+            title={preparing.title}
+            onReady={() => onChosen(preparing.chosen)}
+            onSkip={() => onChosen(preparing.chosen)}
+            onPickOther={() => setPreparing(null)}
+          />
+        ) : (
+        <>
         <form onSubmit={(e) => { e.preventDefault(); search(q, activeCat); }} className="flex gap-2 mb-3">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Cari profesi (mis. perawat, akuntansi, desain)…")} className="input text-sm flex-1" autoFocus />
           <button type="submit" className="btn-primary text-sm px-3" disabled={searching}>{searching ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Cari")}</button>
@@ -139,6 +156,8 @@ export default function SkkniPicker({ onClose, onChosen, selectOnly = false }) {
             </p>
           )}
         </div>
+        </>
+        )}
       </div>
     </div>
   );

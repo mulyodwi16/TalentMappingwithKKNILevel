@@ -10,6 +10,7 @@ import useAuthStore from "../../store/authStore.js";
 import RankBadge from "../../components/RankBadge.jsx";
 import RankHero from "../../components/RankHero.jsx";
 import RankIdentityCard from "../../components/RankIdentityCard.jsx";
+import RankLadder from "../../components/RankLadder.jsx";
 import CertificateModal from "../../components/CertificateModal.jsx";
 import AvatarCropModal from "../../components/AvatarCropModal.jsx";
 import SkkniPicker from "../../components/SkkniPicker.jsx";
@@ -175,7 +176,7 @@ export default function Profile() {
               )}
             </div>
           ) : (
-            <p className="text-sm" style={{ color: "var(--text-4)" }}>{t("Belum ada sertifikat. Lulus")} <Link to="/app/exam" className="text-brand-600 hover:underline">{t("Ujian Kompetensi")}</Link> {t("untuk menerbitkannya.")}</p>
+            <p className="text-sm" style={{ color: "var(--text-4)" }}>{t("Belum ada sertifikat. Lulus")} <Link to="/app/final-exam" className="text-brand-600 hover:underline">{t("Ujian Kompetensi Utama")}</Link> {t("untuk menerbitkannya.")}</p>
           )}
         </div>
 
@@ -250,6 +251,9 @@ export default function Profile() {
         <ReadinessCard readiness={ov.readiness} rankInfo={ov.rankInfo} rank={ov.rank} level={ov.rank?.effective ?? p.currentKkniLevel} />
         <EvidenceCard rank={ov.rank} onChanged={load} open={evidenceOpen} setOpen={setEvidenceOpen} />
       </div>
+
+      {/* Syarat naik rank secara konkret: unit apa saja per tier. */}
+      <RankLadder rank={ov.rank} />
 
       {viewCert && <CertificateModal cert={viewCert} holder={p.name} onClose={() => setViewCert(null)} />}
     </div>
@@ -330,11 +334,11 @@ function ReadinessCard({ readiness, rankInfo, rank, level }) {
             <p className="mt-1.5" style={{ color: "var(--text-4)" }}>
               {raisedBySkill
                 ? t("Kompetensimu menaikkan rank di atas jenjang pendidikan. 💪")
-                : t("Buktikan lebih banyak kompetensi (lulus ujian, sertifikat, course) untuk naik rank.")}
+                : t("Kuasai unit kompetensi lewat ujian untuk naik rank.")}
             </p>
             {rank.next && !rank.cappedByWeight && (
               <p className="mt-1" style={{ color: "var(--text-4)" }}>
-                {t("Menuju")} <b>{rankName(rank.next.level)}</b>: {t("kumpulkan {n} poin kompetensi lagi (≈ {a} unit lulus / {b} sertifikat).", { n: rank.next.need, a: Math.ceil(rank.next.need / 8), b: Math.ceil(rank.next.need / 10) })}
+                {t("Menuju")} <b>{rankName(rank.next.level)}</b>: {t("kuasai {n} unit lagi lewat ujian.", { n: rank.next.need })}
               </p>
             )}
           </div>
