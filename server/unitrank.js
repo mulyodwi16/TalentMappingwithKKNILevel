@@ -88,6 +88,37 @@ export const TIER_TOLERANCE = 0.8;
 // Rank yang diraih = tier tertinggi yang penguasaan kumulatifnya (tier itu + semua tier di
 // bawahnya) mencapai ambang. Unit yang belum dikuasai TETAP dilaporkan sebagai gap.
 // `mastered` = Set kode unit yang skornya mencapai UNIT_MASTERY (lihat thresholds.js).
+// ── Babak rank untuk Learning Path ────────────────────────────────────────────
+// Learning Path dulu menampilkan SATU bar raksasa "cakupan seluruh kompetensi" yang macet
+// di angka kecil (0/90 = 13%) - bikin patah semangat. Sekarang progres dipecah PER RANK:
+// "babak" saat ini = dorongan menuju rank berikutnya. Penuh → naik rank → babak maju ke tier
+// atasnya (bar seolah reset). Angkanya diturunkan dari tangga yang SAMA dengan computeRank,
+// jadi Learning Path, Dashboard, dan hero rank tak pernah berselisih.
+//
+// Target babak = rank pertama DI ATAS rank efektif yang, kalau unit-unitnya dikuasai, BENAR-
+// BENAR menaikkan rank (memicu perayaan). Untuk pemula yang rank awalnya dari pendidikan
+// (mis. Gold), targetnya Platinum - membuktikan Gold saja tak menaikkan rank yang sudah dimiliki.
+// Sudah mentok cap bobot kompetensi (butuh bukti eksternal untuk lanjut) → atTop.
+// Mengembalikan LEVEL angka saja (tanpa nama) - klien yang memberi nama & warna rank.
+export function rankChapter({ ladder = [], next = null, effective = 0 } = {}) {
+  const map = ladder.map((s) => ({ level: s.level, total: s.total, done: s.done, complete: s.complete }));
+  const top = ladder.length ? ladder[ladder.length - 1].level : effective;
+  const targetLevel = Math.max((effective || EARNED_FLOOR) + 1, next?.level || 0);
+
+  // Tak ada tangga (belum pilih kompetensi) atau target melewati tier tertinggi yang tersedia
+  // untuk kompetensi ini → tak ada babak berikutnya lewat unit.
+  if (!ladder.length || targetLevel > top) {
+    return { atTop: true, earned: effective, target: null, done: 0, total: 0, need: 0, pct: 100, ladder: map };
+  }
+
+  const step = ladder.find((s) => s.level === targetLevel) || next;
+  const need = step?.need ?? 0;                 // unit lagi (kumulatif) untuk mencapai target
+  const done = step?.cumDone ?? 0;              // unit yang sudah dikuasai sampai tier target
+  const total = done + need;                    // = ceil(TIER_TOLERANCE * cumTotal target)
+  const pct = total ? Math.round((done / total) * 100) : (need === 0 ? 100 : 0);
+  return { atTop: false, earned: effective, target: targetLevel, done, total, need, pct, ladder: map };
+}
+
 export function evaluateLadder(ladder, mastered, tolerance = TIER_TOLERANCE) {
   const codes = mastered instanceof Set ? mastered : new Set(mastered || []);
   let earned = 0;      // 0 = belum ada tier yang tercapai

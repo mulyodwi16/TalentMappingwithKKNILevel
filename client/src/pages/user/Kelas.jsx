@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import api from "../../api/client.js";
 import { useCoins } from "../../hooks/useCoins.js";
+import { groupByTier, TierHeader, TierLockedHint } from "../../components/TierSection.jsx";
 import { useLang } from "../../lib/i18n.jsx";
 
 const UNLOCK_COST = 60;
@@ -179,7 +180,7 @@ function UnitCard({ unit, balance, busy, onOpen, onUnlock }) {
                 <Coins className="w-3.5 h-3.5" /> {t("Buka dengan {n} Koin", { n: UNLOCK_COST })}
               </button>
               <p className="text-[10px] text-center" style={{ color: "var(--text-4)" }}>
-                {balance < UNLOCK_COST ? t("Koin kurang (saldo {n})", { n: balance }) : t("atau selesaikan unit sebelumnya")}
+                {balance < UNLOCK_COST ? t("Koin kurang (saldo {n})", { n: balance }) : t("atau kuasai tier di bawahnya")}
               </p>
             </>
           ) : (
@@ -506,12 +507,20 @@ export default function Kelas() {
         )}
       </div>
 
-      {/* Grid kartu unit ala AvatarEdu */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start">
-        {units.map((u) => (
-          <UnitCard key={u.code} unit={u} balance={balance} busy={busy}
-            onOpen={(code) => setSp({ unit: code })}
-            onUnlock={(code) => unlock.mutate(code)} />
+      {/* Grid kartu unit dikelompokkan per tier rank (berjenjang: tier atas terbuka setelah tier bawah dikuasai) */}
+      <div className="space-y-6">
+        {groupByTier(units).map((g) => (
+          <div key={g.tier} className="space-y-3">
+            <TierHeader tier={g.tier} total={g.total} passed={g.passed} locked={g.locked} />
+            {g.locked && <TierLockedHint />}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start">
+              {g.units.map((u) => (
+                <UnitCard key={u.code} unit={u} balance={balance} busy={busy}
+                  onOpen={(code) => setSp({ unit: code })}
+                  onUnlock={(code) => unlock.mutate(code)} />
+              ))}
+            </div>
+          </div>
         ))}
       </div>
 

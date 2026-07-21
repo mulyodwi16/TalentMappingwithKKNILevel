@@ -12,7 +12,7 @@
 //   GET /documents/{id}          → detail dokumen + array `units` (unit kompetensi = "skill")
 import { prisma } from "./prisma.js";
 import { chatComplete, isLlmConfigured } from "./llm.js";
-import { buildRankLadder } from "./unitrank.js";
+import { buildRankLadder, evaluateLadder } from "./unitrank.js";
 import { UNIT_MASTERY, FINAL_PASS_SCORE } from "./thresholds.js";
 
 const BASE = "https://skkni-api.kemnaker.go.id/v1/public";
@@ -918,40 +918,67 @@ export async function gradeFreeText(unitTitle, items, lang = "id") {
 // state: locked | learning (kelas terbuka, ujian terkunci) | ready (ujian terbuka) | passed.
 // Urutan maju bila unit sebelumnya "selesai" (kelas ditandai selesai ATAU lulus ujian).
 // unlockedByCoin membypass urutan & kewajiban belajar → langsung "ready".
+// Status tiap unit untuk Kelas & Ujian. Urutan & PENGUNCIAN kini mengikuti TANGGA RANK
+// (bukan lagi urutan kode + rantai unit sebelumnya): unit dikelompokkan per tier, dan sebuah
+// tier baru terbuka setelah tier di bawahnya dikuasai (ambang kumulatif TIER_TOLERANCE) -
+// sama persis dengan syarat naik rank. Efeknya kelas & ujian jadi berjenjang: user termotivasi
+// menuntaskan tier bawah untuk membuka tier atas. Tes Penempatan (yang menulis SkillAssessment
+// per unit) = jalur percepatan: begitu unit tier bawah terbukti dikuasai, tier atas terbuka
+// otomatis. Koin tetap bisa membuka SATU unit lebih cepat (beli akses, bukan bukti).
 export async function unitStates(userId, docId) {
-  const units = await prisma.skkniUnit.findMany({
+  const rawUnits = await prisma.skkniUnit.findMany({
     where: { documentId: docId, availability: "applied" }, orderBy: { code: "asc" },
   });
-  if (!units.length) return [];
-  const codes = units.map((u) => u.code);
-  const [assess, progress, coursePkgs, examPkgs] = await Promise.all([
+  if (!rawUnits.length) return [];
+  const codes = rawUnits.map((u) => u.code);
+  const [assess, progress, coursePkgs, examPkgs, doc] = await Promise.all([
     prisma.skillAssessment.findMany({ where: { userId, competencyCode: { in: codes } } }),
     prisma.unitProgress.findMany({ where: { userId, unitCode: { in: codes } } }),
     prisma.unitCourse.findMany({ where: { docId, unitCode: { in: codes } }, select: { unitCode: true } }),
     prisma.unitExamPackage.findMany({ where: { docId, unitCode: { in: codes } }, select: { unitCode: true, questionCount: true } }),
+    prisma.skkniDocument.findUnique({ where: { id: docId }, select: { weightMaxRank: true, title: true } }).catch(() => null),
   ]);
+  const byCode = Object.fromEntries(rawUnits.map((u) => [u.code, u]));
   const scoreBy = Object.fromEntries(assess.map((a) => [a.competencyCode, a.currentScore]));
   const progBy = Object.fromEntries(progress.map((p) => [p.unitCode, p]));
   const hasCourse = new Set(coursePkgs.map((c) => c.unitCode));
   const qCountBy = Object.fromEntries(examPkgs.map((e) => [e.unitCode, e.questionCount]));
 
-  let prevDone = true; // unit pertama selalu terbuka urutannya
-  return units.map((u, i) => {
-    const score = scoreBy[u.code];
+  const passedCodes = new Set(
+    rawUnits.filter((u) => scoreBy[u.code] !== undefined && scoreBy[u.code] >= UNIT_MASTERY).map((u) => u.code),
+  );
+
+  // Tangga rank kompetensi ini (di-cap bobotnya) → tier tiap unit + keterbukaan tiap tier.
+  const cap = doc?.weightMaxRank || 9;
+  const ladder = buildRankLadder(rawUnits, cap);
+  const lad = evaluateLadder(ladder, passedCodes);
+  const tierOf = {};
+  ladder.forEach((step) => step.units.forEach((u) => { tierOf[u.code] = step.level; }));
+  // Tier terbuka bila tier PERTAMA, atau tier tepat di bawahnya sudah "complete" (ambang
+  // kumulatif tercapai). `lad.steps` sejajar urutan `ladder`.
+  const tierOpen = {};
+  lad.steps.forEach((s, idx) => { tierOpen[s.level] = idx === 0 || lad.steps[idx - 1].complete; });
+
+  // Urutan tampilan = urutan tangga (tier bawah dulu, lalu susunan dalam-tier dari buildRankLadder).
+  const ordered = ladder.flatMap((step) => step.units);
+  return ordered.map((lu, i) => {
+    const u = byCode[lu.code];
+    const tier = tierOf[lu.code];
+    const score = scoreBy[lu.code];
     const passed = (score ?? 0) >= UNIT_MASTERY && score !== undefined;
-    const p = progBy[u.code] || {};
+    const p = progBy[lu.code] || {};
     const learned = !!p.learned;
     const unlockedByCoin = !!p.unlockedByCoin;
-    const sequenceOpen = i === 0 || prevDone;
-    const accessible = sequenceOpen || unlockedByCoin;
+    const tOpen = !!tierOpen[tier];
+    const accessible = tOpen || unlockedByCoin;
     let state;
     if (passed) state = "passed";
     else if (!accessible) state = "locked";
     else if (learned || unlockedByCoin) state = "ready";
     else state = "learning";
-    prevDone = learned || passed; // menentukan keterbukaan unit berikutnya
     return {
       order: i + 1, code: u.code, title: u.title, state,
+      tier, tierLocked: !tOpen, // penguncian tingkat-tier (bukan per unit) untuk header grup di klien
       score: score ?? null, passed, learned, unlockedByCoin,
       hasCourse: hasCourse.has(u.code), questionCount: qCountBy[u.code] ?? null,
     };

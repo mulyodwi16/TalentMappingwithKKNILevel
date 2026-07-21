@@ -78,6 +78,87 @@ function JourneyArt({ done = 0, total = 0 }) {
   );
 }
 
+// ── Peta tangga rank kecil: seluruh perjalanan supaya "babak" tak terasa kehilangan progres ──
+// Dua penanda berbeda: rank SAAT INI ("kamu di sini", tersorot penuh) vs TARGET babak (garis
+// putus + ikon target). Dulu hanya target yang disorot, jadi posisi sekarang tak kelihatan.
+function LadderMap({ ladder = [], target, earned }) {
+  const { t } = useLang();
+  if (!ladder.length) return null;
+  return (
+    <div className="pt-1">
+      <p className="text-[11px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-4)" }}>{t("Tangga Rank")}</p>
+      <div className="flex items-stretch gap-1.5 overflow-x-auto pb-1">
+        {ladder.map((s) => {
+          const isCurrent = s.level === earned;
+          const isTarget = s.level === target;
+          const col = rankColor(s.level);
+          const pct = s.total ? Math.round((s.done / s.total) * 100) : 0;
+          return (
+            <div key={s.level} className="shrink-0 rounded-lg px-2.5 py-2 flex flex-col items-center gap-1 min-w-[76px]"
+              style={{
+                background: isCurrent ? `${col}1f` : "var(--bg-raised)",
+                border: `1px ${isTarget && !isCurrent ? "dashed" : "solid"} ${isCurrent ? col : isTarget ? `${col}99` : "var(--border)"}`,
+              }}>
+              <div className="flex items-center gap-1">
+                <RankIcon level={s.level} size={16} />
+                {s.complete && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
+                {isTarget && !s.complete && <Target className="w-3 h-3" style={{ color: col }} />}
+              </div>
+              <span className="text-[10px] font-semibold" style={{ color: s.complete ? "#10b981" : (isCurrent || isTarget) ? col : "var(--text-4)" }}>{rankName(s.level)}</span>
+              <span className="text-[10px] tabular-nums" style={{ color: "var(--text-4)" }}>{s.done}/{s.total}</span>
+              <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: "var(--bg-muted)" }}>
+                <div className="h-full rounded-full" style={{ width: `${pct}%`, background: s.complete ? "#10b981" : col }} />
+              </div>
+              {isCurrent && <span className="text-[9px] font-semibold leading-none" style={{ color: col }}>{t("Kamu di sini")}</span>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── "Babak" rank: progres tier saat ini menuju rank berikutnya (pengganti bar cakupan raksasa) ──
+function ChapterBar({ chapter }) {
+  const { t } = useLang();
+  if (chapter.atTop) {
+    return (
+      <div className="rounded-xl p-4 flex items-start gap-3" style={{ background: "var(--bg-raised)", border: "1px solid var(--border)" }}>
+        <RankIcon level={chapter.earned} size={34} title={rankName(chapter.earned)} />
+        <div className="min-w-0">
+          <p className="text-sm font-bold capitalize" style={{ color: rankColor(chapter.earned) }}>{rankName(chapter.earned)}</p>
+          <p className="text-xs" style={{ color: "var(--text-3)" }}>
+            {t("sudah di puncak kompetensi ini")}. {t("Tambahkan bukti eksternal untuk menembus ke tingkat ahli.")}
+          </p>
+        </div>
+      </div>
+    );
+  }
+  const col = rankColor(chapter.target);
+  return (
+    <div className="space-y-2.5">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <RankIcon level={chapter.earned} size={24} title={rankName(chapter.earned)} />
+          <ArrowRight className="w-3.5 h-3.5" style={{ color: "var(--text-4)" }} />
+          <RankIcon level={chapter.target} size={28} title={rankName(chapter.target)} />
+          <span className="text-sm font-bold" style={{ color: col }}>{t("Babak menuju {rank}", { rank: rankName(chapter.target) })}</span>
+        </div>
+        <span className="text-xs font-semibold" style={{ color: "var(--text-3)" }}>{t("{a}/{b} unit babak ini", { a: chapter.done, b: chapter.total })}</span>
+      </div>
+      <div className="h-2.5 rounded-full overflow-hidden" style={{ background: "var(--bg-raised)" }}>
+        <div className="h-full rounded-full transition-all" style={{ width: `${chapter.pct}%`, background: col }} />
+      </div>
+      <p className="text-[11px]" style={{ color: "var(--text-4)" }}>
+        {chapter.need > 0
+          ? <>{t("kuasai {n} unit lagi", { n: chapter.need })} {t("menuju")} {rankName(chapter.target)}. {t("Bar reset & maju ke tier berikutnya saat kamu naik rank.")}</>
+          : t("Tinggal selangkah! Selesaikan untuk naik rank.")}
+      </p>
+      <LadderMap ladder={chapter.ladder} target={chapter.target} earned={chapter.earned} />
+    </div>
+  );
+}
+
 // ── Kursus AvatarEdu yang cocok untuk sebuah langkah (lazy saat dibuka) ─────────
 function StepCourses({ query }) {
   const { t } = useLang();
@@ -296,10 +377,15 @@ export default function LearningPath() {
   const noComp = !inputs?.competency;
   const done = plan?.steps?.filter((s) => s.progress === "done").length || 0;
   const total = plan?.steps?.length || 0;
-  // Progres utama = CAKUPAN unit kompetensi (selaras Skill Gap & Kesiapan), bukan langkah
-  // tematik. Rencana hanya berisi langkah prioritas; "10/12 langkah" dulu tampak 83% padahal
-  // kompetensinya baru tersentuh 18%. Lihat lib/planprogress.js.
+  // Progres utama = "babak" rank: dorongan tier saat ini menuju rank berikutnya (dari server,
+  // selaras tangga rank). Bar penuh → naik rank → babak maju ke tier atas (seolah reset). Ini
+  // menggantikan bar cakupan raksasa yang macet di angka kecil & bikin patah semangat.
+  // `cov` masih dipakai sebagai cadangan JourneyArt saat belum ada babak (mis. belum pilih kompetensi).
   const cov = planCoverage(inputs);
+  const chapter = data?.chapter;
+  const hasChapter = !!(chapter && inputs?.competency && !chapter.atTop);
+  const jaDone = hasChapter ? chapter.done : (cov.known ? cov.mastered : done);
+  const jaTotal = hasChapter ? chapter.total : (cov.known ? cov.total : total);
 
   // OTOMATIS: begitu kompetensi dipilih & belum ada rencana, susun sendiri (tanpa tombol manual).
   // JUGA disusun ulang saat `stale` - ada nilai unit yang lebih baru dari rencana ini (mis.
@@ -323,7 +409,7 @@ export default function LearningPath() {
   return (
     <div className="space-y-6">
       {/* Header + ilustrasi */}
-      <div className="card p-5 relative overflow-hidden">
+      <div className="card p-5 relative overflow-hidden space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
           <div>
             <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: "var(--text-base)" }}>
@@ -332,26 +418,11 @@ export default function LearningPath() {
             <p className="text-sm mt-1.5" style={{ color: "var(--text-3)" }}>
               {t("Rencana belajar terurut dari")} <b>{t("seluruh datamu")}</b> {t("- CV, kelas yang diikuti, ujian, keahlian, dan kompetensi target - disusun & dicek AI. Progres")} <b>{t("dilacak otomatis")}</b>.
             </p>
-            {plan && (
-              <div className="mt-3 space-y-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-40 h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-raised)" }}>
-                    <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${cov.known ? cov.pct : (total ? Math.round((done / total) * 100) : 0)}%` }} />
-                  </div>
-                  <span className="text-xs font-semibold" style={{ color: "var(--text-3)" }}>
-                    {cov.known ? t("{a}/{b} unit dikuasai", { a: cov.mastered, b: cov.total }) : t("{a}/{b} selesai", { a: done, b: total })}
-                  </span>
-                </div>
-                {cov.known && total > 0 && (
-                  <p className="text-[11px]" style={{ color: "var(--text-4)" }}>
-                    {t("{a} dari {b} langkah prioritas selesai. Sisanya menutup gap unit lain di kompetensi ini.", { a: done, b: total })}
-                  </p>
-                )}
-              </div>
-            )}
           </div>
-          <JourneyArt done={cov.known ? cov.mastered : done} total={cov.known ? cov.total : total} />
+          <JourneyArt done={jaDone} total={jaTotal} />
         </div>
+        {/* Babak rank: progres per tier + peta tangga. Menggantikan bar cakupan raksasa. */}
+        {inputs?.competency && chapter && <ChapterBar chapter={chapter} />}
       </div>
 
       {/* Data yang dipertimbangkan AI */}

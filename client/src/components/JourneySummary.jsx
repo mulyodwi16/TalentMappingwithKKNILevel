@@ -49,9 +49,11 @@ export default function JourneySummary({ overview, assessments = [] }) {
   const steps = lp?.plan?.steps || [];
   const stepsDone = steps.filter((s) => s.progress === "done").length;
   const nextStep = steps.find((s) => s.progress !== "done");
-  // Progres Learning Path = cakupan unit (selaras Skill Gap), bukan langkah tematik yang
-  // dulu tampak hampir penuh (10/12) padahal kompetensinya baru tersentuh sebagian.
-  const lpPct = assessments.length ? coveragePct(mastered, assessments.length) : 0;
+  // Progres Learning Path = "babak" rank (dorongan tier saat ini menuju rank berikutnya), selaras
+  // dengan halaman Learning Path & tangga rank. Cadangan cakupan unit dipakai bila belum ada babak.
+  const chapter = lp?.chapter;
+  const hasChapter = !!(chapter && !chapter.atTop);
+  const lpPct = hasChapter ? chapter.pct : (assessments.length ? coveragePct(mastered, assessments.length) : 0);
 
   const links = cv.links || {};
   const linkCount = ["linkedin", "instagram", "portfolio", "other"].filter((k) => links[k]).length;
@@ -88,15 +90,19 @@ export default function JourneySummary({ overview, assessments = [] }) {
         }
       />
 
-      {/* 3. Learning path - progres = cakupan unit, sub = langkah berikutnya */}
+      {/* 3. Learning path - progres = babak rank (menuju rank berikutnya), sub = sisa unit babak */}
       <Card
         to="/app/learning-path" icon={Route} color="#8b5cf6"
         title={t("Learning Path")}
-        value={steps.length ? (nextStep ? nextStep.title : t("Semua langkah tuntas")) : t("Belum tersusun")}
-        bar={lpPct}
-        sub={steps.length
-          ? t("{a}/{b} langkah prioritas selesai · cakupan kompetensi {c}%", { a: stepsDone, b: steps.length, c: lpPct })
-          : t("Pilih kompetensi dulu - rencana disusun otomatis.")}
+        value={chapter?.atTop ? t("sudah di puncak kompetensi ini")
+          : hasChapter ? t("Babak menuju {rank}", { rank: rankName(chapter.target) })
+            : steps.length ? (nextStep ? nextStep.title : t("Semua langkah tuntas")) : t("Belum tersusun")}
+        bar={chapter?.atTop ? 100 : lpPct}
+        sub={hasChapter
+          ? t("{a}/{b} unit babak ini · {c} langkah prioritas siap", { a: chapter.done, b: chapter.total, c: steps.length })
+          : steps.length
+            ? t("{a}/{b} langkah prioritas selesai · cakupan kompetensi {c}%", { a: stepsDone, b: steps.length, c: lpPct })
+            : t("Pilih kompetensi dulu - rencana disusun otomatis.")}
       />
 
       {/* 4. Pemahaman dari kelas & latihan */}

@@ -6,6 +6,7 @@ import { UNIT_MASTERY, PLAN_MASTERY } from "./thresholds.js";
 import { computeReadiness } from "./readiness.js";
 import { getDocWithUnits, cleanTitle } from "./skkni.js";
 import { chosenUnitCodeSet } from "./competencyScope.js";
+import { rankChapter } from "./unitrank.js";
 
 // ── Learning Path AI ──────────────────────────────────────────────────────────
 // Menyusun rencana belajar personal & terurut dari 3 masukan (permintaan #4):
@@ -112,6 +113,11 @@ export async function buildInputs(userId) {
       targetName: rankName(u.targetKkniLevel || Math.min(9, rank.effective + 1)),
       masteryScore: rank.masteryScore,
       next: rank.next,
+      // Tangga & rank efektif dibawa mentah supaya "babak" Learning Path (rankChapter) memakai
+      // angka yang SAMA PERSIS dengan tangga rank - tak ada perhitungan tandingan.
+      effective: rank.effective,
+      earned: rank.earned,
+      ladder: rank.ladder,
       weightCap: rank.weightCap, cappedByWeight: rank.cappedByWeight,
     },
     readiness: { total: readiness.total, cv: readiness.cv, exam: readiness.exam, cert: readiness.cert, status: readiness.status },
@@ -454,7 +460,7 @@ export async function generatePlan(userId) {
     : await prisma.learningPlan.create({ data: { userId, docId, ...data } });
   // Progres dilacak OTOMATIS dari aktivitas nyata (bukan manual).
   const steps = await deriveStepProgress(userId, plan.steps);
-  return { plan: { ...plan, steps }, source, targetRole: inputs.user.targetRole, generatedAt: saved.generatedAt, inputs };
+  return { plan: { ...plan, steps }, source, targetRole: inputs.user.targetRole, generatedAt: saved.generatedAt, inputs, chapter: rankChapter(inputs.rank) };
 }
 
 // Ambil rencana tersimpan untuk kompetensi AKTIF (tanpa regenerasi). Progres selalu dihitung
@@ -463,7 +469,8 @@ export async function getPlan(userId) {
   const inputs = await buildInputs(userId);
   const docId = inputs?.competency?.id || null;
   const row = await prisma.learningPlan.findFirst({ where: { userId, docId } });
-  if (!row) return { plan: null, targetRole: inputs?.user.targetRole || null, inputs, llmAvailable: isLlmConfigured() };
+  const chapter = inputs?.rank ? rankChapter(inputs.rank) : null;
+  if (!row) return { plan: null, targetRole: inputs?.user.targetRole || null, inputs, chapter, llmAvailable: isLlmConfigured() };
   let plan = null;
   try { plan = JSON.parse(row.plan); } catch { /* corrupt */ }
   if (plan?.steps) plan = { ...plan, steps: await deriveStepProgress(userId, plan.steps) };
@@ -477,7 +484,7 @@ export async function getPlan(userId) {
   }).catch(() => null);
   const stale = !!newest && newest.updatedAt > row.generatedAt;
 
-  return { plan, source: row.source, targetRole: row.targetRole, generatedAt: row.generatedAt, stale, inputs, llmAvailable: isLlmConfigured() };
+  return { plan, source: row.source, targetRole: row.targetRole, generatedAt: row.generatedAt, stale, inputs, chapter, llmAvailable: isLlmConfigured() };
 }
 
 // (DIHAPUS) Progres langkah tidak lagi diisi manual - dilacak otomatis oleh deriveStepProgress.

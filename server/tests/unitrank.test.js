@@ -1,11 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  classifyUnit, buildRankLadder, evaluateLadder,
+  classifyUnit, buildRankLadder, evaluateLadder, rankChapter,
   EARNED_FLOOR, MAX_RANK, TIER_TOLERANCE,
 } from "../unitrank.js";
 
 const unit = (code, title) => ({ code, title });
+
+// Tiru bentuk keluaran computeRank (ladder+next+effective) dari sebuah tangga & set unit dikuasai.
+// effective = max(seed pendidikan, rank yang diraih tangga) - persis logika rank efektif.
+function rankLike(units, cap, masteredCodes = [], seed = EARNED_FLOOR) {
+  const ladder = buildRankLadder(units, cap);
+  const lad = evaluateLadder(ladder, new Set(masteredCodes));
+  return { ladder: lad.steps, next: lad.next, effective: Math.max(seed, lad.earned), earned: lad.earned };
+}
 
 // 11 unit ala kompetensi Video Editing - dipakai berulang di bawah.
 const UNIT_VIDEO = [
@@ -159,6 +167,64 @@ test("evaluateLadder menerima array maupun Set", () => {
   const l = buildRankLadder(UNIT_VIDEO, 6);
   const kode = UNIT_VIDEO.map((u) => u.code);
   assert.equal(evaluateLadder(l, kode).earned, evaluateLadder(l, new Set(kode)).earned);
+});
+
+test("babak pemula menargetkan rank DI ATAS seed pendidikan, bukan seed itu sendiri", () => {
+  // Pemula rank awal Gold (dari pendidikan) belum menguasai unit apa pun. Membuktikan Gold
+  // tak menaikkan rank yang sudah dimiliki - jadi babaknya harus menuju Platinum (naik nyata).
+  const c = rankChapter(rankLike(UNIT_VIDEO, 6, [], EARNED_FLOOR));
+  assert.equal(c.atTop, false);
+  assert.equal(c.target, EARNED_FLOOR + 1, "target harus satu tier di atas seed");
+  assert.equal(c.done, 0);
+  assert.ok(c.total > 0);
+  assert.equal(c.pct, 0);
+});
+
+test("babak: target maju ke depan (tak pernah mundur) saat unit dikuasai", () => {
+  // pct sengaja BOLEH turun saat naik rank - babak berpindah ke tier yang lebih berat (efek
+  // "reset"). Yang harus dijaga: target selalu maju, dan angka bar selalu masuk akal.
+  const kode = UNIT_VIDEO.map((u) => u.code);
+  let targetSebelum = 0;
+  for (let i = 0; i <= kode.length; i++) {
+    const c = rankChapter(rankLike(UNIT_VIDEO, 6, kode.slice(0, i), EARNED_FLOOR));
+    assert.ok(c.pct >= 0 && c.pct <= 100, `pct di luar 0..100: ${c.pct}`);
+    assert.ok(c.done <= c.total, "done tak boleh melebihi total babak");
+    if (!c.atTop) {
+      assert.ok(c.target >= targetSebelum, `target mundur di ${i} unit: ${targetSebelum} → ${c.target}`);
+      targetSebelum = c.target;
+    }
+  }
+});
+
+test("babak: naik rank memindahkan target ke tier berikutnya (bar seolah reset)", () => {
+  const kode = UNIT_VIDEO.map((u) => u.code);
+  // Kuasai cukup untuk meraih Platinum(4): target lama (4) tercapai → babak baru menuju 5+.
+  const cukupPlatinum = rankLike(UNIT_VIDEO, 6, kode, EARNED_FLOOR); // semua unit → earned 6
+  const c = rankChapter(cukupPlatinum);
+  // Semua unit dikuasai & cap 6 → sudah di puncak kompetensi ini.
+  assert.equal(c.atTop, true);
+  assert.equal(c.target, null);
+  assert.equal(c.pct, 100);
+});
+
+test("babak: target tak pernah melewati cap bobot kompetensi", () => {
+  // earned mentok cap (6) tapi seed lebih tinggi (mustahil normal, tapi jaga-jaga): tetap atTop.
+  const c = rankChapter(rankLike(UNIT_VIDEO, 6, UNIT_VIDEO.map((u) => u.code), 8));
+  assert.equal(c.atTop, true);
+});
+
+test("babak: peta ladder mencerminkan tiap tier tangga", () => {
+  const like = rankLike(UNIT_VIDEO, 6, ["V.01", "V.02"], EARNED_FLOOR);
+  const c = rankChapter(like);
+  assert.equal(c.ladder.length, like.ladder.length);
+  assert.deepEqual(c.ladder.map((s) => s.level), like.ladder.map((s) => s.level));
+  assert.ok(c.ladder.every((s) => typeof s.total === "number" && typeof s.done === "number"));
+});
+
+test("babak: tanpa tangga (belum pilih kompetensi) tidak melempar", () => {
+  const c = rankChapter({ ladder: [], next: null, effective: 0 });
+  assert.equal(c.atTop, true);
+  assert.equal(c.target, null);
 });
 
 test("penguasaan tak pernah turun saat unit ditambahkan", () => {

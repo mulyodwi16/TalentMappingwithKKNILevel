@@ -7,6 +7,7 @@ import {
   History, XCircle, X, Loader2,
 } from "lucide-react";
 import api from "../../api/client.js";
+import { groupByTier, TierHeader, TierLockedHint } from "../../components/TierSection.jsx";
 import { useLang, getLang, dateLocale } from "../../lib/i18n.jsx";
 
 function Timer({ seconds, onDone }) {
@@ -209,37 +210,44 @@ function UnitPicker({ chosen, onPick }) {
         )}
       </div>
 
-      {/* Library grid: 2–4 kolom (samping) × n baris (ke bawah) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {units.map((u) => {
-          const ui = STATE_UI[u.state] || STATE_UI.locked;
-          const canExam = u.state === "ready" || u.state === "passed";
-          const accent = u.state === "passed" ? "#10b981" : u.state === "ready" ? "var(--brand-ring, #6366f1)" : "var(--border)";
-          return (
-            <div key={u.code} className="card p-4 flex flex-col gap-3" style={{ borderTop: `3px solid ${u.state === "passed" ? "#10b981" : "var(--border)"}` }}>
-              <div className="flex items-start gap-2.5">
-                <div className={`w-9 h-9 rounded-xl grid place-items-center shrink-0 text-sm font-black ${u.state === "passed" ? "bg-emerald-500 text-white" : "bg-[var(--bg-muted)]"}`} style={u.state === "passed" ? {} : { color: "var(--text-3)" }}>
-                  {u.state === "passed" ? "✓" : u.order}
-                </div>
-                <span className={`text-[11px] px-1.5 py-0.5 rounded-full ml-auto shrink-0 ${ui.badge}`}>{t(ui.label)}</span>
-              </div>
-              <p className="text-sm font-semibold leading-snug line-clamp-3 min-h-[3.6em]" style={{ color: "var(--text-base)" }} title={u.title}>{u.title}</p>
-              <div className="flex items-center gap-2 text-[11px]" style={{ color: "var(--text-4)" }}>
-                {u.score != null && <span>{t("skor {n}%", { n: u.score })}</span>}
-                {u.questionCount ? <span>· {t("{n} soal", { n: u.questionCount })}</span> : null}
-              </div>
-              {canExam ? (
-                <button onClick={() => onPick(u.code)} className="btn-primary text-xs py-2 w-full flex items-center justify-center gap-1.5 mt-auto">
-                  {u.state === "passed" ? <><RotateCcw className="w-3.5 h-3.5" /> {t("Ujian Ulang")}</> : <><PlayCircle className="w-3.5 h-3.5" /> {t("Mulai Ujian")}</>}
-                </button>
-              ) : (
-                <Link to="/app/kelas" className="btn-outline text-xs py-2 w-full flex items-center justify-center gap-1.5 mt-auto">
-                  <ui.Icon className="w-3.5 h-3.5" /> {u.state === "locked" ? t("Buka di Kelas") : t("Belajar Dulu")}
-                </Link>
-              )}
+      {/* Unit dikelompokkan per tier rank (berjenjang, sinkron dengan Kelas) */}
+      <div className="space-y-6">
+        {groupByTier(units).map((g) => (
+          <div key={g.tier} className="space-y-3">
+            <TierHeader tier={g.tier} total={g.total} passed={g.passed} locked={g.locked} />
+            {g.locked && <TierLockedHint />}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {g.units.map((u) => {
+                const ui = STATE_UI[u.state] || STATE_UI.locked;
+                const canExam = u.state === "ready" || u.state === "passed";
+                return (
+                  <div key={u.code} className="card p-4 flex flex-col gap-3" style={{ borderTop: `3px solid ${u.state === "passed" ? "#10b981" : "var(--border)"}` }}>
+                    <div className="flex items-start gap-2.5">
+                      <div className={`w-9 h-9 rounded-xl grid place-items-center shrink-0 text-sm font-black ${u.state === "passed" ? "bg-emerald-500 text-white" : "bg-[var(--bg-muted)]"}`} style={u.state === "passed" ? {} : { color: "var(--text-3)" }}>
+                        {u.state === "passed" ? "✓" : u.order}
+                      </div>
+                      <span className={`text-[11px] px-1.5 py-0.5 rounded-full ml-auto shrink-0 ${ui.badge}`}>{t(ui.label)}</span>
+                    </div>
+                    <p className="text-sm font-semibold leading-snug line-clamp-3 min-h-[3.6em]" style={{ color: "var(--text-base)" }} title={u.title}>{u.title}</p>
+                    <div className="flex items-center gap-2 text-[11px]" style={{ color: "var(--text-4)" }}>
+                      {u.score != null && <span>{t("skor {n}%", { n: u.score })}</span>}
+                      {u.questionCount ? <span>· {t("{n} soal", { n: u.questionCount })}</span> : null}
+                    </div>
+                    {canExam ? (
+                      <button onClick={() => onPick(u.code)} className="btn-primary text-xs py-2 w-full flex items-center justify-center gap-1.5 mt-auto">
+                        {u.state === "passed" ? <><RotateCcw className="w-3.5 h-3.5" /> {t("Ujian Ulang")}</> : <><PlayCircle className="w-3.5 h-3.5" /> {t("Mulai Ujian")}</>}
+                      </button>
+                    ) : (
+                      <Link to="/app/kelas" className="btn-outline text-xs py-2 w-full flex items-center justify-center gap-1.5 mt-auto">
+                        <ui.Icon className="w-3.5 h-3.5" /> {u.state === "locked" ? t("Buka di Kelas") : t("Belajar Dulu")}
+                      </Link>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
       {units.length === 0 && (
         <div className="card p-8 text-center text-sm" style={{ color: "var(--text-4)" }}>

@@ -69,7 +69,7 @@ router.get("/unit/:code/lessons", async (req, res) => {
 
   const states = await unitStates(req.user.id, chosen.id);
   const st = states.find((s) => s.code === code);
-  if (st && st.state === "locked") return res.status(403).json({ error: "Unit masih terkunci. Selesaikan unit sebelumnya atau buka dengan Koin.", state: st });
+  if (st && st.state === "locked") return res.status(403).json({ error: "Unit ini di tier rank yang belum terbuka. Kuasai tier di bawahnya (atau ambil Tes Penempatan), atau buka unit ini dengan Koin.", state: st });
 
   if (!isLlmConfigured()) return res.status(503).json({ error: "Materi kelas butuh AI aktif. Hubungi admin." });
   try {
@@ -91,7 +91,7 @@ router.post("/unit/:code/complete", async (req, res) => {
   // Hanya boleh menandai selesai bila unit memang sudah bisa diakses (urutan/koin).
   const states = await unitStates(req.user.id, chosen.id);
   const st = states.find((s) => s.code === code);
-  if (st && st.state === "locked") return res.status(403).json({ error: "Selesaikan unit sebelumnya dulu, atau buka dengan Koin." });
+  if (st && st.state === "locked") return res.status(403).json({ error: "Tier rank unit ini belum terbuka. Kuasai tier di bawahnya (atau ambil Tes Penempatan), atau buka dengan Koin." });
 
   await prisma.unitProgress.upsert({
     where: { userId_unitCode: { userId: req.user.id, unitCode: code } },
