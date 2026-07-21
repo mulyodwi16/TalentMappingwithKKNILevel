@@ -45,8 +45,18 @@ export function buildRankLadder(units = [], cap = MAX_RANK) {
     .map((u) => ({ code: u.code, title: u.title, category: classifyUnit(u) }))
     .sort((a, b) => CAT[a.category] - CAT[b.category] || String(a.code).localeCompare(String(b.code)));
   const top = Math.max(EARNED_FLOOR, Math.min(cap || MAX_RANK, MAX_RANK));
+
+  // Tangga tak boleh lebih panjang dari jumlah unitnya. Kalau lebih panjang, sebagian tier
+  // pasti kosong - dan tier kosong dulu dihitung "tercapai", jadi kompetensi dengan 3 unit
+  // membagikan Gold sampai Diamond secara cuma-cuma, dan kompetensi yang unitnya BELUM
+  // tertarik dari Kemnaker (0 unit) langsung memberi Legend kepada siapa pun. Sekarang
+  // tiernya dipangkas mengikuti banyaknya bukti yang benar-benar bisa diminta.
+  const n0 = (units || []).filter((u) => u && u.code).length;
+  const maxLevels = Math.max(1, top - EARNED_FLOOR + 1);
+  const jumlahTier = n0 ? Math.min(maxLevels, n0) : maxLevels;
+
   const levels = [];
-  for (let l = EARNED_FLOOR; l <= top; l++) levels.push(l);
+  for (let l = EARNED_FLOOR; l < EARNED_FLOOR + jumlahTier; l++) levels.push(l);
 
   const ladder = levels.map((level) => ({ level, units: [] }));
   const n = list.length;
@@ -87,7 +97,11 @@ export function evaluateLadder(ladder, mastered, tolerance = TIER_TOLERANCE) {
     const done = step.units.filter((u) => codes.has(u.code)).length;
     cumTotal += total;
     cumDone += done;
-    const reached = cumTotal === 0 || cumDone / cumTotal >= tolerance;
+    // Tanpa satu pun unit sampai tier ini, tak ada yang bisa dibuktikan - maka tier itu
+    // TIDAK tercapai. Dulu `cumTotal === 0` dihitung tercapai, sehingga kompetensi yang
+    // unitnya belum ter-cache memberi rank tertinggi kepada pengguna yang belum ujian
+    // sama sekali. Rank harus selalu punya bukti di belakangnya.
+    const reached = cumTotal > 0 && cumDone / cumTotal >= tolerance;
     // Berapa unit lagi (mana pun, termasuk tier bawah yang tertinggal) untuk mencapai tier ini.
     const need = Math.max(0, Math.ceil(tolerance * cumTotal) - cumDone);
     const s = {

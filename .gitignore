@@ -12,3 +12,6 @@ CLAUDE.md
 
 # Cadangan data hasil skrip perbaikan (isinya data pengguna) — jangan di-commit
 server/backup/
+
+# Database sementara yang dibuat tes (dibangun ulang otomatis saat `npm test`)
+server/tests/.tmp/

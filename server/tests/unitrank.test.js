@@ -85,6 +85,31 @@ test("unit tanpa kode diabaikan, bukan bikin tangga rusak", () => {
   assert.equal(l.flatMap((s) => s.units).length, 1);
 });
 
+test("kompetensi TANPA unit tidak memberi rank apa pun", () => {
+  // Bug nyata yang ditemukan tes ini: tier kosong dulu dihitung "tercapai", sehingga
+  // pengguna yang memilih kompetensi yang unitnya belum tertarik dari Kemnaker langsung
+  // meraih Legend tanpa pernah ujian. Rank harus selalu punya bukti di belakangnya.
+  const r = evaluateLadder(buildRankLadder([], 9), new Set());
+  assert.equal(r.earned, 0, "0 unit tak boleh menghasilkan rank");
+});
+
+test("unit lebih sedikit dari tier tidak membagikan tier bawah gratis", () => {
+  // Turunan dari bug yang sama: 3 unit dengan cap Legend dulu menyisakan 4 tier kosong
+  // di bawah, dan keempatnya diberikan cuma-cuma sebelum satu unit pun dikuasai.
+  const tiga = [unit("A.1", "Satu"), unit("A.2", "Dua"), unit("A.3", "Tiga")];
+  const l = buildRankLadder(tiga, 9);
+  assert.equal(l.length, 3, "tangga tak boleh lebih panjang dari jumlah unitnya");
+  assert.ok(l.every((s) => s.units.length > 0), "tak boleh ada tier kosong");
+  assert.equal(evaluateLadder(l, new Set()).earned, 0);
+  assert.equal(evaluateLadder(l, new Set(tiga.map((u) => u.code))).earned, 5);
+});
+
+test("satu unit yang belum dikuasai tetap rank nol", () => {
+  const l = buildRankLadder([unit("A.1", "Satu")], 9);
+  assert.equal(evaluateLadder(l, new Set()).earned, 0);
+  assert.equal(evaluateLadder(l, new Set(["A.1"])).earned, EARNED_FLOOR);
+});
+
 test("belum menguasai apa pun berarti belum meraih tier", () => {
   const l = buildRankLadder(UNIT_VIDEO, 6);
   const r = evaluateLadder(l, new Set());
