@@ -110,7 +110,16 @@ export default function SkillGap() {
 
   const sorted = [...assessments].sort((a, b) => b.gap - a.gap);
   const gaps = assessments.filter((a) => a.gap > 0);
-  const avgReadiness = assessments.length ? Math.round(assessments.reduce((s, a) => s + a.currentScore, 0) / assessments.length) : 0;
+  // Ambang "dikuasai" SAMA dengan yang dipakai rank & skor kesiapan (60). Dulu halaman ini
+  // menghitung "terpenuhi" hanya untuk nilai 100, jadi unit 90% muncul sebagai belum
+  // terpenuhi di sini padahal di Kelas tertulis lulus - dua layar, dua kesimpulan.
+  const MASTERY = 60;
+  const mastered = assessments.filter((a) => a.currentScore >= MASTERY).length;
+  const belumDikuasai = assessments.length - mastered;
+  // Ini rata-rata NILAI UNIT, bukan Skor Kesiapan. Skor Kesiapan punya rumus sendiri
+  // (CV 25 + ujian 60 + sertifikat 15) dan tampil di Dashboard & Profil - jangan diberi
+  // nama yang sama, karena dua angka berbeda dengan satu nama terbaca sebagai kesalahan.
+  const avgScore = assessments.length ? Math.round(assessments.reduce((s, a) => s + a.currentScore, 0) / assessments.length) : 0;
 
   if (isLoading) return <div className="flex items-center justify-center h-64" style={{ color: "var(--text-4)" }}>{t("Memuat…")}</div>;
 
@@ -145,9 +154,9 @@ export default function SkillGap() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard icon={TrendingUp} value={`${avgReadiness}%`} label={t("Rata-rata Kompetensi")} color="#2563eb" />
-        <StatCard icon={AlertTriangle} value={gaps.length} label={t("Kompetensi Gap")} color="#ef4444" />
-        <StatCard icon={CheckCircle2} value={assessments.length - gaps.length} label={t("Kompetensi Terpenuhi")} color="#10b981" />
+        <StatCard icon={TrendingUp} value={`${avgScore}%`} label={t("Rata-rata Nilai Unit")} color="#2563eb" />
+        <StatCard icon={AlertTriangle} value={belumDikuasai} label={t("Unit Belum Dikuasai")} color="#ef4444" />
+        <StatCard icon={CheckCircle2} value={mastered} label={t("Unit Dikuasai")} color="#10b981" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
@@ -172,18 +181,21 @@ export default function SkillGap() {
 
         {/* Ringkasan + CTA */}
         <div className="card p-6 flex flex-col">
-          <h3 className="font-semibold mb-3" style={{ color: "var(--text-base)" }}>{t("Ringkasan Kesiapan")}</h3>
+          <h3 className="font-semibold mb-3" style={{ color: "var(--text-base)" }}>{t("Ringkasan Nilai Unit")}</h3>
           <div className="flex items-end gap-2 mb-1">
-            <span className="text-4xl font-black" style={{ color: avgReadiness >= 80 ? "#10b981" : avgReadiness >= 50 ? "#f59e0b" : "#ef4444" }}>{avgReadiness}%</span>
-            <span className="text-sm mb-1.5" style={{ color: "var(--text-4)" }}>{t("rata-rata dari {n} kompetensi", { n: assessments.length })}</span>
+            <span className="text-4xl font-black" style={{ color: avgScore >= 80 ? "#10b981" : avgScore >= 60 ? "#f59e0b" : "#ef4444" }}>{avgScore}%</span>
+            <span className="text-sm mb-1.5" style={{ color: "var(--text-4)" }}>{t("rata-rata dari {n} unit", { n: assessments.length })}</span>
           </div>
           <div className="h-2.5 rounded-full overflow-hidden mb-4" style={{ background: "var(--bg-muted)" }}>
-            <div className="h-full rounded-full transition-all" style={{ width: `${avgReadiness}%`, background: avgReadiness >= 80 ? "#10b981" : avgReadiness >= 50 ? "#f59e0b" : "#ef4444" }} />
+            <div className="h-full rounded-full transition-all" style={{ width: `${avgScore}%`, background: avgScore >= 80 ? "#10b981" : avgScore >= 60 ? "#f59e0b" : "#ef4444" }} />
           </div>
           <p className="text-sm" style={{ color: "var(--text-3)" }}>
-            {gaps.length === 0
-              ? t("Semua kompetensi target sudah terpenuhi 🎉 Pertahankan & tambah bukti eksternal untuk naik ke tingkat ahli.")
-              : t("Ada {n} kompetensi yang masih di bawah target. Tiap gap di bawah punya langkah konkret dari Learning Path.", { n: gaps.length })}
+            {belumDikuasai === 0
+              ? t("Semua unit sudah dikuasai (≥60%) 🎉 Naikkan lagi nilainya lalu ambil Ujian Kompetensi Utama.")
+              : t("Ada {n} unit yang belum mencapai 60%. Tiap unit di bawah punya langkah konkret dari Learning Path.", { n: belumDikuasai })}
+          </p>
+          <p className="text-xs mt-2" style={{ color: "var(--text-4)" }}>
+            {t("Angka ini rata-rata nilai unit. Skor Kesiapan di Dashboard dihitung berbeda: CV, hasil ujian, dan sertifikat.")}
           </p>
           <div className="mt-auto pt-4 flex flex-wrap gap-2">
             <Link to="/app/learning-path" className="btn-primary text-sm flex items-center gap-1.5"><Sparkles className="w-4 h-4" /> {t("Buka Learning Path")}</Link>

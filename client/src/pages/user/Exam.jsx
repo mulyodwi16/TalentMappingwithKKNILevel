@@ -259,19 +259,17 @@ export default function Exam() {
   const [sp, setSp] = useSearchParams();
   const unitParam = sp.get("unit");
   const [answers, setAnswers] = useState({});
-  const [started, setStarted] = useState(false);
   const [result, setResult] = useState(null);
   const [current, setCurrent] = useState(0);
 
-  const { data: chosenData } = useQuery({ queryKey: ["skkni-chosen"], queryFn: () => api.get("/skkni/chosen") });
+  const { data: chosenData, isLoading: chosenLoading } = useQuery({ queryKey: ["skkni-chosen"], queryFn: () => api.get("/skkni/chosen") });
   const useSkkni = !!chosenData?.chosen?.id;
 
-  // Mode: SKKNI → per-unit (butuh ?unit). Tanpa kompetensi → ujian legacy penuh.
+  // Latihan SELALU per unit SKKNI (butuh ?unit). Tanpa kompetensi tak ada yang bisa dikerjakan.
   const unitMode = useSkkni && !!unitParam;
-  const legacyActive = !useSkkni && started;
-  const examUrl = unitMode ? `/skkni/exam/${encodeURIComponent(unitParam)}` : "/user/exam";
-  const submitUrl = unitMode ? `/skkni/exam/${encodeURIComponent(unitParam)}/submit` : "/user/exam/submit";
-  const examEnabled = unitMode || legacyActive;
+  const examUrl = `/skkni/exam/${encodeURIComponent(unitParam || "")}`;
+  const submitUrl = `/skkni/exam/${encodeURIComponent(unitParam || "")}/submit`;
+  const examEnabled = unitMode;
 
   const { data: examData, isLoading, error: examError } = useQuery({
     queryKey: ["exam", unitMode ? unitParam : "legacy"],
@@ -297,23 +295,26 @@ export default function Exam() {
   const pickUnit = (code) => { setResult(null); setAnswers({}); setCurrent(0); setSp({ unit: code }); };
   const backToList = () => { setResult(null); setAnswers({}); setCurrent(0); setSp({}); qc.removeQueries(["exam"]); };
   const retakeUnit = () => { setResult(null); setAnswers({}); setCurrent(0); qc.removeQueries(["exam", unitParam]); };
-  const restartLegacy = () => { setResult(null); setAnswers({}); setCurrent(0); setStarted(false); qc.removeQueries(["exam", "legacy"]); };
+
+  // Tunggu jawaban /skkni/chosen dulu. Tanpa ini, pengguna yang PUNYA kompetensi sempat
+  // melihat layar "pilih kompetensi" sekejap sebelum query-nya kembali.
+  if (chosenLoading) return <div className="flex items-center justify-center h-64" style={{ color: "var(--text-4)" }}>{t("Memuat…")}</div>;
 
   // ── SKKNI: tampilkan pemilih unit bila belum memilih unit ───────────────────
   if (useSkkni && !unitParam && !result) return <UnitPicker chosen={chosenData.chosen} onPick={pickUnit} />;
 
-  // ── Legacy start (tanpa kompetensi target) ──────────────────────────────────
-  if (!useSkkni && !started && !result) {
+  // ── Tanpa kompetensi target: tak ada latihan yang bisa dijalankan ───────────
+  // Latihan selalu terikat unit SKKNI. Dulu di sini ada "ujian legacy" berbasis bank soal
+  // contoh yang ikut menerbitkan sertifikat - itu melewati aturan satu sertifikat per
+  // kompetensi, jadi pintunya ditutup dan penggunanya diarahkan memilih kompetensi.
+  if (!useSkkni && !result) {
     return (
       <div className="max-w-xl mx-auto space-y-5">
         <div className="card p-8 text-center">
           <div className="text-5xl mb-4">✎</div>
-          <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-base)" }}>{t("Ujian Kompetensi")}</h2>
-          <p className="text-sm mb-4" style={{ color: "var(--text-3)" }}>{t("Ujian ini menilai kompetensi Anda berdasarkan standar SKKNI.")}</p>
-          <div className="rounded-xl p-3 mb-5 text-sm" style={{ background: "var(--bg-muted)", color: "var(--text-3)" }}>
-            {t("Belum memilih kompetensi target.")} <Link to="/app/profile" className="text-brand-500 font-medium hover:underline">{t("Pilih kompetensi SKKNI")}</Link> {t("agar latihan menjadi per unit & terhubung ke tangga rank.")}
-          </div>
-          <button onClick={() => setStarted(true)} className="btn-primary w-full py-3 inline-flex items-center justify-center gap-2">{t("Mulai Ujian")} <ArrowRight size={16} /></button>
+          <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-base)" }}>{t("Pilih kompetensi dulu")}</h2>
+          <p className="text-sm mb-5" style={{ color: "var(--text-3)" }}>{t("Latihan dikerjakan per unit kompetensi. Pilih kompetensi targetmu dulu supaya unitnya tersedia dan hasilnya terhubung ke tangga rank.")}</p>
+          <Link to="/app/profile?pick=1" className="btn-primary w-full py-3 inline-flex items-center justify-center gap-2">{t("Pilih kompetensi SKKNI")} <ArrowRight size={16} /></Link>
         </div>
       </div>
     );
@@ -328,8 +329,8 @@ export default function Exam() {
         <h2 className="text-xl font-bold mb-2" style={{ color: "var(--text-base)" }}>{t("Ujian belum bisa dimulai")}</h2>
         <p className="text-sm mb-5" style={{ color: "var(--text-3)" }}>{typeof examError === "string" ? examError : t("Gagal memuat soal.")}</p>
         <div className="flex gap-3">
-          {unitMode ? <Link to="/app/kelas" className="btn-outline flex-1">{t("Ke Kelas")}</Link> : <Link to="/app/profile" className="btn-outline flex-1">{t("Ke Profil")}</Link>}
-          <button onClick={unitMode ? backToList : restartLegacy} className="btn-primary flex-1">{t("Kembali")}</button>
+          <Link to="/app/kelas" className="btn-outline flex-1">{t("Ke Kelas")}</Link>
+          <button onClick={backToList} className="btn-primary flex-1">{t("Kembali")}</button>
         </div>
       </div>
     );
@@ -348,17 +349,19 @@ export default function Exam() {
           {isUnit && <p className="text-sm mb-1" style={{ color: "var(--text-3)" }}>{result.unitTitle}</p>}
           <p className={`text-4xl font-black mb-2 ${pct >= 80 ? "text-emerald-400" : pct >= 60 ? "text-amber-400" : "text-red-400"}`}>{pct}%</p>
           {isUnit ? (
-            <p style={{ color: "var(--text-3)" }}>{result.passed ? t("LULUS - sertifikat unit terbit ✓") : t("Belum lulus (butuh ≥60%). Tinjau umpan balik AI di bawah.")}</p>
+            <p style={{ color: "var(--text-3)" }}>{result.passed ? t("Unit dikuasai ✓ - tercatat di tangga rank & Skill Gap") : t("Belum lulus (butuh ≥60%). Tinjau umpan balik AI di bawah.")}</p>
           ) : (
             <p style={{ color: "var(--text-3)" }}>{result.status === "ready" ? t("Siap Naik Level ✓") : result.status === "in_progress" ? t("Dalam Proses") : t("Perlu Peningkatan")}</p>
           )}
         </div>
 
-        {isUnit && result.certificate && (
+        {/* Latihan unit TIDAK menerbitkan sertifikat - sertifikat hanya dari Ujian Kompetensi
+            Utama, satu per kompetensi. Yang ditawarkan di sini adalah langkah berikutnya. */}
+        {isUnit && result.passed && (
           <div className="card p-5" style={{ borderColor: "rgba(16,185,129,0.3)" }}>
-            <p className="text-sm font-semibold text-emerald-500 flex items-center gap-1.5 mb-2"><Award className="w-4 h-4" /> {t("Sertifikat unit terbit")}</p>
-            <span className="text-xs bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 rounded-lg px-2.5 py-1 inline-block">{result.certificate}</span>
-            <Link to="/app/profile" className="mt-3 text-xs text-brand-500 hover:underline inline-flex items-center gap-1">{t("Lihat & unduh sertifikat di Profil")} <ArrowRight className="w-3 h-3" /></Link>
+            <p className="text-sm font-semibold text-emerald-500 flex items-center gap-1.5 mb-2"><Award className="w-4 h-4" /> {t("Unit ini sudah dikuasai")}</p>
+            <p className="text-xs mb-3" style={{ color: "var(--text-3)" }}>{t("Latihan tidak menerbitkan sertifikat. Sertifikat terbit satu kali untuk seluruh kompetensi, lewat Ujian Kompetensi Utama.")}</p>
+            <Link to="/app/final-exam" className="text-xs text-brand-500 hover:underline inline-flex items-center gap-1">{t("Lihat syarat Ujian Kompetensi Utama")} <ArrowRight className="w-3 h-3" /></Link>
           </div>
         )}
 
@@ -371,44 +374,9 @@ export default function Exam() {
           </div>
         )}
 
-        {!isUnit && result.certificates?.length > 0 && (
-          <div className="card p-5" style={{ borderColor: "rgba(16,185,129,0.3)" }}>
-            <p className="text-sm font-semibold text-emerald-500 mb-2">{t("🎓 Sertifikat terbit ({n})", { n: result.certificates.length })}</p>
-            <div className="flex flex-wrap gap-2">{result.certificates.map((c) => <span key={c} className="text-xs bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 rounded-lg px-2.5 py-1">{c}</span>)}</div>
-          </div>
-        )}
-
-        {!isUnit && result.results?.length > 0 && (
-          <div className="card p-6">
-            <h3 className="font-semibold mb-4" style={{ color: "var(--text-base)" }}>{t("Hasil per Kompetensi")}</h3>
-            <div className="space-y-3">
-              {result.results.map((r) => (
-                <div key={r.competencyCode}>
-                  <div className="flex justify-between text-sm mb-1.5">
-                    <span className="font-medium" style={{ color: "var(--text-2)" }}>{r.name}</span>
-                    <span className={r.passed ? "text-emerald-400" : "text-red-400"}>{r.score}% {r.passed ? "✓" : "✗"}</span>
-                  </div>
-                  <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-muted)" }}>
-                    <div className={`h-full rounded-full ${r.passed ? "bg-emerald-500" : "bg-red-500"}`} style={{ width: `${r.score}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         <div className="flex gap-3">
-          {isUnit ? (
-            <>
-              <button onClick={backToList} className="btn-outline flex-1 flex items-center justify-center gap-1"><ArrowLeft className="w-4 h-4" /> {t("Daftar Unit")}</button>
-              <button onClick={retakeUnit} className="btn-primary flex-1 flex items-center justify-center gap-1"><RotateCcw className="w-4 h-4" /> {t("Ujian Ulang")}</button>
-            </>
-          ) : (
-            <>
-              <Link to="/app/skill-gap" className="btn-primary flex-1 py-2.5 inline-flex items-center justify-center gap-2">{t("Lihat Skill Gap")} <ArrowRight size={16} /></Link>
-              <button onClick={restartLegacy} className="btn-outline flex-1">{t("Ujian Ulang")}</button>
-            </>
-          )}
+          <button onClick={backToList} className="btn-outline flex-1 flex items-center justify-center gap-1"><ArrowLeft className="w-4 h-4" /> {t("Daftar Unit")}</button>
+          <button onClick={retakeUnit} className="btn-primary flex-1 flex items-center justify-center gap-1"><RotateCcw className="w-4 h-4" /> {t("Ujian Ulang")}</button>
         </div>
       </div>
     );

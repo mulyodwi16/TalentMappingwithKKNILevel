@@ -1,4 +1,11 @@
 import express from "express";
+import { UNIT_MASTERY } from "../thresholds.js";
+
+// Ambang tampilan "jawaban uraian ini dianggap benar" di layar review per soal. SENGAJA
+// terpisah dari UNIT_MASTERY walau angkanya kebetulan sama: yang ini menilai SATU jawaban,
+// yang itu menyatakan seseorang menguasai satu unit kompetensi. Kalau digabung, mengubah
+// ambang penguasaan akan diam-diam mengubah centang hijau di lembar review.
+const ANSWER_OK_SCORE = 60;
 import { prisma } from "../prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import {
@@ -252,7 +259,7 @@ router.post("/placement/submit", async (req, res) => {
       });
     }
 
-    const passedUnits = breakdown.filter((b) => b.score >= 60).length;
+    const passedUnits = breakdown.filter((b) => b.score >= UNIT_MASTERY).length;
     const overall = Math.round(breakdown.reduce((s, b) => s + b.score, 0) / Math.max(1, breakdown.length));
     const review = await reviewPlacement(u.chosenSkkniTitle || "Kompetensi", breakdown, lang);
     await prisma.placementAttempt.upsert({
@@ -488,7 +495,7 @@ router.post("/exam/submit", async (req, res) => {
     });
     const results = Object.entries(byUnit).map(([code, v]) => {
       const score = Math.round((v.correct / v.total) * 100);
-      return { competencyCode: code, name: v.name, score, passed: score >= 60, gap: score < 60 };
+      return { competencyCode: code, name: v.name, score, passed: score >= UNIT_MASTERY, gap: score < 60 };
     });
 
     // Tulis SkillAssessment per unit → dibaca Skill Gap Analyzer.
@@ -522,7 +529,9 @@ router.post("/exam/submit", async (req, res) => {
     const newCerts = [];
 
     let coin = null;
-    try { coin = await awardOnce(userId, COIN.exam, "Ujian kompetensi SKKNI", { type: "skkniexam", id: attempt.id }); } catch { /* non-fatal */ }
+    // Penanda = docId kompetensi (bukan attempt.id yang selalu baru) supaya batch ini tak
+    // bisa diulang untuk memanen koin. Lihat catatan yang sama di submit latihan per unit.
+    try { coin = await awardOnce(userId, COIN.exam, "Ujian kompetensi SKKNI", { type: "skkniexam", id: u.chosenSkkniId }); } catch { /* non-fatal */ }
     await prisma.notification.create({ data: { userId, type: "exam_result", message: `Ujian SKKNI selesai: skor ${readiness}% (${cov.assessed}/${cov.total} unit dinilai)` } }).catch(() => {});
 
     // Kompetensi terbukti → perbarui rank efektif + skor kesiapan gabungan.
@@ -622,7 +631,7 @@ router.post("/exam/:code/submit", async (req, res) => {
       }
     }
     const score = questions.length ? Math.round(Object.values(perQ).reduce((a, b) => a + (b.score || 0), 0) / questions.length) : 0;
-    const passed = score >= 60;
+    const passed = score >= UNIT_MASTERY;
     // Review ala Quizizz (#3): sertakan jawaban USER + jawaban BENAR (MC) agar user tahu
     // persis apa yang salah & bisa dipelajari ulang. Untuk isian/urutan: jawaban user +
     // feedback AI (rubrik keyPoints/idealSteps tetap privat - menjaga keabsahan tes ulang).
@@ -639,7 +648,7 @@ router.post("/exam/:code/submit", async (req, res) => {
           isCorrect: chosen === q.answerKey,
         };
       }
-      return { ...base, userAnswer: typeof answers[i] === "string" ? answers[i] : "", isCorrect: (perQ[i]?.score ?? 0) >= 60 };
+      return { ...base, userAnswer: typeof answers[i] === "string" ? answers[i] : "", isCorrect: (perQ[i]?.score ?? 0) >= ANSWER_OK_SCORE };
     });
 
     // SkillAssessment unit → dibaca Skill Gap / rank / readiness.
@@ -664,7 +673,10 @@ router.post("/exam/:code/submit", async (req, res) => {
     const certificate = null;
 
     let coin = null;
-    try { coin = await awardOnce(userId, COIN.exam, `Latihan unit: ${inst.unitTitle}`, { type: "unitexam", id: attempt.id }); } catch { /* non-fatal */ }
+    // Penanda = KODE UNIT, bukan attempt.id. `attempt.id` selalu baris baru tiap kirim, jadi
+    // dedupe `awardOnce` tak pernah aktif dan koin bisa dipanen tanpa batas dengan mengulang
+    // latihan yang sama. Satu unit = satu kali koin, selamanya.
+    try { coin = await awardOnce(userId, COIN.exam, `Latihan unit: ${inst.unitTitle}`, { type: "unitexam", id: code }); } catch { /* non-fatal */ }
     await prisma.notification.create({ data: { userId, type: "exam_result", message: `Latihan unit "${inst.unitTitle}": skor ${score}%${passed ? " - unit dikuasai" : ""}` } }).catch(() => {});
 
     const rank = await refreshRank(userId).catch(() => null);

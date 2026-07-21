@@ -265,7 +265,8 @@ router.post("/exam/submit", async (req, res) => {
       },
     });
 
-    await prisma.user.update({ where: { id: req.user.id }, data: { readinessScore: readiness, status } });
+    // Kesiapan & status TIDAK ditulis di sini. `refreshReadiness` di bawah yang berwenang -
+    // kalau keduanya menulis, layar hasil menampilkan angka lama dan dashboard angka baru.
 
     await Promise.all(results.map((r) =>
       prisma.skillAssessment.upsert({
@@ -314,29 +315,21 @@ router.post("/exam/submit", async (req, res) => {
       },
     });
 
-    // Reward gamifikasi: koin per ujian yang diselesaikan (idempoten per attempt).
+    // Reward gamifikasi: koin sekali per level ujian legacy (BUKAN per attempt - attempt.id
+    // selalu baru, jadi dedupe-nya tak pernah aktif dan koin bisa diulang tanpa batas).
     let coin = null;
-    try { coin = await awardOnce(req.user.id, COIN.exam, "Menyelesaikan ujian kompetensi", { type: "exam", id: attempt.id }); } catch { /* non-fatal */ }
+    try { coin = await awardOnce(req.user.id, COIN.exam, "Menyelesaikan ujian kompetensi", { type: "exam", id: `legacy:${effectiveLevel}` }); } catch { /* non-fatal */ }
 
-    // Terbitkan sertifikat kompetensi untuk tiap kompetensi yang LULUS (idempoten per kompetensi).
-    let newCerts = [];
-    try {
-      const passed = results.filter((r) => r.passed);
-      for (const r of passed) {
-        const cert = await prisma.certificate.upsert({
-          where: { userId_competencyCode_source: { userId: req.user.id, competencyCode: r.competencyCode, source: "exam" } },
-          update: { score: r.score, kkniLevel: effectiveLevel },
-          create: { userId: req.user.id, competencyCode: r.competencyCode, name: r.name, kkniLevel: effectiveLevel, score: r.score, source: "exam" },
-        });
-        newCerts.push(cert.name);
-      }
-    } catch (e) { console.error("cert issue:", e.message); }
+    // TIDAK menerbitkan sertifikat. Sejak Fase 14 sertifikat hanya SATU per kompetensi dan
+    // hanya dari Ujian Kompetensi Utama (`source:"competency"`). Jalur legacy ini menilai
+    // bank soal contoh, bukan unit SKKNI - kalau ia ikut menerbitkan sertifikat, aturan
+    // "satu sertifikat per kompetensi" bisa dilewati begitu saja.
 
     // Kompetensi terbukti → perbarui rank efektif + skor kesiapan gabungan.
     const rank = await refreshRank(req.user.id).catch(() => null);
     const overall = await refreshReadiness(req.user.id).catch(() => null);
 
-    res.json({ results, readiness, status, gaps, attemptId: attempt.id, resources: resources.slice(0, 4), coin, certificates: newCerts, overallReadiness: overall?.total, rank });
+    res.json({ results, readiness, status, gaps, attemptId: attempt.id, resources: resources.slice(0, 4), coin, overallReadiness: overall?.total, rank });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

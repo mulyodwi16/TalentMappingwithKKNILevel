@@ -1,4 +1,5 @@
 import { prisma } from "./prisma.js";
+import { UNIT_MASTERY } from "./thresholds.js";
 import { chatComplete, isLlmConfigured } from "./llm.js";
 
 // Profil skill pengguna untuk mencocokkan dengan kriteria posisi (Peta Posisi).
@@ -19,7 +20,7 @@ export async function buildSkillProfile(userId) {
 
   // TERVALIDASI: unit lulus (skor≥60) + sertifikat hasil ujian proyek ini.
   const validated = new Set();
-  assessments.filter((a) => a.currentScore >= 60).forEach((a) => a.competencyName && validated.add(a.competencyName));
+  assessments.filter((a) => a.currentScore >= UNIT_MASTERY).forEach((a) => a.competencyName && validated.add(a.competencyName));
   certs.forEach((c) => validated.add(c.name));
 
   // DIKLAIM (belum tervalidasi): sertifikasi/keahlian dari CV + sertifikat tambahan + klaim portofolio.
@@ -92,16 +93,23 @@ export function matchJob(job, profile) {
 
   // Bobot: level 30, pengalaman 15, skill 40, sertifikasi 15.
   // Skill: tervalidasi = poin penuh, diklaim = SETENGAH (belum divalidasi ujian).
-  const wLevel = 30, wExp = 15, wSkill = 40, wCert = 15;
-  const skillScore = jobSkills.length
-    ? ((matchedSkills.length + claimedSkills.length * 0.5) / jobSkills.length) * wSkill
-    : wSkill;
-  const certScore = jobCerts.length ? (matchedCerts.length / jobCerts.length) * wCert : wCert;
-  const score = Math.round(
-    (levelOk ? wLevel : Math.max(0, wLevel - (job.kkniLevel - profile.level) * 10)) +
-    (expOk ? wExp : (profile.experience / Math.max(1, job.minExperience)) * wExp) +
-    skillScore + certScore
-  );
+  //
+  // Syarat yang TIDAK dicantumkan posisi TIDAK diberi poin gratis, melainkan dikeluarkan dari
+  // pembagi. Dulu posisi tanpa daftar skill memberi 40 poin cuma-cuma (dan 15 lagi bila tanpa
+  // syarat sertifikat), sehingga SELURUH talenta yang levelnya cukup terbaca 85-100% dan
+  // "memenuhi syarat" - corong, ekspor, dan teks undangan semuanya ikut salah.
+  const parts = [
+    { w: 30, ratio: levelOk ? 1 : Math.max(0, 1 - (job.kkniLevel - profile.level) / 3) },
+    { w: 15, ratio: expOk ? 1 : Math.min(1, profile.experience / Math.max(1, job.minExperience)) },
+  ];
+  if (jobSkills.length) parts.push({ w: 40, ratio: (matchedSkills.length + claimedSkills.length * 0.5) / jobSkills.length });
+  if (jobCerts.length) parts.push({ w: 15, ratio: matchedCerts.length / jobCerts.length });
+  const totalW = parts.reduce((a, p) => a + p.w, 0);
+  const score = Math.round((parts.reduce((a, p) => a + p.w * p.ratio, 0) / totalW) * 100);
+
+  // Posisi tanpa satu pun syarat skill tak bisa dinilai kelayakannya - menyebut semua orang
+  // "memenuhi syarat" jauh lebih merugikan daripada mengaku datanya belum lengkap.
+  const requirementsSet = jobSkills.length > 0;
 
   return {
     score: Math.max(0, Math.min(100, score)),
@@ -109,10 +117,11 @@ export function matchJob(job, profile) {
     levelGap: Math.max(0, job.kkniLevel - profile.level),
     expGap: Math.max(0, job.minExperience - profile.experience),
     matchedSkills, claimedSkills, missingSkills, matchedCerts, missingCerts,
+    requirementsSet,
     // ELIGIBLE hanya bila skill TERVALIDASI ujian menutupi semua syarat (klaim CV tak cukup).
-    eligible: levelOk && expOk && missingSkills.length === 0 && claimedSkills.length === 0,
+    eligible: requirementsSet && levelOk && expOk && missingSkills.length === 0 && claimedSkills.length === 0,
     // "siap divalidasi": tinggal ujian untuk skill yang sudah diklaim.
-    readyToValidate: levelOk && expOk && missingSkills.length === 0 && claimedSkills.length > 0,
+    readyToValidate: requirementsSet && levelOk && expOk && missingSkills.length === 0 && claimedSkills.length > 0,
   };
 }
 

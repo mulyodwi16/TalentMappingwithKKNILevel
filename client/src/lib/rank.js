@@ -27,28 +27,11 @@ export function rankColor(level) {
   return rankOf(level)?.color || "#94a3b8";
 }
 
-// Batas masteryScore per tier - MIRROR server/rankcalc.js TIERS (jaga tetap sinkron).
-// masteryScore = unitLulus*8 + sertifikat*10 + course*4.
-export const RANK_TIERS = [
-  { min: 160, level: 9 },
-  { min: 120, level: 8 },
-  { min: 85, level: 7 },
-  { min: 55, level: 6 },
-  { min: 32, level: 5 },
-  { min: 15, level: 4 },
-  { min: 0, level: 3 },
-];
-
-// Progres "LP bar" dalam tier saat ini: seberapa jauh menuju tier berikutnya.
-// Mengembalikan { pct, need, nextLevel, atCap } - pct 0..100 dalam tier berjalan.
-export function tierProgress(score = 0, cap = 9) {
-  const asc = [...RANK_TIERS].sort((a, b) => a.min - b.min);
-  const curFloor = asc.filter((t) => score >= t.min).pop() || asc[0];
-  const higher = asc.find((t) => t.min > score);
-  // Rank berikutnya melewati cap bobot kompetensi → bar penuh, terkunci.
-  if (higher && higher.level > cap) return { pct: 100, need: 0, nextLevel: null, atCap: true };
-  if (!higher) return { pct: 100, need: 0, nextLevel: null, atCap: false };
-  const span = higher.min - curFloor.min || 1;
-  const pct = Math.max(0, Math.min(100, Math.round(((score - curFloor.min) / span) * 100)));
-  return { pct, need: higher.min - score, nextLevel: higher.level, atCap: false };
-}
+// CATATAN: dulu di sini ada `RANK_TIERS` + `tierProgress()` berbasis masteryScore
+// (unitLulus*8 + sertifikat*10 + course*4) dengan komentar "jaga tetap sinkron dengan
+// server/rankcalc.js". Keduanya DIHAPUS karena sudah tidak dipakai sejak rank ditentukan
+// oleh TANGGA UNIT (server/unitrank.js): progres tier kini datang dari `rank.next` yang
+// dikirim server, bukan dihitung ulang di klien. Menyimpan salinan rumus yang tak lagi
+// menentukan apa pun hanya menambah tempat yang bisa jadi tidak sinkron diam-diam.
+// Yang MASIH harus sinkron dengan server hanyalah daftar RANKS di atas - dijaga oleh
+// server/tests/rank-sync.test.js.

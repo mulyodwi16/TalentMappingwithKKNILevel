@@ -73,7 +73,7 @@ export const TIER_TOLERANCE = 0.8;
 
 // Rank yang diraih = tier tertinggi yang penguasaan kumulatifnya (tier itu + semua tier di
 // bawahnya) mencapai ambang. Unit yang belum dikuasai TETAP dilaporkan sebagai gap.
-// `mastered` = Set kode unit dengan skor >= 60.
+// `mastered` = Set kode unit yang skornya mencapai UNIT_MASTERY (lihat thresholds.js).
 export function evaluateLadder(ladder, mastered, tolerance = TIER_TOLERANCE) {
   const codes = mastered instanceof Set ? mastered : new Set(mastered || []);
   let earned = 0;      // 0 = belum ada tier yang tercapai

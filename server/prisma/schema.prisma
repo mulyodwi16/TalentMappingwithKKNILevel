@@ -58,6 +58,7 @@ model User {
   certificates    Certificate[]
   jobs            Job[]
   applications    JobApplication[]
+  candidateReviews CandidateReview[]
   learningPlan    LearningPlan[]
   unitProgress    UnitProgress[]
   evidence        ExternalEvidence[]
@@ -281,6 +282,7 @@ model Job {
 
   postedBy     User             @relation(fields: [postedById], references: [id])
   applications JobApplication[]
+  reviews      CandidateReview[]
 }
 
 model JobApplication {
@@ -629,4 +631,28 @@ model AvatarEduCourse {
   syncedAt       DateTime @default(now())
 
   @@index([published, displayOrder])
+}
+
+// ── Seleksi kandidat oleh HRD ────────────────────────────────────────────────
+// SENGAJA terpisah dari JobApplication: JobApplication adalah MINAT yang dinyatakan
+// talenta ("Jadikan Target"). Kalau penilaian HRD ditumpangkan ke sana, jumlah peminat
+// jadi ikut naik tiap kali HRD menandai seseorang - padahal orangnya tak pernah berminat.
+model CandidateReview {
+  id         String   @id @default(cuid())
+  jobId      String
+  userId     String
+  status     String   @default("new") // new | reviewed | shortlisted | rejected | accepted
+  note       String?
+  invitedAt  DateTime?
+  reply      String?   // tertarik | belum_siap - jawaban talenta atas undangan
+  replyNote  String?
+  repliedAt  DateTime?
+  reviewerId String?
+  updatedAt  DateTime @updatedAt
+
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([jobId, userId])
+  @@index([jobId, status])
 }

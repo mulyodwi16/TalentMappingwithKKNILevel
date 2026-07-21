@@ -13,6 +13,7 @@
 import { prisma } from "./prisma.js";
 import { chatComplete, isLlmConfigured } from "./llm.js";
 import { buildRankLadder } from "./unitrank.js";
+import { UNIT_MASTERY, FINAL_PASS_SCORE } from "./thresholds.js";
 
 const BASE = "https://skkni-api.kemnaker.go.id/v1/public";
 const MIN_GAP_MS = 70_000;   // jarak minimal antar request keluar (window per-IP nyatanya > 60dtk)
@@ -345,7 +346,7 @@ export async function examCoverage(userId, docId) {
   const codeSet = new Set(units.map((u) => u.code));
   const assessments = await prisma.skillAssessment.findMany({ where: { userId } });
   const relevant = assessments.filter((a) => codeSet.has(a.competencyCode));
-  const passed = relevant.filter((a) => a.currentScore >= 60).length;
+  const passed = relevant.filter((a) => a.currentScore >= UNIT_MASTERY).length;
   return { total: codeSet.size, assessed: relevant.length, passed };
 }
 
@@ -386,7 +387,7 @@ export async function courseCoverage(userId, pkg) {
   const codes = new Set(JSON.parse(pkg.questions).map((q) => q.unitCode));
   const assess = await prisma.skillAssessment.findMany({ where: { userId } });
   const relevant = assess.filter((a) => codes.has(a.competencyCode));
-  return { total: codes.size, assessed: relevant.length, passed: relevant.filter((a) => a.currentScore >= 60).length };
+  return { total: codes.size, assessed: relevant.length, passed: relevant.filter((a) => a.currentScore >= UNIT_MASTERY).length };
 }
 
 // Generate soal PG dari daftar unit (1 panggilan AI untuk seluruh batch).
@@ -705,7 +706,9 @@ export async function ensurePlacementPackage(docId) {
 // Satu-satunya penerbit sertifikat. Bedanya dengan tes penempatan bukan cuma "lebih susah":
 // soalnya menuntut SINTESIS lintas unit (keputusan yang menimbang beberapa aspek sekaligus),
 // sedangkan tes penempatan menilai tiap unit terpisah.
-export const FINAL_PASS_SCORE = 70;          // ambang lulus (lebih tinggi dari 60 per unit)
+// Ambang lulusnya ada di thresholds.js bersama ambang lain; di-ekspor ulang di sini supaya
+// pemanggil lama (routes/skkni.js) tak perlu diubah.
+export { FINAL_PASS_SCORE };
 export const FINAL_MINUTES_PER_UNIT = 4;     // soal sintesis butuh waktu berpikir lebih
 
 async function generateFinalBatch(compTitle, units) {
@@ -920,7 +923,7 @@ export async function unitStates(userId, docId) {
   let prevDone = true; // unit pertama selalu terbuka urutannya
   return units.map((u, i) => {
     const score = scoreBy[u.code];
-    const passed = (score ?? 0) >= 60 && score !== undefined;
+    const passed = (score ?? 0) >= UNIT_MASTERY && score !== undefined;
     const p = progBy[u.code] || {};
     const learned = !!p.learned;
     const unlockedByCoin = !!p.unlockedByCoin;

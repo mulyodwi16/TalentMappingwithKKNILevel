@@ -342,16 +342,19 @@ export default function UserDashboard() {
           ) : (
             <div className="space-y-3">
               {attempts.slice(0, 5).map((a) => (
+                // Baris ini adalah hasil SATU latihan unit, bukan kesiapan menyeluruh. Dulu
+                // badge-nya diambil dari `a.status` yang berisi "ready"/"not_ready", jadi
+                // latihan satu unit dengan nilai 61% menampilkan "Siap Naik" tepat di bawah
+                // hero yang menyatakan "Belum Siap". Sekarang dibaca dari `a.passed`.
                 <div key={a.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "var(--bg-muted)" }}>
                   <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold ${
-                    a.status === "ready" ? "bg-emerald-500/20 text-emerald-400" :
-                    a.status === "in_progress" ? "bg-amber-500/20 text-amber-400" : "bg-red-500/20 text-red-400"
+                    a.passed ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"
                   }`}>{a.readinessScore}%</div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium" style={{ color: "var(--text-base)" }}>Rank {rankName(a.kkniLevel)}</p>
+                    <p className="text-sm font-medium truncate" style={{ color: "var(--text-base)" }}>{a.results?.[0]?.name || `Rank ${rankName(a.kkniLevel)}`}</p>
                     <p className="text-xs" style={{ color: "var(--text-4)" }}>{new Date(a.createdAt).toLocaleDateString(dateLocale(lang), { day: "numeric", month: "short", year: "numeric" })}</p>
                   </div>
-                  <span className={`badge ${STATUS_CONFIG[a.status]?.cls || "badge-not-ready"}`}>{t(STATUS_CONFIG[a.status]?.label || "")}</span>
+                  <span className={`badge ${a.passed ? "badge-ready" : "badge-not-ready"}`}>{a.passed ? t("Dikuasai") : t("Belum lulus")}</span>
                 </div>
               ))}
             </div>

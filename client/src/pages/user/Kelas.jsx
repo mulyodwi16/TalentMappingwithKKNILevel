@@ -388,7 +388,7 @@ function CoursePlayer({ code, onBack, onComplete, busyComplete }) {
               </Link>
             )}
             {state?.state === "learning" && <span className="text-[11px] w-full text-center" style={{ color: "var(--text-4)" }}>{t("Ujian terbuka setelah kelas ditandai selesai.")}</span>}
-            {state?.state === "passed" && <span className="text-[11px] text-emerald-500 w-full text-center">{t("Sertifikat unit sudah terbit ✓")}</span>}
+            {state?.state === "passed" && <span className="text-[11px] text-emerald-500 w-full text-center">{t("Unit ini sudah dikuasai ✓")}</span>}
           </div>
 
           <AvatarEduSection title={unit?.title} defaultOpen={false} />

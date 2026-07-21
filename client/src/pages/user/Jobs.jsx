@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
   Compass, MapPin, Building2, CheckCircle2, XCircle, Award, Loader2, TrendingUp,
-  BookOpen, Target, GraduationCap, PenLine, FileText, ShieldCheck, Clock, ArrowRight, Info,
+  BookOpen, Target, GraduationCap, PenLine, FileText, ShieldCheck, Clock, ArrowRight, Info, Send,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../api/client.js";
@@ -153,6 +153,70 @@ function FulfillmentPlan({ job, onChanged }) {
   );
 }
 
+// Undangan dari perekrut + jawabannya. Tanpa ini undangan cuma satu arah: talenta
+// menerima notifikasi lalu tidak punya cara menyatakan mau atau tidak.
+function MyInvites() {
+  const { t } = useLang();
+  const qc = useQueryClient();
+  const [noteFor, setNoteFor] = useState(null);
+  const [note, setNote] = useState("");
+  const { data: invites = [] } = useQuery({ queryKey: ["my-invites"], queryFn: () => api.get("/jobs/invites/me") });
+
+  const reply = useMutation({
+    mutationFn: ({ jobId, body }) => api.post(`/jobs/${jobId}/invite/reply`, body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-invites"] }); setNoteFor(null); setNote(""); toast.success(t("Jawabanmu terkirim ke perekrut")); },
+    onError: (e) => toast.error(typeof e === "string" ? e : t("Gagal")),
+  });
+
+  if (!invites.length) return null;
+
+  return (
+    <div className="card p-5">
+      <p className="text-sm font-bold mb-1 flex items-center gap-2" style={{ color: "var(--text-base)" }}>
+        <Send className="w-4 h-4 text-brand-500" /> {t("Undangan dari Perekrut ({n})", { n: invites.length })}
+      </p>
+      <p className="text-xs mb-3" style={{ color: "var(--text-4)" }}>{t("Perekrut melihat profilmu dan mengundangmu. Jawabanmu langsung sampai ke mereka.")}</p>
+      <div className="space-y-2">
+        {invites.map((inv) => (
+          <div key={inv.jobId} className="rounded-xl p-3" style={{ border: "1px solid var(--border)", background: "var(--bg-raised)" }}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold truncate" style={{ color: "var(--text-base)" }}>{inv.job?.title}</p>
+                <p className="text-[11px]" style={{ color: "var(--text-4)" }}>
+                  {inv.job?.company || t("Internal")}
+                  {inv.job?.status === "closed" && <span className="text-red-400"> · {t("posisi sudah ditutup")}</span>}
+                </p>
+              </div>
+              {inv.reply ? (
+                <span className={`text-[11px] px-2 py-1 rounded-full border ${inv.reply === "tertarik" ? "bg-emerald-500/15 text-emerald-500 border-emerald-500/30" : "bg-amber-500/15 text-amber-500 border-amber-500/30"}`}>
+                  {inv.reply === "tertarik" ? t("Kamu tertarik") : t("Kamu belum siap")}
+                </span>
+              ) : (
+                <div className="flex gap-2 shrink-0">
+                  <button onClick={() => reply.mutate({ jobId: inv.jobId, body: { reply: "tertarik" } })} disabled={reply.isPending}
+                    className="btn-primary text-xs py-1.5 px-3 disabled:opacity-50">{t("Tertarik")}</button>
+                  <button onClick={() => setNoteFor(noteFor === inv.jobId ? null : inv.jobId)}
+                    className="btn-outline text-xs py-1.5 px-3">{t("Belum siap")}</button>
+                </div>
+              )}
+            </div>
+
+            {noteFor === inv.jobId && !inv.reply && (
+              <div className="flex gap-2 mt-2">
+                <input value={note} onChange={(e) => setNote(e.target.value)} className="input text-xs py-1.5 flex-1"
+                  placeholder={t("Alasan singkat (opsional) - mis. ingin selesaikan unit dulu")} />
+                <button onClick={() => reply.mutate({ jobId: inv.jobId, body: { reply: "belum_siap", note } })} disabled={reply.isPending}
+                  className="btn-outline text-xs py-1.5 px-3 disabled:opacity-50">{t("Kirim")}</button>
+              </div>
+            )}
+            {inv.replyNote && <p className="text-[11px] mt-1.5 italic" style={{ color: "var(--text-4)" }}>“{inv.replyNote}”</p>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function PositionCard({ job, onTarget, targeting }) {
   const { t } = useLang();
   const qc = useQueryClient();
@@ -181,7 +245,9 @@ function PositionCard({ job, onTarget, targeting }) {
         {m && (
           <div className="text-center shrink-0">
             <p className="text-2xl font-black" style={{ color: matchColor(m.score) }}>{m.score}%</p>
-            <p className="text-[10px]" style={{ color: "var(--text-4)" }}>{t("kesiapan")}</p>
+            {/* "kecocokan", bukan "kesiapan" - ini skor terhadap SATU posisi, sedangkan
+                Skor Kesiapan di Dashboard mengukur kesiapan menyeluruh. */}
+            <p className="text-[10px]" style={{ color: "var(--text-4)" }}>{t("kecocokan")}</p>
           </div>
         )}
       </div>
@@ -258,6 +324,8 @@ export default function Jobs() {
         <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: "var(--text-base)" }}><Compass className="w-5 h-5 text-brand-600" /> {t("Peta Posisi & Kesiapan")}</h2>
         <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>{t("Posisi target dari HRD. Buka tiap posisi untuk melihat")} <b>{t("langkah konkret memenuhinya")}</b> {t("- dan ingat: kompetensi hanya")} <b>{t("tervalidasi lewat ujian")}</b>{t(", bukan sekadar tertulis di CV.")}</p>
       </div>
+
+      <MyInvites />
 
       {/* Legend status skill */}
       <div className="card p-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">

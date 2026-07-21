@@ -12,7 +12,7 @@ export const ACADEMIC_STATUS = {
   siswa_smk:   { label: "Siswa SMA/SMK",           education: "SMK",    seed: 3 }, // Gold
   mahasiswa:   { label: "Mahasiswa",                education: "Kuliah", seed: 3 }, // Gold
   lulusan_smk: { label: "Lulusan SMA/SMK",          education: "SMK",    seed: 3 }, // Gold
-  lulusan_s1:  { label: "Lulusan Kuliah (D3–S1)",   education: "S1",     seed: 4 }, // Platinum
+  lulusan_s1:  { label: "Lulusan Kuliah (D3-S1)",   education: "S1",     seed: 4 }, // Platinum
   lulusan_s2:  { label: "Lulusan S2 (Magister)",    education: "S2",     seed: 4 }, // Platinum
   lulusan_s3:  { label: "Lulusan S3 (Doktor)",      education: "S3",     seed: 4 }, // Platinum
 };

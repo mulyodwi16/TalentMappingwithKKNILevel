@@ -1,13 +1,20 @@
 import { prisma } from "./prisma.js";
+import { UNIT_MASTERY } from "./thresholds.js";
 import { educationSeed, clampRank } from "./onboarding.js";
 import { chosenUnitCodeSet } from "./competencyScope.js";
 import { buildRankLadder, evaluateLadder } from "./unitrank.js";
 
 // Rank efektif = MAX( seed pendidikan (rendah), rank yang DIRAIH dari kompetensi ).
-// Rank diraih dari BUKTI kompetensi: unit kompetensi yang LULUS + sertifikat + course selesai.
-// Ini membuat keahlian (bukan ijazah) jadi penentu utama - SMK terampil bisa menyalip S3.
+// Rank diraih dari BUKTI kompetensi. Ini membuat keahlian (bukan ijazah) jadi penentu
+// utama - SMK terampil bisa menyalip S3.
 //
-// masteryScore = unitLulus*8 + sertifikat*10 + course*4  → dipetakan ke tier:
+// PENENTU RANK = TANGGA UNIT di unitrank.js (buildRankLadder + evaluateLadder), supaya
+// syarat naik bisa ditunjuk: "kuasai 3 unit ini untuk naik ke Diamond".
+//
+// `masteryScore` di bawah BUKAN penentu rank - ia hanya angka ringkas yang masih dikirim
+// ke UI & prompt Learning Path sebagai gambaran banyaknya bukti. Jangan pakai `level`-nya
+// untuk menentukan rank, dan jangan menyalin TIERS ini ke klien (`tierProgress` di
+// client/src/lib/rank.js sudah dihapus justru karena itu).
 const TIERS = [
   { min: 160, level: 9 }, // Legend
   { min: 120, level: 8 }, // Grandmaster
@@ -22,12 +29,6 @@ export function earnedFromMastery(passedUnits, certs, courses) {
   const score = passedUnits * 8 + certs * 10 + courses * 4;
   const level = (TIERS.find((t) => score >= t.min) || TIERS[TIERS.length - 1]).level;
   return { score, level };
-}
-
-// Poin kompetensi menuju tier berikutnya (untuk UI progres "berapa lagi untuk naik").
-export function nextTierInfo(score) {
-  const higher = [...TIERS].reverse().find((t) => t.min > score);
-  return higher ? { level: higher.level, need: higher.min - score, at: higher.min } : null;
 }
 
 export async function computeRank(userId) {
@@ -46,7 +47,7 @@ export async function computeRank(userId) {
       : Promise.resolve([]),
   ]);
   const inScope = (code) => (codes ? codes.has(code) : false);
-  const passedCodes = new Set(assessAll.filter((a) => a.currentScore >= 60 && inScope(a.competencyCode)).map((a) => a.competencyCode));
+  const passedCodes = new Set(assessAll.filter((a) => a.currentScore >= UNIT_MASTERY && inScope(a.competencyCode)).map((a) => a.competencyCode));
   const passedUnits = passedCodes.size;
   const certs = certRows.filter((c) => inScope(c.competencyCode)).length;
   // "Course" = kelas kompetensi ini yang sudah dipelajari tapi BELUM lulus (hindari dobel hitung).

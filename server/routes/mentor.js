@@ -36,7 +36,8 @@ const KB = `PENGETAHUAN PLATFORM (TalentaAI):
 - Alur sistem: (1) Upload CV → auto-prediksi Skill Rank awal dari pendidikan+sertifikat+pengalaman,
   (2) Tes Penempatan sebagai baseline, lalu Latihan Unit terstandar SKKNI, (3) Skill Gap Analyzer (radar kompetensi aktual vs target),
   (4) Learning Path + kursus AvatarEdu untuk menutup gap, (5) status kesiapan promosi otomatis.
-- Ambang lulus: 60% per unit di Latihan Unit & Tes Penempatan (unit dihitung dikuasai), 70% di Ujian Kompetensi Utama (baru terbit sertifikat). Readiness score = % kompetensi yang lulus.
+- Ambang lulus: 60% per unit di Latihan Unit & Tes Penempatan (unit dihitung dikuasai), 70% di Ujian Kompetensi Utama (baru terbit sertifikat).
+- Skor Kesiapan (0-100) TIDAK sama dengan rata-rata nilai unit. Rumusnya tiga bagian: CV & profil terisi (maks 25), unit yang dikuasai dibagi SELURUH unit kompetensi (maks 60), sertifikat & bukti eksternal terverifikasi (maks 15). Jadi orang yang baru lulus 1 dari 11 unit tetap rendah walau nilainya 100.
   Status: >=80% "Siap Naik", >=50% "Dalam Proses", <50% "Perlu Peningkatan".
 - Fitur yang bisa kamu bukakan lewat tag [BUKA:kunci] (JANGAN pernah menulis alamat halaman sebagai teks):
   dashboard · cv (Upload CV) · penempatan (Tes Penempatan) · latihan (Latihan Unit) · ujian (Ujian Kompetensi Utama) ·
@@ -57,7 +58,8 @@ const KB_EN = `PLATFORM KNOWLEDGE (TalentaAI):
 - System flow: (1) Upload CV → automatic initial Skill Rank prediction from education+certificates+experience,
   (2) the Placement Test as a baseline, then SKKNI-standardized Unit Practice, (3) Skill Gap Analyzer (radar of actual vs target competency),
   (4) Learning Path + AvatarEdu courses to close gaps, (5) automatic promotion-readiness status.
-- Passing thresholds: 60% per unit in Unit Practice & the Placement Test (unit counts as mastered), 70% in the Main Competency Exam (only then is a certificate issued). Readiness score = % of competencies passed.
+- Passing thresholds: 60% per unit in Unit Practice & the Placement Test (unit counts as mastered), 70% in the Main Competency Exam (only then is a certificate issued).
+- The Readiness Score (0-100) is NOT the average unit score. It has three parts: CV & profile filled in (max 25), units mastered divided by ALL units of the competency (max 60), certificates & verified external evidence (max 15). So someone who has passed only 1 of 11 units stays low even with a perfect score on that unit.
   Status: >=80% "Ready", >=50% "In Progress", <50% "Needs Improvement".
 - Features you can open with a [BUKA:key] tag (NEVER write a page address as text):
   dashboard · cv (Upload CV) · penempatan (Placement Test) · latihan (Unit Practice) · ujian (Main Competency Exam) ·

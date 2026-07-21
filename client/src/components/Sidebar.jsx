@@ -28,8 +28,9 @@ const USER_CAREER = [
   { to: "/app/toko",          label: "Toko Koin",     Icon: ShoppingBag },
 ];
 const HRD_ITEMS = [
-  { to: "/app/hrd",      label: "Dashboard HRD", Icon: LayoutDashboard },
-  { to: "/app/hrd/jobs", label: "Peta Posisi",   Icon: Compass },
+  { to: "/app/hrd",         label: "Dashboard HRD",    Icon: LayoutDashboard },
+  { to: "/app/hrd/talenta", label: "Daftar Talenta",   Icon: Users },
+  { to: "/app/hrd/jobs",    label: "Posisi & Kandidat", Icon: Compass },
 ];
 const ADMIN_ITEMS = [
   { to: "/app/admin",           label: "Dashboard",       Icon: LayoutDashboard },

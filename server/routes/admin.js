@@ -31,33 +31,107 @@ router.get("/users", async (req, res) => {
   res.json(users.map(safeUser));
 });
 
+const ROLES = ["user", "hrd", "admin"];
+// Kolom yang boleh disetel dari panel admin. Dulu SELURUH isi body disebar ke Prisma, jadi
+// klien bisa menulis readinessScore, currentKkniLevel, atau googleId langsung - angka yang
+// seharusnya dihitung dari bukti bisa dikarang, dan akun bisa ditautkan ke Google orang lain.
+const USER_EDITABLE = ["name", "email", "role", "department", "position", "education", "academicStatus", "experienceYears"];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function pickUserData(body) {
+  const data = {};
+  for (const k of USER_EDITABLE) if (body[k] !== undefined) data[k] = body[k];
+  if (data.email !== undefined) data.email = String(data.email).trim().toLowerCase();
+  if (data.experienceYears !== undefined) data.experienceYears = parseInt(data.experienceYears) || 0;
+  return data;
+}
+
 router.post("/users", async (req, res) => {
-  const { password = "demo123", certifications, ...data } = req.body;
-  data.email = data.email?.toLowerCase();
+  const { password, certifications } = req.body || {};
+  const data = pickUserData(req.body || {});
+  if (!data.name?.trim()) return res.status(400).json({ error: "nama wajib diisi" });
+  if (!EMAIL_RE.test(data.email || "")) return res.status(400).json({ error: "format email tidak valid" });
+  // Tanpa ini, body tanpa password diam-diam membuat akun berkata sandi "demo123".
+  if (!password || String(password).length < 6) return res.status(400).json({ error: "kata sandi minimal 6 karakter" });
+  if (data.role && !ROLES.includes(data.role)) return res.status(400).json({ error: `role harus salah satu dari: ${ROLES.join(", ")}` });
   if (await prisma.user.findUnique({ where: { email: data.email } }))
     return res.status(409).json({ error: "email sudah dipakai" });
   const u = await prisma.user.create({
-    data: { ...data, passwordHash: await bcrypt.hash(password, 10), certifications: JSON.stringify(certifications || []) },
+    data: { ...data, role: data.role || "user", passwordHash: await bcrypt.hash(password, 10), certifications: JSON.stringify(certifications || []) },
   });
-  await audit(req, "create_user", u.email);
+  await audit(req, "create_user", u.email, JSON.stringify({ role: u.role }));
   res.status(201).json(safeUser(u));
 });
 
 router.put("/users/:id", async (req, res) => {
-  const { password, certifications, ...data } = req.body;
-  if (password) data.passwordHash = await bcrypt.hash(password, 10);
+  const { password, certifications } = req.body || {};
+  const before = await prisma.user.findUnique({ where: { id: req.params.id } });
+  if (!before) return res.status(404).json({ error: "user not found" });
+
+  const data = pickUserData(req.body || {});
+  if (data.email !== undefined && !EMAIL_RE.test(data.email)) return res.status(400).json({ error: "format email tidak valid" });
+  if (data.role && !ROLES.includes(data.role)) return res.status(400).json({ error: `role harus salah satu dari: ${ROLES.join(", ")}` });
+  if (before.id === req.user.id && data.role && data.role !== "admin")
+    return res.status(400).json({ error: "tidak bisa menurunkan role diri sendiri" });
+  if (password !== undefined) {
+    if (String(password).length < 6) return res.status(400).json({ error: "kata sandi minimal 6 karakter" });
+    data.passwordHash = await bcrypt.hash(password, 10);
+  }
   if (certifications !== undefined) data.certifications = JSON.stringify(certifications);
-  const u = await prisma.user.update({ where: { id: req.params.id }, data }).catch(() => null);
-  if (!u) return res.status(404).json({ error: "user not found" });
-  await audit(req, "update_user", u.email);
+
+  const u = await prisma.user.update({ where: { id: before.id }, data }).catch(() => null);
+  if (!u) return res.status(409).json({ error: "gagal menyimpan perubahan (email mungkin sudah dipakai)" });
+
+  // Catat APA yang berubah. Entri "update_user someone@x.com" tanpa isi tak bisa dipakai
+  // menelusuri siapa yang menaikkan role seseorang jadi admin.
+  const changed = {};
+  for (const k of USER_EDITABLE) if (data[k] !== undefined && data[k] !== before[k]) changed[k] = { dari: before[k], jadi: data[k] };
+  if (data.passwordHash) changed.password = "diubah";
+  await audit(req, "update_user", u.email, JSON.stringify(changed));
   res.json(safeUser(u));
 });
 
+// Baris anak yang harus ikut terhapus. Skema ini hanya punya dua relasi onDelete: Cascade,
+// dan tak satu pun di User - jadi `user.delete` melempar P2003 begitu orangnya punya SATU
+// notifikasi, dompet koin, atau percobaan ujian. Versi lama menangkap error itu lalu
+// membalas "user not found", sehingga operator melihat pesan yang jelas-jelas salah untuk
+// orang yang jelas terlihat di tabel. Urutannya dari daun ke akar.
+const USER_CHILDREN = [
+  "placementInstance", "competencyExamInstance", "placementAttempt", "externalEvidence",
+  "unitExamReview", "skillClaim", "learningPlan", "dailyMission", "dailyQuizLog",
+  "certificate", "jobApplication", "candidateReview", "coinTransaction", "coinWallet",
+  "shopRedemption", "skkniExam", "unitProgress", "unitExamInstance", "examAttempt",
+  "skillAssessment", "recommendation", "notification",
+];
+
 router.delete("/users/:id", async (req, res) => {
   if (req.params.id === req.user.id) return res.status(400).json({ error: "tidak bisa hapus diri sendiri" });
-  const u = await prisma.user.delete({ where: { id: req.params.id } }).catch(() => null);
+  const u = await prisma.user.findUnique({ where: { id: req.params.id } });
   if (!u) return res.status(404).json({ error: "user not found" });
-  await audit(req, "delete_user", u.email);
+
+  // Posisi yang pernah dibuka HRD dipegang orang lain (kandidat, minat) - menghapusnya diam-diam
+  // akan menghilangkan pekerjaan orang lain. Minta posisinya diberesi dulu.
+  const jobCount = await prisma.job.count({ where: { postedById: u.id } });
+  if (jobCount) return res.status(409).json({ error: `Akun ini masih memegang ${jobCount} posisi. Hapus atau pindahkan posisinya dulu.` });
+
+  // `AuditLog.actorId` relasi WAJIB ke User, jadi barisnya harus ikut terhapus - tak bisa
+  // dikosongkan tanpa mengubah skema. Jumlahnya dicatat di entri audit penghapusan ini
+  // supaya jejak yang hilang tetap terlihat, bukan lenyap tanpa keterangan.
+  const logCount = await prisma.auditLog.count({ where: { actorId: u.id } });
+
+  try {
+    await prisma.$transaction([
+      ...USER_CHILDREN.map((m) => prisma[m].deleteMany({ where: { userId: u.id } })),
+      prisma.request.deleteMany({ where: { fromId: u.id } }),
+      prisma.auditLog.deleteMany({ where: { actorId: u.id } }),
+      prisma.user.delete({ where: { id: u.id } }),
+    ]);
+  } catch (e) {
+    console.error("delete_user:", e.message);
+    return res.status(409).json({ error: "Akun tidak bisa dihapus karena masih terkait data lain. Periksa log server." });
+  }
+
+  await audit(req, "delete_user", u.email, JSON.stringify({ role: u.role, name: u.name, auditLogsRemoved: logCount }));
   res.json({ ok: true });
 });
 

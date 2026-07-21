@@ -20,6 +20,7 @@ import Jobs from "./pages/user/Jobs.jsx";
 import Profile from "./pages/user/Profile.jsx";
 import HrdDashboard from "./pages/hrd/HrdDashboard.jsx";
 import JobBoard from "./pages/hrd/JobBoard.jsx";
+import TalentList from "./pages/hrd/TalentList.jsx";
 import AvatarEduSettings from "./pages/admin/AvatarEduSettings.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import UserManagement from "./pages/admin/UserManagement.jsx";
@@ -85,6 +86,14 @@ export default function App() {
             element={
               <ProtectedRoute roles={["hrd", "admin"]}>
                 <HrdDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="hrd/talenta"
+            element={
+              <ProtectedRoute roles={["hrd", "admin"]}>
+                <TalentList />
               </ProtectedRoute>
             }
           />

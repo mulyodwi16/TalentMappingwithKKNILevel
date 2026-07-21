@@ -108,8 +108,9 @@ const SYSTEMS = [
   {
     Icon: Gauge, color: "#2563eb", title: "Cara Rank Dihitung",
     points: [
-      "Skor penguasaan = (unit lulus × 8) + (sertifikat × 10) + (kelas selesai × 4).",
-      "Skor itu dipetakan ke tier: mis. Gold mulai 0, Emerald 32, Diamond 55, Master 85, Legend 160.",
+      "Unit kompetensimu dibagi ke tiap tier, dari yang mendasar sampai yang menuntut tanggung jawab luas.",
+      "Sebuah tier tercapai bila unit tier itu dan semua tier di bawahnya sudah dikuasai (nilai ≥ 60%).",
+      "Ada toleransi: cukup 80% dari seluruh unit sampai tier itu. Tapi melompati tier tengah tidak dihargai.",
       "Rank efektif = nilai TERTINGGI dari: rank awal pendidikan, rank dari kompetensi (dibatasi bobot), dan rank dari bukti eksternal.",
     ],
   },
@@ -118,7 +119,7 @@ const SYSTEMS = [
     points: [
       "Tiap kompetensi punya bobot kesulitan berbeda - petani ≠ ahli pertanian.",
       "Rank hasil ujian DIBATASI bobot kompetensi (cap), mencegah 'overcapacity' (rank ahli dari skill dasar).",
-      "AI mengklasifikasikan bobot tiap kompetensi (rank maksimal 5–9) secara otomatis.",
+      "AI mengklasifikasikan bobot tiap kompetensi (rank maksimal 5-9) secara otomatis.",
     ],
   },
   {
@@ -132,9 +133,10 @@ const SYSTEMS = [
   {
     Icon: ClipboardCheck, color: "#6366f1", title: "Ujian 3 Tipe (Validasi Nyata)",
     points: [
-      "Tiap unit: 10–15 soal campuran - pilihan ganda, studi kasus situasional, & urutan langkah.",
+      "Tiap unit: 10-15 soal campuran - pilihan ganda, studi kasus situasional, & urutan langkah.",
       "Isian & urutan dinilai AI (skor + umpan balik); pilihan ganda dinilai otomatis.",
-      "Lulus = skor ≥ 60% per unit → sertifikat unit terbit & rank diperbarui. Soal diacak tiap percobaan.",
+      "Latihan unit tidak menerbitkan sertifikat. Lulus (≥ 60%) menandai unit dikuasai & memperbarui rank.",
+      "Sertifikat terbit sekali untuk seluruh kompetensi, lewat Ujian Kompetensi Utama (≥ 70%).",
     ],
   },
   {

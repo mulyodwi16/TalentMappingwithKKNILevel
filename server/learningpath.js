@@ -2,6 +2,7 @@ import { prisma } from "./prisma.js";
 import { chatComplete, isLlmConfigured, LlmError } from "./llm.js";
 import { rankName } from "./rank.js";
 import { computeRank } from "./rankcalc.js";
+import { UNIT_MASTERY, PLAN_MASTERY } from "./thresholds.js";
 import { computeReadiness } from "./readiness.js";
 import { getDocWithUnits, cleanTitle } from "./skkni.js";
 import { chosenUnitCodeSet } from "./competencyScope.js";
@@ -58,10 +59,10 @@ export async function buildInputs(userId) {
     .sort((a, b) => b.gap - a.gap)
     .map((a) => ({ name: a.competencyName, code: a.competencyCode, score: a.currentScore, gap: a.gap }));
   const strong = scopedAssess
-    .filter((a) => a.gap === 0 && a.currentScore >= 60)
+    .filter((a) => a.gap === 0 && a.currentScore >= UNIT_MASTERY)
     .map((a) => a.competencyName);
   const passedUnits = scopedAssess
-    .filter((a) => a.currentScore >= 60)
+    .filter((a) => a.currentScore >= UNIT_MASTERY)
     .map((a) => ({ name: a.competencyName, code: a.competencyCode, score: a.currentScore }));
 
   // Unit kompetensi standar dari dokumen SKKNI yang dipilih (patokan skill yang harus dikuasai).
@@ -137,10 +138,6 @@ export async function buildInputs(userId) {
 //   unit lulus (skor≥60) → done · sedang dipelajari/diuji (<60 / kelas dibuka) → doing · lainnya → todo.
 function normalizeTitle(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); }
 
-// Ambang "langkah tuntas" di Learning Path. Sengaja lebih tinggi dari ambang lulus unit (60%)
-// dan disamakan dengan ambang status "Siap Naik" - langkah rencana bertugas MENUTUP gap,
-// bukan sekadar melewatinya.
-const PLAN_MASTERY = 80;
 
 // AI kadang salah memberi trackType (mis. langkah "Verifikasi Bukti Eksternal" diberi
 // trackType "cv"), sehingga langkahnya dinyatakan selesai hanya karena CV sudah diunggah.
@@ -190,7 +187,7 @@ export async function deriveStepProgress(userId, steps) {
     // sekadar lulus. Unit dengan skor 75% masih menyisakan gap -25%, dan menandainya
     // selesai membuat rencana terlihat beres padahal gap-nya masih terpampang.
     if (a && a.currentScore >= PLAN_MASTERY) return mark("done", `Dikuasai ${a.currentScore}%`);
-    if (a && a.currentScore >= 60) return mark("doing", `Dikuasai ${a.currentScore}% - tutup sisa gap ke ${PLAN_MASTERY}%`);
+    if (a && a.currentScore >= UNIT_MASTERY) return mark("doing", `Dikuasai ${a.currentScore}% - tutup sisa gap ke ${PLAN_MASTERY}%`);
     if (a && a.currentScore > 0) return mark("doing", `Ujian ${a.currentScore}% - belum lulus (min 60%)`);
     if (code && learnedCodes.has(code)) return mark("doing", "Materi kelas selesai - tinggal lulus ujiannya");
     if (code && learningCodes.has(code)) return mark("doing", "Kelas sedang berjalan");

@@ -1,4 +1,5 @@
 import express from "express";
+import crypto from "node:crypto";
 import { requireAuth } from "../middleware/auth.js";
 import { prisma } from "../prisma.js";
 
@@ -8,6 +9,47 @@ import { prisma } from "../prisma.js";
 // Karena itu kita FALLBACK ke seluruh katalog bila query tak menemukan apa pun, agar course
 // selalu tampil. Validasi key & akses via `/me`.
 const router = express.Router();
+
+// ── Pemutar course: tiket sekali pakai, kunci partner TIDAK pernah ke peramban ──────────
+// Dulu `/embed-url/:slug` membalas URL LENGKAP berisi `?key=<AVATAREDU_API_KEY>`. Komentar
+// lamanya bilang kuncinya "tak bocor ke bundle" - itu benar, tapi kuncinya tetap sampai ke
+// setiap pengguna yang login: ada di badan respons API, tersimpan di state React, dan
+// terpasang sebagai atribut src iframe. Satu klik "periksa elemen" sudah cukup.
+// Sekarang klien hanya menerima alamat SERVER KITA berisi tiket bertanda tangan & berumur
+// pendek; kunci aslinya baru dipasang di sini saat mengalihkan.
+const TICKET_TTL_MS = 5 * 60 * 1000;
+const ticketSecret = () => process.env.JWT_SECRET || "avataredu-ticket";
+
+function signTicket(payload) {
+  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const sig = crypto.createHmac("sha256", ticketSecret()).update(body).digest("base64url");
+  return `${body}.${sig}`;
+}
+
+function readTicket(raw) {
+  const [body, sig] = String(raw || "").split(".");
+  if (!body || !sig) return null;
+  const expect = crypto.createHmac("sha256", ticketSecret()).update(body).digest("base64url");
+  // Perbandingan waktu-tetap: pembandingan biasa membocorkan panjang awalan yang cocok.
+  const a = Buffer.from(sig), b = Buffer.from(expect);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  try {
+    const p = JSON.parse(Buffer.from(body, "base64url").toString());
+    return p.exp > Date.now() ? p : null;
+  } catch { return null; }
+}
+
+// TANPA requireAuth - iframe tak bisa mengirim header Authorization. Penjaganya tiket.
+// Harus didaftarkan SEBELUM router.use(requireAuth) di bawah.
+router.get("/player/:slug", (req, res) => {
+  const key = process.env.AVATAREDU_API_KEY;
+  if (!key) return res.status(503).send("AVATAREDU_API_KEY not set");
+  const t = readTicket(req.query.t);
+  if (!t || t.slug !== req.params.slug) return res.status(403).send("Tautan pemutar sudah kedaluwarsa. Muat ulang halaman.");
+  const chapter = t.chapter ? `&chapter=${encodeURIComponent(t.chapter)}` : "";
+  res.redirect(302, `https://avataredu.ai/embed/scorm/${encodeURIComponent(t.slug)}?key=${encodeURIComponent(key)}&partner_user_id=${encodeURIComponent(t.uid)}${chapter}`);
+});
+
 router.use(requireAuth);
 
 const BASE = "https://avataredu.ai/api/v1";
@@ -105,15 +147,20 @@ router.get("/courses/:slug", async (req, res) => {
 });
 
 // Player SCORM: /embed/scorm/{slug} (BUKAN /embed/course/{slug} yang cuma kartu preview).
-// Wajib partner_user_id agar AvatarEdu lacak progres per pengguna; key & id diinject
-// server-side (tak bocor ke bundle). Endpoint ini 302 → sesi player bertoken.
+// Wajib partner_user_id agar AvatarEdu melacak progres per pengguna. Yang dikembalikan ke
+// klien HANYA alamat /player di server kita berisi tiket berumur 5 menit - kunci partner
+// dipasang di sisi server saat pengalihan (lihat catatan di rute /player di atas).
 router.get("/embed-url/:slug", (req, res) => {
-  const key = process.env.AVATAREDU_API_KEY;
-  if (!key) return res.status(503).json({ error: "AVATAREDU_API_KEY not set" });
-  const partnerUserId = encodeURIComponent(String(req.user?.id ?? req.user?.email ?? "guest"));
-  // ?chapter={id} memilih bab tertentu (course multi-chapter); tanpa itu → bab pertama.
-  const chapter = req.query.chapter ? `&chapter=${encodeURIComponent(String(req.query.chapter))}` : "";
-  res.json({ url: `https://avataredu.ai/embed/scorm/${encodeURIComponent(req.params.slug)}?key=${encodeURIComponent(key)}&partner_user_id=${partnerUserId}${chapter}` });
+  if (!process.env.AVATAREDU_API_KEY) return res.status(503).json({ error: "AVATAREDU_API_KEY not set" });
+  const ticket = signTicket({
+    uid: String(req.user?.id ?? req.user?.email ?? "guest"),
+    slug: req.params.slug,
+    // ?chapter={id} memilih bab tertentu (course multi-chapter); tanpa itu → bab pertama.
+    chapter: req.query.chapter ? String(req.query.chapter) : null,
+    exp: Date.now() + TICKET_TTL_MS,
+  });
+  const base = `${req.protocol}://${req.get("host")}`;
+  res.json({ url: `${base}/api/avataredu/player/${encodeURIComponent(req.params.slug)}?t=${ticket}` });
 });
 
 export default router;

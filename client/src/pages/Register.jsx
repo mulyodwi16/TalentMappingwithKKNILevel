@@ -15,8 +15,8 @@ import { useLang } from "../lib/i18n.jsx";
 const EXPERIENCE = [
   { years: 0, label: "Belum ada" },
   { years: 1, label: "< 1 tahun" },
-  { years: 2, label: "1–3 tahun" },
-  { years: 4, label: "3–5 tahun" },
+  { years: 2, label: "1-3 tahun" },
+  { years: 4, label: "3-5 tahun" },
   { years: 6, label: "> 5 tahun" },
 ];
 
