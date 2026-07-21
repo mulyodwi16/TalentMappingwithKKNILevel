@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { ArrowRight, ArrowLeft, Check, Loader2, Target, FileText, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowLeft, Check, Loader2, Target, FileText, Sparkles, LayoutDashboard } from "lucide-react";
 import api from "../api/client.js";
 import useAuthStore from "../store/authStore.js";
 import { ACADEMIC_STATUS } from "../lib/academic.js";
@@ -35,6 +35,7 @@ export default function Register() {
   const [cvData, setCvData] = useState(null);          // { pdfBase64, fileName } - diproses saat finalisasi
   const [finalizing, setFinalizing] = useState(false);
   const [preparing, setPreparing] = useState(null);    // {docId, title} - menunggu unit kompetensi siap
+  const [choosingDest, setChoosingDest] = useState(false); // tawarkan Tes Penempatan vs Dashboard
   const cvRef = useRef(null);
 
   const upd = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -82,6 +83,9 @@ export default function Register() {
         setPreparing({ docId: chosen.id, title: chooseRes.chosen?.title || chosen.title });
         return;
       }
+      // Kompetensi sudah siap: tawarkan mulai Tes Penempatan (cara tercepat mengisi Skill
+      // Gap). Tanpa kompetensi, tes penempatan tak ada gunanya - langsung ke dashboard.
+      if (chosen?.id) { setChoosingDest(true); return; }
       navigate("/app/dashboard");
     } catch (err) {
       toast.error(err || t("Registrasi gagal"));
@@ -112,12 +116,29 @@ export default function Register() {
           <p className="mt-1 text-sm" style={{ color: "var(--text-3)" }}>{t("Siapkan diri memenuhi standar kompetensi SKKNI")}</p>
         </div>
 
-        {/* Kompetensi belum siap: tahan di sini dulu, jangan masuk dashboard dengan data kosong. */}
-        {preparing ? (
+        {/* Akun siap + kompetensi terpasang: tawarkan Tes Penempatan atau langsung dashboard. */}
+        {choosingDest ? (
+          <div className="card p-6 text-center flex flex-col items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 grid place-items-center"><Check className="w-6 h-6 text-emerald-500" /></div>
+            <h3 className="font-bold text-lg" style={{ color: "var(--text-base)" }}>{t("Akunmu siap!")}</h3>
+            <p className="text-sm" style={{ color: "var(--text-3)" }}>
+              {t("Mau langsung ukur kemampuan lewat Tes Penempatan? Sekali jalan, Skill Gap dan Learning Path-mu langsung terisi.")}
+            </p>
+            <div className="flex flex-col w-full gap-2 pt-1">
+              <button onClick={() => navigate("/app/placement")} className="btn-primary py-2.5 flex items-center justify-center gap-2">
+                <Target className="w-4 h-4" /> {t("Mulai Tes Penempatan")} <ArrowRight className="w-4 h-4" />
+              </button>
+              <button onClick={() => navigate("/app/dashboard")} className="btn-outline py-2.5 flex items-center justify-center gap-2">
+                <LayoutDashboard className="w-4 h-4" /> {t("Nanti saja, ke Dashboard")}
+              </button>
+            </div>
+            <p className="text-[11px]" style={{ color: "var(--text-4)" }}>{t("Tes Penempatan bisa diambil kapan saja dari menu Belajar & Ujian.")}</p>
+          </div>
+        ) : preparing ? (
           <CompetencyPreparing
             docId={preparing.docId}
             title={preparing.title}
-            onReady={() => navigate("/app/dashboard")}
+            onReady={() => { setPreparing(null); setChoosingDest(true); }}
             onSkip={() => navigate("/app/dashboard")}
             onPickOther={() => navigate("/app/profile?pick=1")}
           />

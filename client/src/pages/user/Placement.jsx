@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
-  Target, Loader2, CheckCircle2, AlertTriangle, Sparkles, RotateCcw, MessageSquareQuote,
+  Target, Loader2, CheckCircle2, AlertTriangle, Sparkles, RotateCcw, MessageSquareQuote, Lock, Coins,
 } from "lucide-react";
 import api from "../../api/client.js";
 import { rankName, rankColor } from "../../lib/rank.js";
@@ -61,6 +61,17 @@ export default function Placement() {
     mutationFn: () => api.post("/skkni/placement/start"),
     onSuccess: (d) => { setSession(d); setAnswers({}); setStep(0); setResult(null); lockExam(t("Tes Penempatan")); },
     onError: (e) => toast.error(typeof e === "string" ? e : t("Gagal memulai tes")),
+  });
+
+  const unlock = useMutation({
+    mutationFn: () => api.post("/skkni/placement/unlock"),
+    onSuccess: (d) => {
+      toast.success(t("Tes Penempatan terbuka lagi. Sisa kesempatan: {n}.", { n: d.attemptsLeft }));
+      qc.invalidateQueries({ queryKey: ["placement"] });
+      qc.invalidateQueries({ queryKey: ["overview"] });
+      qc.invalidateQueries({ queryKey: ["coins"] });
+    },
+    onError: (e) => toast.error(typeof e === "string" ? e : t("Saldo Koin belum cukup.")),
   });
 
   const submit = useMutation({
@@ -145,7 +156,7 @@ export default function Placement() {
       <div>
         <h2 className="text-xl font-bold" style={{ color: "var(--text-base)" }}>{t("Tes Penempatan")}</h2>
         <p className="text-sm mt-1" style={{ color: "var(--text-4)" }}>
-          {t("Ukur kemampuan awalmu sekali jalan, supaya kamu tidak perlu mengulang materi yang sudah dikuasai.")}
+          {t("Semacam ujian percepatan: kalau kamu sudah punya pengalaman, kemampuan yang sudah dikuasai langsung diakui supaya kamu lanjut mengembangkan skill, bukan mengulang dari awal.")}
         </p>
       </div>
 
@@ -180,18 +191,46 @@ export default function Placement() {
               })}</li>
               <li>{t("Selama tes berlangsung, menu lain dan AI Mentor dikunci supaya kamu fokus.")}</li>
               <li>{t("Tes ini tidak menerbitkan sertifikat. Sertifikat hanya dari ujian kompetensi utama.")}</li>
+              <li>{t("Ini pengukuran baseline, bukan latihan berulang. Kamu punya {n} kali kesempatan; sesudahnya bisa dibuka lagi dengan Koin. Untuk berlatih terus, pakai Latihan Unit.", { n: status?.freeAttempts || 2 })}</li>
             </ul>
             <p className="text-xs" style={{ color: "var(--text-4)" }}>
-              {t("Kompetensi: {title} - {n} unit", { title: status?.competencyTitle || "-", n: status?.unitCount || 0 })}
+              {status?.capped
+                ? t("Kompetensi: {title}. Dari {total} unit, tes memilih {n} yang mewakili dari dasar sampai lanjutan supaya tetap ringkas.", { title: status?.competencyTitle || "-", total: status?.totalUnits || 0, n: status?.unitCount || 0 })
+                : t("Kompetensi: {title} - {n} unit", { title: status?.competencyTitle || "-", n: status?.unitCount || 0 })}
             </p>
-            <button onClick={() => start.mutate()} disabled={start.isPending}
-              className="btn-primary text-sm flex items-center gap-2 disabled:opacity-70">
-              {start.isPending
-                ? <><Loader2 className="w-4 h-4 animate-spin" /> {t("Menyusun soal…")}</>
-                : <><Target className="w-4 h-4" /> {status?.taken ? t("Ulangi Tes Penempatan") : t("Mulai Tes Penempatan")}</>}
-            </button>
-            {start.isPending && (
-              <p className="text-xs" style={{ color: "var(--text-4)" }}>{t("Penyusunan soal pertama kali bisa memakan waktu sekitar satu menit, setelah itu tersimpan.")}</p>
+
+            {status?.locked ? (
+              <div className="rounded-xl p-4 space-y-2" style={{ background: "var(--bg-raised)", border: "1px solid var(--border)" }}>
+                <p className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text-base)" }}>
+                  <Lock className="w-4 h-4 text-amber-500" /> {t("Kesempatan tes penempatan sudah habis")}
+                </p>
+                <p className="text-xs" style={{ color: "var(--text-4)" }}>
+                  {t("Baseline-mu sudah tercatat di bawah. Untuk mengukur ulang, buka satu kesempatan lagi dengan {c} Koin. Koin dikumpulkan dari login harian dan aktivitas belajar.", { c: status?.unlockCost || 400 })}
+                </p>
+                <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                  <button onClick={() => unlock.mutate()} disabled={unlock.isPending}
+                    className="btn-primary text-sm flex items-center gap-2 disabled:opacity-70">
+                    {unlock.isPending
+                      ? <><Loader2 className="w-4 h-4 animate-spin" /> {t("Membuka…")}</>
+                      : <><Coins className="w-4 h-4" /> {t("Buka lagi - {c} Koin", { c: status?.unlockCost || 400 })}</>}
+                  </button>
+                  <Link to="/app/toko" className="text-xs text-brand-500 hover:underline">{t("Kumpulkan Koin di Toko")}</Link>
+                </div>
+              </div>
+            ) : (
+              <>
+                <button onClick={() => start.mutate()} disabled={start.isPending}
+                  className="btn-primary text-sm flex items-center gap-2 disabled:opacity-70">
+                  {start.isPending
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> {t("Menyusun soal…")}</>
+                    : <><Target className="w-4 h-4" /> {status?.taken ? t("Ulangi Tes Penempatan") : t("Mulai Tes Penempatan")}</>}
+                </button>
+                <p className="text-xs" style={{ color: "var(--text-4)" }}>
+                  {start.isPending
+                    ? t("Penyusunan soal pertama kali bisa memakan waktu sekitar satu menit, setelah itu tersimpan.")
+                    : t("Sisa kesempatan: {n} kali.", { n: status?.attemptsLeft ?? 2 })}
+                </p>
+              </>
             )}
           </div>
 

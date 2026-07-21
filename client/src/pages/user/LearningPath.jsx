@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import api from "../../api/client.js";
 import { rankName, rankColor } from "../../lib/rank.js";
+import { planCoverage } from "../../lib/planprogress.js";
 import RankIcon from "../../components/RankIcon.jsx";
 import { useLang, dateLocale } from "../../lib/i18n.jsx";
 
@@ -295,6 +296,10 @@ export default function LearningPath() {
   const noComp = !inputs?.competency;
   const done = plan?.steps?.filter((s) => s.progress === "done").length || 0;
   const total = plan?.steps?.length || 0;
+  // Progres utama = CAKUPAN unit kompetensi (selaras Skill Gap & Kesiapan), bukan langkah
+  // tematik. Rencana hanya berisi langkah prioritas; "10/12 langkah" dulu tampak 83% padahal
+  // kompetensinya baru tersentuh 18%. Lihat lib/planprogress.js.
+  const cov = planCoverage(inputs);
 
   // OTOMATIS: begitu kompetensi dipilih & belum ada rencana, susun sendiri (tanpa tombol manual).
   // JUGA disusun ulang saat `stale` - ada nilai unit yang lebih baru dari rencana ini (mis.
@@ -328,15 +333,24 @@ export default function LearningPath() {
               {t("Rencana belajar terurut dari")} <b>{t("seluruh datamu")}</b> {t("- CV, kelas yang diikuti, ujian, keahlian, dan kompetensi target - disusun & dicek AI. Progres")} <b>{t("dilacak otomatis")}</b>.
             </p>
             {plan && (
-              <div className="flex items-center gap-2 mt-3">
-                <div className="w-40 h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-raised)" }}>
-                  <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: total ? `${(done / total) * 100}%` : 0 }} />
+              <div className="mt-3 space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-40 h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-raised)" }}>
+                    <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${cov.known ? cov.pct : (total ? Math.round((done / total) * 100) : 0)}%` }} />
+                  </div>
+                  <span className="text-xs font-semibold" style={{ color: "var(--text-3)" }}>
+                    {cov.known ? t("{a}/{b} unit dikuasai", { a: cov.mastered, b: cov.total }) : t("{a}/{b} selesai", { a: done, b: total })}
+                  </span>
                 </div>
-                <span className="text-xs font-semibold" style={{ color: "var(--text-3)" }}>{t("{a}/{b} selesai", { a: done, b: total })}</span>
+                {cov.known && total > 0 && (
+                  <p className="text-[11px]" style={{ color: "var(--text-4)" }}>
+                    {t("{a} dari {b} langkah prioritas selesai. Sisanya menutup gap unit lain di kompetensi ini.", { a: done, b: total })}
+                  </p>
+                )}
               </div>
             )}
           </div>
-          <JourneyArt done={done} total={total} />
+          <JourneyArt done={cov.known ? cov.mastered : done} total={cov.known ? cov.total : total} />
         </div>
       </div>
 

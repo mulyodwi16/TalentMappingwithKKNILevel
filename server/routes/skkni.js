@@ -14,11 +14,12 @@ import {
   ensureExamPackage, buildShuffledInstance, courseCoverage, COURSE_UNITS,
   ensureUnitExamPackage, buildUnitExamInstance, unitStates, ensureCompetencyWeight, gradeFreeText,
   prepareDoc, getPrepareState,
-  ensurePlacementPackage, buildPlacementInstance, reviewPlacement, PLACEMENT_MINUTES_PER_UNIT,
+  ensurePlacementPackage, buildPlacementInstance, reviewPlacement, PLACEMENT_MINUTES_PER_UNIT, PLACEMENT_MAX_UNITS,
+  PLACEMENT_FREE_ATTEMPTS, PLACEMENT_UNLOCK_COST, placementGate,
   ensureFinalExamPackage, FINAL_PASS_SCORE, FINAL_MINUTES_PER_UNIT,
 } from "../skkni.js";
 import { isLlmConfigured } from "../llm.js";
-import { awardOnce, COIN } from "../gamification.js";
+import { awardOnce, award, getBalance, COIN } from "../gamification.js";
 import { refreshReadiness } from "../readiness.js";
 import { refreshRank } from "../rankcalc.js";
 
@@ -141,19 +142,37 @@ async function chosenDoc(userId) {
 router.get("/placement", async (req, res) => {
   const u = await chosenDoc(req.user.id);
   if (!u) return res.json({ available: false, reason: "no-competency" });
-  const [attempt, inst, unitCount] = await Promise.all([
+  const [attempt, inst, unitCount, access] = await Promise.all([
     prisma.placementAttempt.findUnique({ where: { userId_docId: { userId: req.user.id, docId: u.chosenSkkniId } } }).catch(() => null),
     prisma.placementInstance.findUnique({ where: { userId: req.user.id } }).catch(() => null),
     prisma.skkniUnit.count({ where: { documentId: u.chosenSkkniId } }),
+    prisma.placementAccess.findUnique({ where: { userId_docId: { userId: req.user.id, docId: u.chosenSkkniId } } }).catch(() => null),
   ]);
+  const gate = placementGate({ used: access?.used || 0, bonus: access?.bonus || 0 });
+  // Tes yang sedang berjalan tak ikut terkunci - biar user bisa menyelesaikan yang sudah dimulai.
+  const sedangBerjalan = !!inst && inst.docId === u.chosenSkkniId;
+  // Tes penempatan dibatasi PLACEMENT_MAX_UNITS unit (disebar ke seluruh tier) supaya tetap
+  // manusiawi. `unitCount` yang dikirim = jumlah yang BENAR-BENAR diuji, jadi hitungan waktu
+  // dan teks "N unit" di intro cocok dengan tes yang muncul (bukan total unit kompetensi -
+  // dulu intro bilang 79 unit / 237 menit padahal tesnya cuma 12 unit).
+  const placementUnits = Math.min(unitCount, PLACEMENT_MAX_UNITS);
   res.json({
     available: unitCount > 0 && isLlmConfigured(),
     reason: unitCount === 0 ? "no-units" : !isLlmConfigured() ? "no-llm" : null,
     competencyTitle: u.chosenSkkniTitle,
-    unitCount,
-    inProgress: !!inst && inst.docId === u.chosenSkkniId,
-    expiresAt: inst && inst.docId === u.chosenSkkniId ? inst.expiresAt : null,
+    unitCount: placementUnits,
+    totalUnits: unitCount,
+    capped: unitCount > placementUnits,
+    inProgress: sedangBerjalan,
+    expiresAt: sedangBerjalan ? inst.expiresAt : null,
     minutesPerUnit: PLACEMENT_MINUTES_PER_UNIT,
+    // Jatah mengambil tes: bebas selama masih ada sisa; terkunci sesudahnya (buka via Koin).
+    attemptsUsed: gate.used,
+    attemptsAllowed: gate.allowed,
+    attemptsLeft: gate.remaining,
+    freeAttempts: PLACEMENT_FREE_ATTEMPTS,
+    locked: gate.locked && !sedangBerjalan,
+    unlockCost: PLACEMENT_UNLOCK_COST,
     taken: attempt
       ? { score: attempt.score, unitCount: attempt.unitCount, passedUnits: attempt.passedUnits, takenAt: attempt.takenAt, breakdown: safeArr(attempt.breakdown), review: attempt.review }
       : null,
@@ -167,10 +186,26 @@ router.post("/placement/start", async (req, res) => {
   if (!isLlmConfigured()) return res.status(503).json({ error: "Penyusun soal sedang tidak tersedia. Coba lagi nanti." });
   try {
     let inst = await prisma.placementInstance.findUnique({ where: { userId: req.user.id } });
+    // Memulai tes BARU (bukan melanjutkan yang tertunda) memakai satu jatah. Melanjutkan tes
+    // yang docId-nya sama TIDAK dihitung ulang - user berhak menyelesaikan yang sudah dimulai.
     if (!inst || inst.docId !== u.chosenSkkniId) {
+      const access = await prisma.placementAccess.findUnique({
+        where: { userId_docId: { userId: req.user.id, docId: u.chosenSkkniId } },
+      }).catch(() => null);
+      const gate = placementGate({ used: access?.used || 0, bonus: access?.bonus || 0 });
+      if (!gate.canStart) {
+        return res.status(403).json({ error: "Tes penempatan terkunci. Buka lagi dengan menukar Koin di Toko.", locked: true, unlockCost: PLACEMENT_UNLOCK_COST });
+      }
       const pkg = await ensurePlacementPackage(u.chosenSkkniId);
       if (!pkg) return res.status(503).json({ error: "Belum bisa menyusun soal untuk kompetensi ini." });
       const questions = buildPlacementInstance(pkg);
+      // Catat jatah terpakai SEBELUM instance dibuat, jadi menutup tab lalu memulai lagi tetap
+      // memakan jatah (mencegah "intip soal lalu batal" untuk menghafal tanpa biaya).
+      await prisma.placementAccess.upsert({
+        where: { userId_docId: { userId: req.user.id, docId: u.chosenSkkniId } },
+        update: { used: { increment: 1 } },
+        create: { userId: req.user.id, docId: u.chosenSkkniId, used: 1, bonus: 0 },
+      });
       // Waktu mengikuti jumlah unit, bukan angka tetap: kompetensi 5 unit dan 12 unit
       // jelas tak layak diberi durasi sama.
       const unitCount = new Set(questions.map((q) => q.unitCode)).size;
@@ -191,6 +226,32 @@ router.post("/placement/start", async (req, res) => {
     console.warn("[placement] start gagal:", e.message);
     res.status(502).json({ error: "Gagal menyiapkan tes penempatan." });
   }
+});
+
+// Buka satu kesempatan tes penempatan tambahan dengan menukar Koin. Bisa berkali-kali
+// (tiap beli = satu kesempatan). Koin didapat dari login harian & aktivitas belajar.
+router.post("/placement/unlock", async (req, res) => {
+  const userId = req.user.id;
+  const u = await chosenDoc(userId);
+  if (!u) return res.status(400).json({ error: "Pilih kompetensi target dulu." });
+  const balance = await getBalance(userId);
+  if (balance < PLACEMENT_UNLOCK_COST) {
+    return res.status(400).json({ error: "Saldo Koin belum cukup untuk membuka tes penempatan.", need: PLACEMENT_UNLOCK_COST, balance });
+  }
+  // Kurangi Koin lebih dulu; hanya bila berhasil, tambah kesempatan. Tiap pembelian dicatat
+  // dengan refId unik (menit + jumlah pakai) supaya boleh berulang, tak terblokir dedupe.
+  const access = await prisma.placementAccess.findUnique({
+    where: { userId_docId: { userId, docId: u.chosenSkkniId } },
+  }).catch(() => null);
+  const refId = `${u.chosenSkkniId}:${(access?.bonus || 0) + 1}`;
+  const paid = await award(userId, -PLACEMENT_UNLOCK_COST, "Buka Tes Penempatan", { type: "placement-unlock", id: refId });
+  const updated = await prisma.placementAccess.upsert({
+    where: { userId_docId: { userId, docId: u.chosenSkkniId } },
+    update: { bonus: { increment: 1 } },
+    create: { userId, docId: u.chosenSkkniId, used: 0, bonus: 1 },
+  });
+  const gate = placementGate({ used: updated.used, bonus: updated.bonus });
+  res.json({ ok: true, balance: paid.balance, attemptsLeft: gate.remaining, cost: PLACEMENT_UNLOCK_COST });
 });
 
 // Buang kunci jawaban & poin acuan sebelum dikirim ke klien (jaga keabsahan tes ulang).

@@ -36,6 +36,10 @@ export function classifyUnit(unit) {
   return "teknikal";
 }
 
+// Urutan tampilan kelompok: dari yang mendasar ke yang menuntut tanggung jawab luas.
+// Dipakai Skill Gap untuk menyusun radar & kartu per kelompok saat unitnya banyak.
+export const UNIT_CATEGORIES = ["dasar", "teknikal", "lanjutan"];
+
 // Bagi unit ke tier EARNED_FLOOR..cap. Unit diurutkan berdasarkan sifatnya
 // (dasar → teknikal → lanjutan), lalu kode untuk menjaga urutan tetap stabil.
 // Sisa pembagian diberikan ke tier ATAS.

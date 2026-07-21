@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Award, BarChart3, Crosshair, FileText, GraduationCap, Route, ArrowRight } from "lucide-react";
 import api from "../api/client.js";
 import { rankName, rankColor } from "../lib/rank.js";
+import { coveragePct } from "../lib/planprogress.js";
 import { useLang } from "../lib/i18n.jsx";
 
 // Ringkasan perjalanan di Dashboard: enam kondisi penting yang selama ini tersebar di
@@ -48,6 +49,9 @@ export default function JourneySummary({ overview, assessments = [] }) {
   const steps = lp?.plan?.steps || [];
   const stepsDone = steps.filter((s) => s.progress === "done").length;
   const nextStep = steps.find((s) => s.progress !== "done");
+  // Progres Learning Path = cakupan unit (selaras Skill Gap), bukan langkah tematik yang
+  // dulu tampak hampir penuh (10/12) padahal kompetensinya baru tersentuh sebagian.
+  const lpPct = assessments.length ? coveragePct(mastered, assessments.length) : 0;
 
   const links = cv.links || {};
   const linkCount = ["linkedin", "instagram", "portfolio", "other"].filter((k) => links[k]).length;
@@ -84,13 +88,15 @@ export default function JourneySummary({ overview, assessments = [] }) {
         }
       />
 
-      {/* 3. Learning path */}
+      {/* 3. Learning path - progres = cakupan unit, sub = langkah berikutnya */}
       <Card
         to="/app/learning-path" icon={Route} color="#8b5cf6"
         title={t("Learning Path")}
-        value={steps.length ? t("{a} dari {b} langkah", { a: stepsDone, b: steps.length }) : t("Belum tersusun")}
-        bar={steps.length ? Math.round((stepsDone / steps.length) * 100) : 0}
-        sub={nextStep ? `${t("Berikutnya:")} ${nextStep.title}` : steps.length ? t("Semua langkah tuntas.") : t("Pilih kompetensi dulu - rencana disusun otomatis.")}
+        value={steps.length ? (nextStep ? nextStep.title : t("Semua langkah tuntas")) : t("Belum tersusun")}
+        bar={lpPct}
+        sub={steps.length
+          ? t("{a}/{b} langkah prioritas selesai · cakupan kompetensi {c}%", { a: stepsDone, b: steps.length, c: lpPct })
+          : t("Pilih kompetensi dulu - rencana disusun otomatis.")}
       />
 
       {/* 4. Pemahaman dari kelas & latihan */}

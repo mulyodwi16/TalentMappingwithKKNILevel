@@ -1,14 +1,15 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from "recharts";
 import { Link } from "react-router-dom";
 import {
   Target, TrendingUp, CheckCircle2, GraduationCap, PenLine, Sparkles, ArrowRight,
-  Trophy, AlertTriangle, Lightbulb, Route,
+  Trophy, AlertTriangle, Lightbulb, Route, ChevronDown, Layers,
 } from "lucide-react";
 import api from "../../api/client.js";
 import { markMission } from "../../lib/missions.js";
 import { useLang } from "../../lib/i18n.jsx";
+import { groupByCategory, radarSeries } from "../../lib/skillgroups.js";
 
 const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
@@ -103,13 +104,10 @@ export default function SkillGap() {
     (s.unitCode && s.unitCode === a.competencyCode) || (s.competencyRef && norm(s.competencyRef) === norm(a.competencyName)) || (s.title && norm(s.title).includes(norm(a.competencyName)))
   );
 
-  const radarData = assessments.map((a) => ({
-    competency: a.competencyName?.split(" ").slice(0, 2).join(" ") || a.competencyCode,
-    aktual: a.currentScore, target: a.requiredScore, gap: a.gap, fullName: a.competencyName,
-  }));
-
-  const sorted = [...assessments].sort((a, b) => b.gap - a.gap);
-  const gaps = assessments.filter((a) => a.gap > 0);
+  // Radar: sedikit unit → per-unit; banyak unit → digabung per kelompok agar tetap terbaca.
+  const radar = radarSeries(assessments);
+  // Kartu detail dikelompokkan ke Dasar/Teknikal/Lanjutan (gap terbesar dulu di tiap kelompok).
+  const groups = groupByCategory(assessments);
   // Ambang "dikuasai" SAMA dengan yang dipakai rank & skor kesiapan (60). Dulu halaman ini
   // menghitung "terpenuhi" hanya untuk nilai 100, jadi unit 90% muncul sebagai belum
   // terpenuhi di sini padahal di Kelas tertulis lulus - dua layar, dua kesimpulan.
@@ -162,11 +160,18 @@ export default function SkillGap() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         {/* Radar */}
         <div className="card p-6">
-          <h3 className="font-semibold mb-4" style={{ color: "var(--text-base)" }}>{t("Radar Kompetensi")}</h3>
+          <div className="flex items-start justify-between gap-2 mb-4">
+            <h3 className="font-semibold" style={{ color: "var(--text-base)" }}>{t("Radar Kompetensi")}</h3>
+            {radar.grouped && (
+              <span className="text-[11px] flex items-center gap-1 shrink-0" style={{ color: "var(--text-4)" }}>
+                <Layers className="w-3 h-3" /> {t("digabung per kelompok")}
+              </span>
+            )}
+          </div>
           <ResponsiveContainer width="100%" height={300}>
-            <RadarChart data={radarData}>
+            <RadarChart data={radar.data}>
               <PolarGrid stroke="var(--border)" />
-              <PolarAngleAxis dataKey="competency" tick={{ fill: "var(--text-4)", fontSize: 11 }} />
+              <PolarAngleAxis dataKey="label" tick={{ fill: "var(--text-4)", fontSize: 11 }} />
               <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: "var(--text-4)", fontSize: 9 }} />
               <Radar name="Target" dataKey="target" stroke="#64748b" fill="#64748b" fillOpacity={0.2} />
               <Radar name="Aktual" dataKey="aktual" stroke="rgb(var(--brand-500))" fill="rgb(var(--brand-500))" fillOpacity={0.4} />
@@ -177,6 +182,11 @@ export default function SkillGap() {
             <span className="flex items-center gap-1.5" style={{ color: "var(--text-3)" }}><span className="w-3 h-3 rounded-sm bg-brand-600/60 inline-block" />{t("Aktual")}</span>
             <span className="flex items-center gap-1.5" style={{ color: "var(--text-3)" }}><span className="w-3 h-3 rounded-sm bg-slate-500/50 inline-block" />{t("Target")}</span>
           </div>
+          {radar.grouped && (
+            <p className="text-[11px] text-center mt-2" style={{ color: "var(--text-4)" }}>
+              {t("Kompetensi ini punya banyak unit, jadi radar menampilkan rata-rata tiap kelompok. Rincian per unit ada di bawah.")}
+            </p>
+          )}
         </div>
 
         {/* Ringkasan + CTA */}
@@ -204,16 +214,52 @@ export default function SkillGap() {
         </div>
       </div>
 
-      {/* Detail gap + rencana (prioritas) */}
+      {/* Detail gap + rencana (prioritas), dikelompokkan per kategori */}
       <div>
         <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--text-base)" }}>
           <Route className="w-4 h-4 text-brand-500" /> {t("Detail Gap & Rencana Menutupnya")}
           {!lp?.plan && <Link to="/app/learning-path" className="text-[11px] font-normal text-brand-500 hover:underline inline-flex items-center gap-1">{t("(susun Learning Path untuk langkah detail)")} <ArrowRight className="w-3 h-3" /></Link>}
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
-          {sorted.map((a) => <GapCard key={a.id} a={a} step={stepFor(a)} />)}
+        <div className="space-y-3">
+          {groups.map((g) => <GroupSection key={g.key} group={g} stepFor={stepFor} />)}
         </div>
       </div>
+    </div>
+  );
+}
+
+// Satu kelompok kategori yang bisa dilipat. Kelompok yang masih punya gap terbuka otomatis;
+// yang seluruhnya sudah dikuasai dilipat supaya daftarnya tidak ramai.
+function GroupSection({ group, stepFor }) {
+  const { t } = useLang();
+  const [open, setOpen] = useState(group.gaps > 0);
+  const tuntas = group.gaps === 0;
+  return (
+    <div className="card overflow-hidden">
+      <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center gap-3 p-4 text-left hover:bg-[var(--bg-raised)] transition-colors">
+        <div className="w-9 h-9 rounded-xl grid place-items-center shrink-0" style={{ background: tuntas ? "#10b98122" : "rgb(var(--brand-500) / 0.14)", color: tuntas ? "#10b981" : "rgb(var(--brand-500))" }}>
+          {tuntas ? <CheckCircle2 className="w-4 h-4" /> : <Layers className="w-4 h-4" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold" style={{ color: "var(--text-base)" }}>{t(group.label)}</p>
+          <p className="text-[11px]" style={{ color: "var(--text-4)" }}>
+            {t("{done}/{total} unit dikuasai", { done: group.mastered, total: group.total })}
+            {" · "}
+            {t("rata-rata {n}%", { n: group.avg })}
+            {group.gaps > 0 && <span className="text-amber-500"> · {t("{n} unit bisa ditingkatkan", { n: group.gaps })}</span>}
+          </p>
+        </div>
+        {/* Bar ringkas rata-rata kelompok */}
+        <div className="hidden sm:block w-24 h-1.5 rounded-full overflow-hidden shrink-0" style={{ background: "var(--bg-muted)" }}>
+          <div className="h-full rounded-full" style={{ width: `${group.avg}%`, background: group.avg >= 60 ? "#10b981" : "#f59e0b" }} />
+        </div>
+        <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? "" : "-rotate-90"}`} style={{ color: "var(--text-4)" }} />
+      </button>
+      {open && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start p-4 pt-0">
+          {group.items.map((a) => <GapCard key={a.id} a={a} step={stepFor(a)} />)}
+        </div>
+      )}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { clampRank } from "../onboarding.js";
 import { computeReadiness, refreshReadiness } from "../readiness.js";
 import { refreshRank, computeRank } from "../rankcalc.js";
 import { chosenUnitCodeSet } from "../competencyScope.js";
+import { classifyUnit } from "../unitrank.js";
 
 const router = express.Router();
 router.use(requireAuth);
@@ -358,19 +359,26 @@ router.get("/skill-assessments", async (req, res) => {
     });
     if (units.length) {
       const byCode = new Map(all.map((a) => [a.competencyCode, a]));
-      const merged = units.map((unit) => byCode.get(unit.code) || {
-        id: `pending-${unit.code}`, userId: req.user.id,
-        competencyCode: unit.code, competencyName: unit.title,
-        currentScore: 0, requiredScore: 100, gap: 100, updatedAt: null, pending: true,
-      });
+      // `category` (dasar/teknikal/lanjutan) ikut dikirim supaya Skill Gap bisa menggabung
+      // radar & kartu per kelompok ketika unitnya banyak - dihitung dari sumber yang SAMA
+      // dengan tangga rank (classifyUnit), jadi pengelompokannya konsisten di seluruh app.
+      const merged = units.map((unit) => ({
+        ...(byCode.get(unit.code) || {
+          id: `pending-${unit.code}`, userId: req.user.id,
+          competencyCode: unit.code, competencyName: unit.title,
+          currentScore: 0, requiredScore: 100, gap: 100, updatedAt: null, pending: true,
+        }),
+        category: classifyUnit(unit),
+      }));
       return res.json(merged);
     }
     // Unit belum ter-cache (mis. baru pilih kompetensi) → sementara pakai assessment yang ada.
     const codes = await chosenUnitCodeSet(req.user.id);
-    return res.json(codes ? all.filter((a) => codes.has(a.competencyCode)) : all);
+    const scoped = codes ? all.filter((a) => codes.has(a.competencyCode)) : all;
+    return res.json(scoped.map((a) => ({ ...a, category: classifyUnit({ title: a.competencyName }) })));
   }
 
-  res.json(all);
+  res.json(all.map((a) => ({ ...a, category: classifyUnit({ title: a.competencyName }) })));
 });
 
 // ── Recommendations ───────────────────────────────────────────────────────────

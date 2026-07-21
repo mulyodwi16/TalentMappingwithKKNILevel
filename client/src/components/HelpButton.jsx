@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   HelpCircle, LayoutDashboard, Upload, ClipboardCheck, Target, BookOpen, Bot,
   Coins, Sparkles, PartyPopper, ArrowRight, ArrowLeft, X, GraduationCap, Compass,
@@ -291,16 +291,21 @@ function HelpModal({ name, onClose }) {
 export default function HelpButton() {
   const { t } = useLang();
   const user = useAuthStore((s) => s.user);
+  const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (user?.role !== "user" || !user?.email) return;
+    // Tur pertama menyapa di DASHBOARD (rumah), bukan di halaman mana pun yang kebetulan
+    // dibuka lebih dulu. Kalau user baru memilih langsung Tes Penempatan usai daftar, tur
+    // menunggu sampai mereka membuka Dashboard - konteksnya utuh & tak mengganggu tes.
+    if (pathname !== "/app/dashboard") return;
     const key = seenKey(user.email);
     if (!localStorage.getItem(key)) {
       localStorage.setItem(key, "1");
       setOpen(true);
     }
-  }, [user?.role, user?.email]);
+  }, [user?.role, user?.email, pathname]);
 
   if (user?.role !== "user") return null;
 

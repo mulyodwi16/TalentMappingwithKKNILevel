@@ -64,6 +64,7 @@ model User {
   evidence        ExternalEvidence[]
   skillClaims     SkillClaim[]
   placements      PlacementAttempt[]
+  placementAccess PlacementAccess[]
 }
 
 // ── Tes Penempatan ───────────────────────────────────────────────────────────
@@ -111,6 +112,28 @@ model CompetencyExamInstance {
   questions String    @default("[]")
   expiresAt DateTime?
   createdAt DateTime  @default(now())
+}
+
+// Jatah mengambil Tes Penempatan per (user, kompetensi).
+//
+// Tes penempatan adalah pengukuran BASELINE, bukan latihan berulang. Soalnya di-cache tetap
+// (sama tiap kali), jadi kalau bisa diulang bebas, seseorang tinggal menghafal jawaban lalu
+// menaikkan rank tanpa latihan/ujian sungguhan - merusak keseimbangan. Maka: `used`
+// (berapa kali tes DIMULAI ulang) dibatasi jatah gratis; kesempatan tambahan `bonus` hanya
+// didapat dengan menukar Koin di toko. Latihan Unit (soal diacak baru) tetap jalur berulang
+// yang sah.
+model PlacementAccess {
+  id        String   @id @default(cuid())
+  userId    String
+  docId     String
+  used      Int      @default(0) // berapa kali tes penempatan dimulai (fresh) untuk kompetensi ini
+  bonus     Int      @default(0) // kesempatan tambahan hasil pembelian Koin
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, docId])
+  @@index([userId])
 }
 
 // Riwayat tes penempatan per kompetensi. Boleh diulang (menimpa baseline lama).

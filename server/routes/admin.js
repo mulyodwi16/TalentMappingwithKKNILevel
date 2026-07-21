@@ -97,7 +97,7 @@ router.put("/users/:id", async (req, res) => {
 // membalas "user not found", sehingga operator melihat pesan yang jelas-jelas salah untuk
 // orang yang jelas terlihat di tabel. Urutannya dari daun ke akar.
 const USER_CHILDREN = [
-  "placementInstance", "competencyExamInstance", "placementAttempt", "externalEvidence",
+  "placementInstance", "competencyExamInstance", "placementAttempt", "placementAccess", "externalEvidence",
   "unitExamReview", "skillClaim", "learningPlan", "dailyMission", "dailyQuizLog",
   "certificate", "jobApplication", "candidateReview", "coinTransaction", "coinWallet",
   "shopRedemption", "skkniExam", "unitProgress", "unitExamInstance", "examAttempt",

@@ -623,6 +623,21 @@ export const PLACEMENT_MAX_UNITS = 12;   // batas unit yang diuji (2 soal/unit â
 export const PLACEMENT_MINUTES_PER_UNIT = 3;
 export const PLACEMENT_BATCH = 4;        // unit per panggilan AI (8 soal/panggilan)
 
+// Jatah tes penempatan: pertama (baseline saat onboarding) + satu kali ulang gratis.
+// Sesudahnya terkunci; buka lagi dengan menukar Koin (harga di tengah rentang, diseimbangkan
+// dengan hadiah login harian). Lihat catatan di model PlacementAccess kenapa dibatasi.
+export const PLACEMENT_FREE_ATTEMPTS = 2;
+export const PLACEMENT_UNLOCK_COST = 400;
+
+// Hitung status jatah dari data mentah. Dipisah agar bisa diuji tanpa database.
+//   used  = berapa kali tes DIMULAI ulang (fresh)
+//   bonus = kesempatan tambahan yang sudah dibeli
+export function placementGate({ used = 0, bonus = 0, free = PLACEMENT_FREE_ATTEMPTS } = {}) {
+  const allowed = free + Math.max(0, bonus);
+  const remaining = Math.max(0, allowed - used);
+  return { allowed, used, remaining, canStart: remaining > 0, locked: remaining === 0 };
+}
+
 // Pilih unit yang diuji. Bila unit terlalu banyak untuk satu tes yang manusiawi, ambil
 // MENYEBAR ke seluruh tier tangga rank (bukan 12 unit pertama) supaya baseline tetap
 // mewakili dari dasar sampai lanjutan.
