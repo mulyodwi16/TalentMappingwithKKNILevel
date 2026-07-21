@@ -6,6 +6,7 @@ import {
   Trophy, Scale, ShieldCheck, Gauge, Brain, ListChecks, BadgeCheck,
 } from "lucide-react";
 import useAuthStore from "../store/authStore.js";
+import useCelebrateStore from "../store/celebrateStore.js";
 import TourArt from "./TourArt.jsx";
 import { useLang } from "../lib/i18n.jsx";
 
@@ -292,13 +293,13 @@ export default function HelpButton() {
   const { t } = useLang();
   const user = useAuthStore((s) => s.user);
   const { pathname } = useLocation();
+  const { tourQueued, clearTour, rankUp } = useCelebrateStore();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (user?.role !== "user" || !user?.email) return;
-    // Tur pertama menyapa di DASHBOARD (rumah), bukan di halaman mana pun yang kebetulan
-    // dibuka lebih dulu. Kalau user baru memilih langsung Tes Penempatan usai daftar, tur
-    // menunggu sampai mereka membuka Dashboard - konteksnya utuh & tak mengganggu tes.
+    // Kalau user MELEWATI Tes Penempatan usai daftar, dia mendarat di Dashboard - di situlah
+    // tur menyapa. (Kalau dia justru LANGSUNG tes, turnya dipicu usai tes - lihat efek di bawah.)
     if (pathname !== "/app/dashboard") return;
     const key = seenKey(user.email);
     if (!localStorage.getItem(key)) {
@@ -306,6 +307,24 @@ export default function HelpButton() {
       setOpen(true);
     }
   }, [user?.role, user?.email, pathname]);
+
+  // Tur usai Tes Penempatan: user baru yang memilih langsung tes (jadi tak lewat Dashboard) tetap
+  // disapa turnya BEGITU tes selesai. Ditunda sampai animasi "Naik Rank" (bila ada) menutup dulu,
+  // supaya dua modal tak menumpuk. Hanya untuk yang belum pernah lihat tur.
+  useEffect(() => {
+    if (!tourQueued) return;
+    if (user?.role !== "user" || !user?.email) { clearTour(); return; }
+    if (localStorage.getItem(seenKey(user.email))) { clearTour(); return; } // sudah pernah lihat
+    if (rankUp) return; // tunggu overlay rank menutup; efek jalan lagi saat rankUp jadi null
+    // Beri jeda supaya animasi rank sempat muncul lebih dulu bila menyusul dari refetch overview.
+    const id = setTimeout(() => {
+      if (useCelebrateStore.getState().rankUp) return; // keburu naik rank → biar efek berikut yang buka
+      localStorage.setItem(seenKey(user.email), "1");
+      setOpen(true);
+      clearTour();
+    }, 1400);
+    return () => clearTimeout(id);
+  }, [tourQueued, rankUp, user?.role, user?.email, clearTour]);
 
   if (user?.role !== "user") return null;
 

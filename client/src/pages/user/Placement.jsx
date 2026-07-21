@@ -10,6 +10,7 @@ import { rankName, rankColor } from "../../lib/rank.js";
 import RankIcon from "../../components/RankIcon.jsx";
 import ExamRunner from "../../components/ExamRunner.jsx";
 import useExamStore from "../../store/examStore.js";
+import useCelebrateStore from "../../store/celebrateStore.js";
 import { useLang, getLang, dateLocale } from "../../lib/i18n.jsx";
 
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString(dateLocale(getLang()), { day: "numeric", month: "short", year: "numeric" }) : "-");
@@ -21,6 +22,7 @@ export default function Placement() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { lockExam, unlockExam } = useExamStore();
+  const { queueTour } = useCelebrateStore();
   const [session, setSession] = useState(null);   // {competencyTitle, questions[]}
   const [answers, setAnswers] = useState({});
   const [step, setStep] = useState(0);            // indeks unit yang sedang dikerjakan
@@ -84,6 +86,9 @@ export default function Placement() {
       qc.invalidateQueries({ queryKey: ["overview"] });
       qc.invalidateQueries({ queryKey: ["skill-assessments"] });
       qc.invalidateQueries({ queryKey: ["learning-path"] });
+      // User baru yang datang langsung dari daftar → tes: sapa turnya sekarang. HelpButton yang
+      // memutuskan (hanya bila belum pernah lihat) & menunggu animasi rank kelar dulu.
+      queueTour();
     },
     onError: (e) => toast.error(typeof e === "string" ? e : t("Gagal mengumpulkan jawaban")),
   });

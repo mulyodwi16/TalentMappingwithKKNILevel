@@ -3,6 +3,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar.jsx";
 import Topbar from "./Topbar.jsx";
 import CompanionAvatar from "./CompanionAvatar.jsx";
+import RankUpWatcher from "./RankUpWatcher.jsx";
 
 export default function Layout() {
   const { pathname } = useLocation();
@@ -37,6 +38,9 @@ export default function Layout() {
 
       {/* AI Companion Onyen (#14/#15) - avatar kiri-bawah, menggantikan tombol mentor kanan-bawah */}
       <CompanionAvatar />
+
+      {/* Perayaan kenaikan rank - global, jadi animasinya nyala di halaman mana pun (bukan cuma Dashboard) */}
+      <RankUpWatcher />
     </div>
   );
 }

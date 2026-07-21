@@ -10,7 +10,6 @@ import DailyLoginCard from "../../components/DailyLoginCard.jsx";
 import DailyMissions from "../../components/DailyMissions.jsx";
 import DailyQuiz from "../../components/DailyQuiz.jsx";
 import RankHero from "../../components/RankHero.jsx";
-import RankUpOverlay from "../../components/RankUpOverlay.jsx";
 import JourneySummary from "../../components/JourneySummary.jsx";
 import { rankName } from "../../lib/rank.js";
 import { useLang, dateLocale } from "../../lib/i18n.jsx";
@@ -20,8 +19,6 @@ const STATUS_CONFIG = {
   in_progress: { label: "Dalam Proses", cls: "badge-in-progress" },
   not_ready:   { label: "Belum Siap",   cls: "badge-not-ready" },
 };
-
-const LAST_RANK_KEY = (id) => `talenta:lastRank:${id}`;
 
 const AV_LEVEL = {
   beginner:     { label: "Pemula",   cls: "bg-emerald-500/20 text-emerald-400" },
@@ -237,20 +234,9 @@ export default function UserDashboard() {
   const { data: attempts = [] } = useQuery({ queryKey: ["attempts"], queryFn: () => api.get("/user/attempts") });
   const { data: assessments = [] } = useQuery({ queryKey: ["assessments"], queryFn: () => api.get("/user/skill-assessments") });
 
-  const [rankUp, setRankUp] = useState(null); // { from, to }
-
   const rank = overview?.rank;
-  const effective = rank?.effective;
-
-  // Deteksi kenaikan rank → rayakan (feel of accomplishment). Bandingkan dengan rank
-  // terakhir yang tersimpan di localStorage per user. Akun baru tidak dirayakan.
-  useEffect(() => {
-    if (!effective || !user?.id) return;
-    const key = LAST_RANK_KEY(user.id);
-    const prev = Number(localStorage.getItem(key));
-    if (prev && effective > prev) setRankUp({ from: prev, to: effective });
-    localStorage.setItem(key, String(effective));
-  }, [effective, user?.id]);
+  // Perayaan kenaikan rank kini ditangani RankUpWatcher (global di Layout), jadi animasinya
+  // muncul di halaman mana pun - termasuk tepat usai Tes Penempatan, bukan cuma di Dashboard.
 
   const p = overview?.profile || user || {};
   const status = p?.status || "not_ready";
@@ -271,8 +257,6 @@ export default function UserDashboard() {
 
   return (
     <div className="space-y-6">
-      {rankUp && <RankUpOverlay from={rankUp.from} to={rankUp.to} onClose={() => setRankUp(null)} />}
-
       {/* ── Panggung Rank (hero) full-width - kartu identitas dipindah ke sidebar (#10) ── */}
       {rank ? (
         <RankHero
