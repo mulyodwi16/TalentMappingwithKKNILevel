@@ -13,7 +13,7 @@ import {
   getCatalogStatus, syncCatalog, SkkniError, listCategories,
   ensureExamPackage, buildShuffledInstance, courseCoverage, COURSE_UNITS,
   ensureUnitExamPackage, buildUnitExamInstance, unitStates, ensureCompetencyWeight, gradeFreeText,
-  prepareDoc, getPrepareState,
+  prepareDoc, getPrepareState, usableUnitCount,
   ensurePlacementPackage, buildPlacementInstance, reviewPlacement, PLACEMENT_MINUTES_PER_UNIT, PLACEMENT_MAX_UNITS,
   PLACEMENT_FREE_ATTEMPTS, PLACEMENT_UNLOCK_COST, placementGate,
   ensureFinalExamPackage, FINAL_PASS_SCORE, FINAL_MINUTES_PER_UNIT,
@@ -106,11 +106,15 @@ router.get("/prepare/:docId", async (req, res) => {
   if (!doc) return res.status(404).json({ error: "Dokumen SKKNI tidak ditemukan." });
   const st = getPrepareState(docId);
   const ready = !!doc.unitsCached;
+  // Hitung unit yang BISA DIPAKAI (applied), bukan `doc.unitCount` yang ikut menghitung unit
+  // dicabut. Dokumen SKKNI yang sudah dicabut punya puluhan unit di basis data tapi nol yang
+  // terbaca fitur mana pun - dulu layar ini menyatakannya siap.
+  const usable = ready ? await usableUnitCount(docId) : 0;
   res.json({
     ready,
-    unitCount: doc.unitCount || 0,
+    unitCount: usable,
     // Dokumen terbitan terbaru kadang belum dirinci Kemnaker: siap, tapi tanpa unit.
-    empty: ready && (doc.unitCount || 0) === 0,
+    empty: ready && usable === 0,
     state: st?.state || (ready ? "done" : "idle"),
     error: st?.state === "error" ? st.error : null,
   });

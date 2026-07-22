@@ -685,6 +685,10 @@ export default {
   "kuasai {n} unit lagi": "master {n} more units",
   "Babak menuju {rank}": "Chapter to {rank}",
   "Kamu di sini": "You are here",
+  "Ganti Kompetensi": "Change Competency",
+  "Kompetensi ini belum punya unit yang bisa dipelajari": "This competency has no units to study yet",
+  "Rincian unitnya belum tersedia di data Kemnaker, atau standarnya sudah dicabut. Pilih kompetensi lain supaya Kelas, Latihan Unit, dan Skill Gap punya bahan.":
+    "Its units are not detailed in the Kemnaker data yet, or the standard has been revoked. Pick another competency so Classes, Unit Practice, and Skill Gap have something to work with.",
   "Menunggu tier di bawahnya": "Waiting on the tier below",
   "Ada tier atas yang unitnya sudah kamu kuasai, tapi belum dihitung selama tier di bawahnya masih bolong. Tutup unit dasarnya dulu - rank akan langsung menyusul.":
     "You have finished the units in a higher tier, but it will not count while a tier below still has gaps. Close the foundational units first - your rank will follow right away.",

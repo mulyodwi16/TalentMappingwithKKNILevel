@@ -268,13 +268,28 @@ function categorize(title, sector) {
   for (const c of CAT_RE) if (c.res.some((re) => re.test(hay))) return { key: c.key, label: c.label };
   return FALLBACK_CAT;
 }
+// Jumlah unit yang benar-benar BISA DIPAKAI fitur hilir. `SkkniDocument.unitCount` menghitung
+// semua unit apa adanya, termasuk yang berstatus "cancelled" - padahal Kelas/Latihan/ujian/tangga
+// rank semuanya menyaring `availability: "applied"`. Layar penyiapan kompetensi harus memakai
+// angka INI, kalau tidak ia menyatakan "siap, 46 unit" untuk kompetensi yang isinya nol.
+export async function usableUnitCount(docId) {
+  return prisma.skkniUnit.count({ where: { documentId: String(docId), availability: "applied" } });
+}
+
 // Nama tampilan yang bersih (buang prefiks "SKKNI").
 export function cleanTitle(title) {
   return (title || "").replace(/^SKKNI\s+/i, "").trim() || "(tanpa judul)";
 }
 // Filter dokumen yang layak dipilih user (bukan perubahan/pencabutan/tanpa-judul).
+//
+// `availability: "applied"` WAJIB ada di sini. Dokumen berstatus "cancelled" (SKKNI yang sudah
+// dicabut - 301 dari 1.234 dokumen di katalog) unit-unitnya IKUT berstatus cancelled, sedangkan
+// SELURUH fitur hilir (Kelas, Latihan Unit, tes penempatan, ujian utama, tangga rank) hanya
+// membaca unit "applied". Tanpa filter ini, memilih dokumen dicabut menghasilkan kompetensi
+// yang tampak sah tapi 0 unit: Kelas kosong, Skill Gap kosong, rank tak pernah bisa naik.
 function selectableWhere(query) {
   const nots = [
+    { availability: "applied" },
     { NOT: { title: { startsWith: "Perubahan" } } },
     { NOT: { title: { startsWith: "Pencabutan" } } },
     { NOT: { title: "(tanpa judul)" } },

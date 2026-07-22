@@ -82,13 +82,19 @@ export async function buatUser(prisma, data = {}) {
 }
 
 // Dokumen SKKNI + unit-unitnya. `units` = array {code, title}.
-export async function buatKompetensi(prisma, { id, title = "Kompetensi Uji", units = [], weightMaxRank = 9 } = {}) {
+// `availability` bisa diatur untuk menguji dokumen SKKNI yang sudah DICABUT: dokumen
+// "cancelled" unit-unitnya ikut cancelled, dan seluruh fitur hilir hanya membaca "applied".
+export async function buatKompetensi(prisma, {
+  id, title = "Kompetensi Uji", units = [], weightMaxRank = 9, availability = "applied",
+} = {}) {
   const docId = id || uniq("doc");
   await prisma.skkniDocument.create({
-    data: { id: docId, title, unitsCached: true, unitCount: units.length, weightMaxRank },
+    data: { id: docId, title, unitsCached: true, unitCount: units.length, weightMaxRank, availability },
   });
   for (const u of units) {
-    await prisma.skkniUnit.create({ data: { documentId: docId, code: u.code, title: u.title } });
+    await prisma.skkniUnit.create({
+      data: { documentId: docId, code: u.code, title: u.title, availability: u.availability || availability },
+    });
   }
   return docId;
 }

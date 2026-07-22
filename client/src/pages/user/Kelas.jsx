@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import {
   GraduationCap, BookOpen, Lock, CheckCircle2, PlayCircle, RotateCcw, ChevronDown,
   Coins, Sparkles, Star, Lightbulb, Briefcase, Clock, Loader2, X, ArrowLeft, ArrowRight,
-  ExternalLink, Youtube, ListChecks, Trophy,
+  ExternalLink, Youtube, ListChecks, Trophy, BookX,
 } from "lucide-react";
 import api from "../../api/client.js";
 import { useCoins } from "../../hooks/useCoins.js";
@@ -506,6 +506,22 @@ export default function Kelas() {
           </div>
         )}
       </div>
+
+      {/* Kompetensi tanpa satu pun unit terpakai. Bisa terjadi pada dokumen SKKNI yang sudah
+          dicabut atau yang belum dirinci Kemnaker - tanpa jalan keluar di layar, halaman ini
+          cuma tampil kosong dan pengguna tak tahu harus berbuat apa. */}
+      {!units.length && (
+        <div className="card p-8 text-center space-y-3">
+          <BookX className="w-10 h-10 mx-auto" style={{ color: "var(--text-4)" }} />
+          <h2 className="font-semibold" style={{ color: "var(--text-base)" }}>{t("Kompetensi ini belum punya unit yang bisa dipelajari")}</h2>
+          <p className="text-sm max-w-md mx-auto" style={{ color: "var(--text-3)" }}>
+            {t("Rincian unitnya belum tersedia di data Kemnaker, atau standarnya sudah dicabut. Pilih kompetensi lain supaya Kelas, Latihan Unit, dan Skill Gap punya bahan.")}
+          </p>
+          <Link to="/app/profile?pick=1" className="btn-primary inline-flex items-center gap-1.5 text-sm">
+            {t("Ganti Kompetensi")} <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      )}
 
       {/* Grid kartu unit dikelompokkan per tier rank (berjenjang: tier atas terbuka setelah tier bawah dikuasai) */}
       <div className="space-y-6">
