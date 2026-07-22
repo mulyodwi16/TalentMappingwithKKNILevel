@@ -14,7 +14,7 @@ import { prisma } from "./prisma.js";
 import { chatComplete, isLlmConfigured } from "./llm.js";
 import { buildRankLadder, evaluateLadder } from "./unitrank.js";
 import { UNIT_MASTERY, FINAL_PASS_SCORE } from "./thresholds.js";
-import { once } from "./inflight.js";
+import { once, setProgress } from "./inflight.js";
 
 // Kunci pekerjaan penyusunan AI. Dipakai DUA tempat: `once` di dalam fungsi penyusun, dan
 // pelacak status di rute. Keduanya WAJIB memakai kunci yang sama - kalau berbeda, rute akan
@@ -675,7 +675,13 @@ export const PLACEMENT_MAX_UNITS = 12;   // batas unit yang diuji (2 soal/unit â
 // Sengaja longgar - tes ini mencari kemampuan sebenarnya, dan orang yang terburu-buru akan
 // tampak lebih rendah dari kenyataan lalu disuruh mengulang materi yang sudah dia kuasai.
 export const PLACEMENT_MINUTES_PER_UNIT = 3;
-export const PLACEMENT_BATCH = 4;        // unit per panggilan AI (8 soal/panggilan)
+// Unit per panggilan AI. Waktu tunggu di sini didominasi JUMLAH TEKS YANG DITULIS model
+// (maxTokens ~900 per unit), bukan jumlah panggilan - dan sejak batch dijalankan bersamaan,
+// panggilan yang lebih kecil selesai lebih cepat SEKALIGUS lebih banyak yang jalan berbarengan.
+// 12 unit: dulu 3 panggilan x ~3.900 token, sekarang 6 panggilan x ~2.100 token.
+// Jangan dinaikkan lagi tanpa alasan - itu memanjangkan tulisan per panggilan, dan itulah
+// yang membuat pengguna menunggu.
+export const PLACEMENT_BATCH = 2;        // unit per panggilan AI (4 soal/panggilan)
 
 // Jatah tes penempatan: pertama (baseline saat onboarding) + satu kali ulang gratis.
 // Sesudahnya terkunci; buka lagi dengan menukar Koin (harga di tengah rentang, diseimbangkan
@@ -769,7 +775,10 @@ export async function ensurePlacementPackage(docId) {
     if (!units.length) return null;
 
     // Dibatch supaya satu panggilan tak kepanjangan; berurutan agar kegagalan mudah ditelusuri.
-    const questions = await buildExamQuestions(doc?.title || "Kompetensi", units, generatePlacementBatch, "placement");
+    const questions = await buildExamQuestions(
+      doc?.title || "Kompetensi", units, generatePlacementBatch, "placement",
+      (p) => setProgress(PLACEMENT_JOB(docId), p),
+    );
     if (!questions.length) return null;
 
     const covered = new Set(questions.map((q) => q.unitCode));
@@ -828,17 +837,38 @@ async function generateFinalBatch(compTitle, units) {
 // Perlu karena AI kadang mengembalikan JSON rusak atau memakai unitCode yang tak cocok,
 // sehingga batch itu terbuang dan unitnya tak pernah diuji. Tanpa percobaan ulang,
 // kegagalan itu diam - paket tetap tersimpan permanen dengan cakupan bolong.
-async function buildExamQuestions(compTitle, units, batchFn, label) {
+export async function buildExamQuestions(compTitle, units, batchFn, label, onProgress) {
   const questions = [];
+
+  const potong = (list) => {
+    const out = [];
+    for (let i = 0; i < list.length; i += PLACEMENT_BATCH) out.push(list.slice(i, i + PLACEMENT_BATCH));
+    return out;
+  };
+
+  // Batch dijalankan BERSAMAAN, bukan berurutan. Tiap batch menggarap unit yang berbeda dan
+  // sama sekali tak saling bergantung, jadi menunggunya satu per satu hanya menjumlahkan waktu:
+  // 12 unit = 3 batch x ~40 dtk = ~2 menit, padahal bisa selesai dalam waktu satu batch.
+  // Jumlahnya kecil (paket dibatasi PLACEMENT_MAX_UNITS, jadi maksimal 3 batch), aman terhadap
+  // batas laju penyedia LLM.
+  //
+  // Isolasi kegagalan per batch DIPERTAHANKAN: satu batch yang gagal tak menjatuhkan yang lain,
+  // dan unit yang tak kebagian soal dicoba ulang di bawah.
   const runBatches = async (list) => {
-    for (let i = 0; i < list.length; i += PLACEMENT_BATCH) {
-      const chunk = list.slice(i, i + PLACEMENT_BATCH);
+    const chunks = potong(list);
+    let selesai = 0;
+    onProgress?.({ done: 0, total: chunks.length });
+    const hasil = await Promise.all(chunks.map(async (chunk) => {
       try {
-        questions.push(...(await batchFn(compTitle, chunk)));
+        return await batchFn(compTitle, chunk);
       } catch (e) {
         console.warn(`[${label}] batch gagal:`, chunk.map((u) => u.code).join(","), e.message);
+        return [];
+      } finally {
+        onProgress?.({ done: ++selesai, total: chunks.length });
       }
-    }
+    }));
+    questions.push(...hasil.flat());
   };
 
   await runBatches(units);
@@ -867,7 +897,10 @@ export async function ensureFinalExamPackage(docId) {
     const units = pickPlacementUnits(allUnits, doc?.weightMaxRank || 9);  // sebaran lintas tier yang sama
     if (!units.length) return null;
 
-    const questions = await buildExamQuestions(doc?.title || "Kompetensi", units, generateFinalBatch, "final");
+    const questions = await buildExamQuestions(
+      doc?.title || "Kompetensi", units, generateFinalBatch, "final",
+      (p) => setProgress(FINAL_JOB(docId), p),
+    );
     if (!questions.length) return null;
 
     const covered = new Set(questions.map((q) => q.unitCode));

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { once, isRunning, startJob, jobState, clearJob, readyOrStart } from "../inflight.js";
+import { once, isRunning, startJob, jobState, clearJob, readyOrStart, setProgress } from "../inflight.js";
 
 // Penyusunan soal & materi oleh AI makan puluhan detik - lebih lama dari batas tunggu klien.
 // Pengguna yang kehabisan waktu akan menekan tombolnya lagi. `once` memastikan tekanan kedua
@@ -196,4 +196,104 @@ test("paket yang selesai selagi klien polling langsung tersaji", async () => {
   const kedua = await readyOrStart({ key: "ro5", read: baca, work: kerja });
   assert.deepEqual(kedua.hasil, { id: "paket-baru" }, "polling berikutnya harus memungut hasilnya");
   assert.equal(kedua.pending, undefined);
+});
+
+test("kemajuan pekerjaan bisa dilaporkan & ikut terbawa ke klien", async () => {
+  // Menunggu 2 menit tanpa tahu sudah sampai mana terasa seperti macet. Angka yang bergerak
+  // membedakan "sedang jalan" dari "menggantung" - tanpa perlu menebak dari lamanya.
+  let lepas;
+  const selesai = new Promise((r) => { lepas = r; });
+  startJob("pg1", async () => {
+    setProgress("pg1", { done: 1, total: 3 });
+    await selesai;
+    return "paket";
+  });
+  await tunda(20);
+
+  const r = await readyOrStart({ key: "pg1", read: async () => null, work: async () => "x" });
+  assert.deepEqual(r.pending.progress, { done: 1, total: 3 }, "kemajuan harus ikut di balasan `preparing`");
+
+  lepas();
+  await tunda(30);
+  assert.equal(jobState("pg1").state, "done");
+});
+
+test("kemajuan pekerjaan yang sudah berhenti tidak ditimpa lagi", async () => {
+  startJob("pg2", async () => "cepat");
+  await tunda(20);
+  setProgress("pg2", { done: 99, total: 99 });
+  assert.notDeepEqual(jobState("pg2").progress, { done: 99, total: 99 },
+    "laporan telat dari pekerjaan lama tak boleh mengotori catatan hasil");
+});
+
+test("pekerjaan yang selesai TANPA hasil dilaporkan gagal, bukan diulang selamanya", async () => {
+  // Kasus nyata: batas waktu LLM memutus tiap batch, jadi paketnya kosong dan tak pernah
+  // tersimpan. Karena `read()` tetap null dan statusnya "done", polling klien memulai
+  // penyusunan BARU tiap kali - spinner tak pernah berhenti dan biayanya terus jalan.
+  let jalan = 0;
+  const kosong = async () => { jalan++; return null; };   // selesai, tapi tak menulis apa pun
+
+  const pertama = await readyOrStart({ key: "nil1", read: async () => null, work: kosong });
+  assert.equal(pertama.pending.preparing, true);
+  await tunda(30);
+
+  const kedua = await readyOrStart({ key: "nil1", read: async () => null, work: kosong });
+  assert.equal(kedua.pending.failed, true, "harus dilaporkan gagal, bukan 'sedang menyusun' lagi");
+  assert.match(kedua.pending.error, /tanpa hasil/i);
+  assert.equal(jalan, 1, "tak boleh langsung memulai penyusunan kedua di panggilan yang sama");
+});
+
+test("sesudah dilaporkan, pengguna tetap bisa mencoba lagi", async () => {
+  let jalan = 0;
+  const kosong = async () => { jalan++; return null; };
+  await readyOrStart({ key: "nil2", read: async () => null, work: kosong });
+  await tunda(30);
+  await readyOrStart({ key: "nil2", read: async () => null, work: kosong });   // laporan gagal
+
+  const lagi = await readyOrStart({ key: "nil2", read: async () => null, work: kosong });
+  assert.equal(lagi.pending.preparing, true, "percobaan berikutnya harus benar-benar jalan lagi");
+  await tunda(30);
+  assert.equal(jalan, 2);
+});
+
+// ── Regresi: pekerjaan latar yang membungkus dirinya sendiri ─────────────────
+// Ini penyebab nyata "Menyusun soal..." tanpa akhir di Tes Penempatan. Rutenya memanggil
+// startJob(K, work), sedangkan work-nya (ensurePlacementPackage) membungkus pekerjaan asli
+// dengan once(K, ...) - kunci yang SAMA, memang disengaja supaya pemanggil langsung ikut
+// menumpang. Saat keduanya berbagi satu peta promise, once menemukan promise si pemanggil
+// yang belum selesai lalu mengembalikannya: promise menunggu dirinya sendiri.
+//
+// Gejalanya jahat karena tak terlihat seperti galat - tak ada lemparan, tak ada log, tak ada
+// biaya LLM. Yang terlihat hanya spinner yang tak pernah berhenti.
+
+test("pekerjaan latar yang memanggil once dengan kunci sama TETAP jalan", async () => {
+  let jalan = false;
+  const kerja = async () => {
+    await tunda(10);                       // ensurePlacementPackage membaca DB dulu
+    return once("selfref", async () => { jalan = true; return "paket"; });
+  };
+
+  startJob("selfref", kerja);
+  await tunda(120);
+  assert.ok(jalan, "pekerjaan aslinya tak pernah dijalankan - promise menunggu dirinya sendiri");
+  assert.equal(jobState("selfref").state, "done", "status harus selesai, bukan menggantung di 'running'");
+  clearJob("selfref");
+});
+
+test("hasil pekerjaan latar yang membungkus once tetap bisa dipungut", async () => {
+  // Bukan cuma soal 'jalan': hasilnya harus benar-benar tersimpan supaya pembacaan
+  // berikutnya menemukannya, bukan memulai penyusunan baru tanpa henti.
+  let simpanan = null;
+  const susun = async () => {
+    await tunda(10);
+    return once("selfref2", async () => { simpanan = "paket"; return simpanan; });
+  };
+
+  let r = await readyOrStart({ key: "selfref2", read: async () => simpanan, work: susun });
+  assert.equal(r.pending?.preparing, true, "panggilan pertama menyusun di latar");
+
+  await tunda(150);
+  r = await readyOrStart({ key: "selfref2", read: async () => simpanan, work: susun });
+  assert.equal(r.hasil, "paket", "polling berikutnya harus memungut hasilnya, bukan menyusun ulang");
+  clearJob("selfref2");
 });

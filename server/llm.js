@@ -41,7 +41,12 @@ export async function chatComplete(messages, opts = {}) {
   if (!provider) throw new LlmError("Belum ada API key LLM di .env (OPENAI_API_KEY / OPENROUTER_API_KEY / MINIMAX_API_KEY)", 503);
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? 60_000);
+  // 60 detik cukup untuk jawaban percakapan, TIDAK cukup untuk penyusunan panjang: menulis
+  // ~4.000 token keluaran memakan lebih dari satu menit, jadi permintaannya diputus tepat
+  // sebelum selesai dan pekerjaannya terbuang seluruhnya - berulang, tanpa jejak selain log.
+  // Batasnya kini mengikuti panjang yang diminta: ~1 detik per 40 token, minimal 60 detik.
+  const perkiraanMs = Math.ceil((opts.maxTokens ?? 700) / 40) * 1000;
+  const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? Math.max(60_000, perkiraanMs + 30_000));
 
   let res;
   try {

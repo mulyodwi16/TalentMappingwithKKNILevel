@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { Search, Loader2, X, CheckCircle2 } from "lucide-react";
 import api from "../api/client.js";
 import CompetencyPreparing from "./CompetencyPreparing.jsx";
 import { useLang } from "../lib/i18n.jsx";
+import { invalidateCompetencyScoped } from "../lib/competencyCache.js";
 
 // Modal pencarian & pemilihan kompetensi SKKNI - kategori + infinite scroll (muat per 100,
 // item di luar layar di-hide via content-visibility agar hemat, scroll tetap jalan sampai habis).
@@ -13,6 +15,10 @@ import { useLang } from "../lib/i18n.jsx";
 const PAGE = 100;
 export default function SkkniPicker({ onClose, onChosen, selectOnly = false }) {
   const { t } = useLang();
+  const qc = useQueryClient();
+  // Kompetensi berganti = seluruh angka turunannya basi. Dibuang di SATU tempat, di sini,
+  // karena di sinilah satu-satunya pintu penggantian kompetensi di dalam aplikasi.
+  const selesai = (chosen) => { invalidateCompetencyScoped(qc); onChosen(chosen); };
   const [q, setQ] = useState("");
   const [cats, setCats] = useState([]);
   const [activeCat, setActiveCat] = useState("all");
@@ -77,7 +83,7 @@ export default function SkkniPicker({ onClose, onChosen, selectOnly = false }) {
       const r = await api.post("/skkni/choose", { docId: item.id });
       if (r.ready) {
         toast.success(t("Kompetensi target: {title} ({n} skill)", { title: r.chosen?.title, n: r.chosen?.unitCount }));
-        onChosen(r.chosen);
+        selesai(r.chosen);
         return;
       }
       // Skill-nya masih ditarik dari data resmi SKKNI: tahan modal di layar tunggu
@@ -113,8 +119,8 @@ export default function SkkniPicker({ onClose, onChosen, selectOnly = false }) {
           <CompetencyPreparing
             docId={preparing.docId}
             title={preparing.title}
-            onReady={() => onChosen(preparing.chosen)}
-            onSkip={() => onChosen(preparing.chosen)}
+            onReady={() => selesai(preparing.chosen)}
+            onSkip={() => selesai(preparing.chosen)}
             onPickOther={() => setPreparing(null)}
           />
         ) : (

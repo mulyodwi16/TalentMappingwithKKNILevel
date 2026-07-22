@@ -72,7 +72,7 @@ export default function Placement() {
     retryDelay: 4000,
     onSuccess: (d) => {
       if (d?.preparing) {                                // soal belum siap - tanya lagi sebentar lagi
-        setPreparing({ sinceMs: d.elapsedMs || 0 });
+        setPreparing({ sinceMs: d.elapsedMs || 0, progress: d.progress || null });
         pollRef.current = setTimeout(() => start.mutate(), 4000);
         return;
       }
@@ -250,7 +250,9 @@ export default function Placement() {
                 </button>
                 <p className="text-xs" style={{ color: "var(--text-4)" }}>
                   {menyusun
-                    ? t("Penyusunan soal berjalan di server - aman ditinggal. Kalau halaman tertutup, buka lagi dan soalnya tetap dilanjutkan.")
+                    ? (preparing?.progress?.total
+                        ? t("Bagian {a} dari {b} selesai. Penyusunan berjalan di server - aman ditinggal.", { a: preparing.progress.done, b: preparing.progress.total })
+                        : t("Penyusunan soal berjalan di server - aman ditinggal. Kalau halaman tertutup, buka lagi dan soalnya tetap dilanjutkan."))
                     : t("Sisa kesempatan: {n} kali.", { n: status?.attemptsLeft ?? 2 })}
                 </p>
               </>

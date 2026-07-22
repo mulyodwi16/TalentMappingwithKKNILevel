@@ -32,7 +32,7 @@ export function once(key, fn) {
   const ada = running.get(k);
   if (ada) return ada;
 
-  const s = { state: "running", error: null, startedAt: Date.now(), finishedAt: null };
+  const s = { state: "running", error: null, startedAt: Date.now(), finishedAt: null, progress: null };
   catat(k, s);
 
   // `fn` dipanggil DI DALAM async supaya lemparan sinkron pun jadi promise yang ditolak -
@@ -50,13 +50,22 @@ export function once(key, fn) {
 
 // Untuk pelaporan/diagnostik: apakah kunci ini sedang dikerjakan?
 export function isRunning(key) {
-  return running.has(String(key));
+  const k = String(key);
+  return running.has(k) || jobs.has(k);
 }
 
 // Keadaan terakhir sebuah kunci. "idle" = belum pernah dikerjakan di proses ini (atau
 // catatannya sudah kedaluwarsa) - bukan berarti gagal.
 export function jobState(key) {
-  return states.get(String(key)) || { state: "idle", error: null, startedAt: null, finishedAt: null };
+  return states.get(String(key)) || { state: "idle", error: null, startedAt: null, finishedAt: null, progress: null };
+}
+
+// Laporkan kemajuan pekerjaan yang sedang jalan, mis. { done: 2, total: 3 }. Menunggu tanpa
+// tahu sudah sampai mana terasa jauh lebih lama daripada menunggu yang sama sambil melihat
+// angkanya bergerak - dan kalau macet, macetnya jadi kelihatan.
+export function setProgress(key, progress) {
+  const st = states.get(String(key));
+  if (st && st.state === "running") st.progress = progress;
 }
 
 // Buang catatan hasil supaya panggilan berikutnya memulai percobaan BARU. Dipakai sesudah
@@ -69,12 +78,26 @@ export function clearJob(key) {
 // Jalankan di LATAR: kembalikan keadaannya sekarang, jangan menahan pemanggil. Inilah yang
 // memutus ketergantungan pada satu permintaan HTTP panjang - pekerjaan tetap jalan walau
 // koneksi pengguna putus, dan hasilnya dipungut lewat panggilan berikutnya.
+// Peta TERPISAH dari `running` milik `once`, dan pemisahan itu WAJIB. Pekerjaan yang
+// dijalankan di sini hampir selalu memanggil `once(kunci yang sama)` di dalamnya - itu
+// memang niatnya, supaya pemanggil langsung ikut menumpang. Kalau keduanya berbagi satu
+// peta, `once` menemukan promise si pemanggil yang belum selesai lalu MENGEMBALIKANNYA:
+// promise menunggu dirinya sendiri, pekerjaan aslinya tak pernah jalan, dan statusnya
+// "running" selamanya - pengguna melihat "Menyusun soal..." tanpa akhir. Sudah terjadi.
+const jobs = new Map();
+
 export function startJob(key, fn) {
   const k = String(key);
-  if (!running.has(k)) {
-    // Kegagalannya sudah tercatat di `states`; ditelan di sini supaya tak jadi
-    // unhandled rejection yang mematikan proses.
-    once(k, fn).catch(() => {});
+  if (!jobs.has(k)) {
+    const s = { state: "running", error: null, startedAt: Date.now(), finishedAt: null, progress: null };
+    catat(k, s);
+    // Kegagalannya dicatat ke `states`; ditelan di sini supaya tak jadi unhandled
+    // rejection yang mematikan proses.
+    const p = (async () => fn())()
+      .then(() => { catat(k, { ...states.get(k), state: "done", finishedAt: Date.now() }); })
+      .catch((e) => { catat(k, { ...states.get(k), state: "error", error: e?.message || "Gagal", finishedAt: Date.now() }); })
+      .finally(() => { jobs.delete(k); });
+    jobs.set(k, p);
   }
   return jobState(k);
 }
@@ -96,12 +119,21 @@ export async function readyOrStart({ key, read, work }) {
     clearJob(key);
     return { pending: { preparing: false, failed: true, error: st.error || "Gagal menyusun." } };
   }
+  // Pekerjaan SELESAI tapi tak menghasilkan apa-apa. Ini bukan "belum siap" - mengulanginya
+  // hanya akan gagal dengan cara yang sama, mahal, dan selamanya: pengguna melihat "sedang
+  // menyusun" tanpa akhir sementara server membakar biaya tiap satu menit. Diperlakukan
+  // sebagai kegagalan supaya pengguna diberi tahu dan bisa memutuskan sendiri.
+  if (st.state === "done") {
+    clearJob(key);
+    return { pending: { preparing: false, failed: true, error: "Penyusunan selesai tanpa hasil. Coba lagi, atau pilih kompetensi lain bila terus gagal." } };
+  }
 
   const jalan = startJob(key, work);
   return {
     pending: {
       preparing: true,
       state: jalan.state,
+      progress: jalan.progress,
       // Klien memakainya untuk memperkirakan sudah berapa lama menunggu.
       elapsedMs: jalan.startedAt ? Date.now() - jalan.startedAt : 0,
     },

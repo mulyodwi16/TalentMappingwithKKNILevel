@@ -64,7 +64,7 @@ export default function FinalExam() {
     retryDelay: 4000,
     onSuccess: (d) => {
       if (d?.preparing) {
-        setPreparing({ sinceMs: d.elapsedMs || 0 });
+        setPreparing({ sinceMs: d.elapsedMs || 0, progress: d.progress || null });
         pollRef.current = setTimeout(() => start.mutate(), 4000);
         return;
       }
@@ -216,7 +216,11 @@ export default function FinalExam() {
               : <><Award className="w-4 h-4" /> {cert ? t("Ulangi Ujian Kompetensi") : t("Mulai Ujian Kompetensi")}</>}
           </button>
           {menyusun && (
-            <p className="text-xs" style={{ color: "var(--text-4)" }}>{t("Penyusunan soal berjalan di server - aman ditinggal. Kalau halaman tertutup, buka lagi dan soalnya tetap dilanjutkan.")}</p>
+            <p className="text-xs" style={{ color: "var(--text-4)" }}>
+              {preparing?.progress?.total
+                ? t("Bagian {a} dari {b} selesai. Penyusunan berjalan di server - aman ditinggal.", { a: preparing.progress.done, b: preparing.progress.total })
+                : t("Penyusunan soal berjalan di server - aman ditinggal. Kalau halaman tertutup, buka lagi dan soalnya tetap dilanjutkan.")}
+            </p>
           )}
         </div>
       )}

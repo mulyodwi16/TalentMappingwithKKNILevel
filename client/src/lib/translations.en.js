@@ -685,6 +685,8 @@ export default {
   "kuasai {n} unit lagi": "master {n} more units",
   "Babak menuju {rank}": "Chapter to {rank}",
   "Kamu di sini": "You are here",
+  "Bagian {a} dari {b} selesai. Penyusunan berjalan di server - aman ditinggal.":
+    "Part {a} of {b} done. The work runs on the server - you can leave this page.",
   "Penyusunan soal berjalan di server - aman ditinggal. Kalau halaman tertutup, buka lagi dan soalnya tetap dilanjutkan.":
     "The questions are being written on the server - you can leave this page. Close it and come back; the work carries on.",
   "AI sedang menyusun soal unit ini": "The AI is writing questions for this unit",

@@ -43,9 +43,13 @@ function PublicPage({ children }) {
   return <div key={pathname} className="page-enter">{children}</div>;
 }
 
+// Dua flag `future` memakai perilaku React Router v7 lebih awal: pembungkusan
+// startTransition & resolusi rute relatif di dalam splat. Selain menyenyapkan
+// peringatan konsol, memasangnya sekarang berarti pindah ke v7 nanti tidak
+// mengubah perilaku navigasi diam-diam.
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Toaster
         position="top-right"
         toastOptions={{

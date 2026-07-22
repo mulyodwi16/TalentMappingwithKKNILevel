@@ -344,7 +344,9 @@ export default function Exam() {
         <Loader2 className="w-8 h-8 animate-spin mx-auto text-brand-500" />
         <h2 className="font-semibold" style={{ color: "var(--text-base)" }}>{t("AI sedang menyusun soal unit ini")}</h2>
         <p className="text-sm" style={{ color: "var(--text-3)" }}>
-          {t("Penyusunan soal berjalan di server - aman ditinggal. Kalau halaman tertutup, buka lagi dan soalnya tetap dilanjutkan.")}
+          {examData?.progress?.total
+            ? t("Bagian {a} dari {b} selesai. Penyusunan berjalan di server - aman ditinggal.", { a: examData.progress.done, b: examData.progress.total })
+            : t("Penyusunan soal berjalan di server - aman ditinggal. Kalau halaman tertutup, buka lagi dan soalnya tetap dilanjutkan.")}
         </p>
         <p className="text-xs" style={{ color: "var(--text-4)" }}>{t("Disusun sekali saja, setelah itu langsung tersedia.")}</p>
       </div>
