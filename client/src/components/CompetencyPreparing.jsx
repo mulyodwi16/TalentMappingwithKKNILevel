@@ -1,8 +1,74 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
 import api from "../api/client.js";
 import { useLang } from "../lib/i18n.jsx";
+
+// Pemantau status penyiapan kompetensi, dipakai BERSAMA oleh layar tunggu di berkas ini
+// dan kartu kompetensi di Profil. Sengaja satu tempat: dulu kartu Profil menebak status
+// dari `unitsCached` saja, sehingga penyiapan yang GAGAL tetap tampil sebagai "sedang
+// menyiapkan" selamanya - server sudah melaporkan errornya, tapi tak ada yang bertanya.
+
+// Jeda sebelum percobaan otomatis. Sengaja PANJANG: satu penyiapan sudah mencoba ke
+// Kemnaker sampai 4 kali dengan mundur ~64 detik, jadi mencoba ulang lebih cepat dari ini
+// hanya menabrak batas yang sama. Kuota Kemnaker per-IP dipakai BERSAMA semua pengguna,
+// jadi tiap percobaan otomatis mengambil jatah orang lain - karena itu jumlahnya dibatasi
+// dan sesudahnya dikembalikan ke tombol manual.
+const AUTO_RETRY_MS = 120_000;
+const AUTO_RETRY_MAX = 2;
+
+export function useCompetencyPrepare(docId, { enabled = true, auto = true } = {}) {
+  const [retrying, setRetrying] = useState(false);
+  const [autoLeft, setAutoLeft] = useState(AUTO_RETRY_MAX);
+  const [autoIn, setAutoIn] = useState(0);          // hitung mundur, supaya diamnya tak terbaca macet
+  const [tick, setTick] = useState(0);              // memulai ulang jeda tanpa memakan jatah
+
+  const { data, refetch } = useQuery({
+    queryKey: ["skkni-prepare", docId],
+    queryFn: () => api.get(`/skkni/prepare/${encodeURIComponent(docId)}`),
+    enabled: !!docId && enabled,
+    refetchInterval: (q) => (q.state.data?.ready || q.state.data?.error ? false : 3000),
+  });
+
+  // Penyiapan yang gagal TIDAK pernah dicoba ulang oleh server - memilih ulang kompetensi
+  // yang sama adalah pemicunya, dan itu yang dilakukan tombol "Coba lagi".
+  const retry = useCallback(async () => {
+    setRetrying(true);
+    try {
+      await api.post("/skkni/choose", { docId });
+      await refetch();
+    } catch { /* pesan gagal sudah tampil di kartu */ }
+    finally { setRetrying(false); }
+  }, [docId, refetch]);
+
+  const failed = !!data?.error;
+
+  useEffect(() => {
+    if (!auto || !failed || autoLeft <= 0) { setAutoIn(0); return; }
+
+    setAutoIn(Math.round(AUTO_RETRY_MS / 1000));
+    const iv = setInterval(() => setAutoIn((s) => (s > 0 ? s - 1 : 0)), 1000);
+    const to = setTimeout(() => {
+      // Tab yang ditinggalkan di latar tak boleh diam-diam menghabiskan kuota bersama:
+      // jeda diulang, jatahnya TIDAK dipakai, sampai halamannya benar-benar dilihat lagi.
+      if (typeof document !== "undefined" && document.hidden) { setTick((n) => n + 1); return; }
+      setAutoLeft((n) => n - 1);
+      retry();
+    }, AUTO_RETRY_MS);
+
+    return () => { clearInterval(iv); clearTimeout(to); };
+  }, [auto, failed, autoLeft, tick, retry]);
+
+  const empty = !!data?.empty;
+  return {
+    data, refetch, retrying, empty, failed, ready: !!data?.ready && !empty,
+    autoIn: failed && autoLeft > 0 ? autoIn : 0,
+    autoLeft,
+    // Percobaan manual mengembalikan jatah otomatis: pengguna yang menekan tombol
+    // biasanya tahu sumbernya sudah pulih, jadi jangan hukum dengan kunci permanen.
+    retry: () => { setAutoLeft(AUTO_RETRY_MAX); return retry(); },
+  };
+}
 
 // Layar tunggu saat kompetensi baru dipilih. Daftar unit ditarik dari data resmi SKKNI
 // di latar belakang, dan sumbernya membatasi jumlah permintaan sehingga bisa memakan
@@ -18,34 +84,14 @@ import { useLang } from "../lib/i18n.jsx";
 export default function CompetencyPreparing({ docId, title, onReady, onSkip, onPickOther }) {
   const { t } = useLang();
   const [elapsed, setElapsed] = useState(0);
-  const [retrying, setRetrying] = useState(false);
-
-  const { data, refetch } = useQuery({
-    queryKey: ["skkni-prepare", docId],
-    queryFn: () => api.get(`/skkni/prepare/${encodeURIComponent(docId)}`),
-    enabled: !!docId,
-    refetchInterval: (q) => (q.state.data?.ready || q.state.data?.error ? false : 3000),
-  });
+  const { data, retry, retrying, failed, empty, ready, autoIn } = useCompetencyPrepare(docId);
 
   useEffect(() => {
     const id = setInterval(() => setElapsed((s) => s + 1), 1000);
     return () => clearInterval(id);
   }, []);
 
-  const failed = !!data?.error;
-  const empty = !!data?.empty;
-  const ready = !!data?.ready && !empty;
-
   useEffect(() => { if (ready) onReady?.(data); }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function retry() {
-    setRetrying(true);
-    try {
-      await api.post("/skkni/choose", { docId });
-      await refetch();
-    } catch { /* pesan gagal sudah tampil di kartu */ }
-    finally { setRetrying(false); }
-  }
 
   // Kompetensi tanpa rincian unit: menunggu lebih lama tak akan menolong.
   if (empty) {
@@ -74,6 +120,11 @@ export default function CompetencyPreparing({ docId, title, onReady, onSkip, onP
           </button>
           {onSkip && <button onClick={onSkip} className="btn-outline text-sm">{t("Lanjut saja")}</button>}
         </div>
+        {autoIn > 0 && (
+          <p className="text-[11px]" style={{ color: "var(--text-4)" }}>
+            {t("Mencoba lagi otomatis dalam {n} detik.", { n: autoIn })}
+          </p>
+        )}
       </Shell>
     );
   }

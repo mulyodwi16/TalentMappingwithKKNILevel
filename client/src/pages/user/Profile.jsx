@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import {
   User, Target, FileText, GraduationCap, Award, Search, Loader2,
   Pencil, Save, X, Briefcase, Building2, Clock, ListChecks, Sparkles, ArrowRight,
+  AlertTriangle, RefreshCw,
 } from "lucide-react";
 import api from "../../api/client.js";
 import useAuthStore from "../../store/authStore.js";
@@ -14,6 +15,7 @@ import RankLadder from "../../components/RankLadder.jsx";
 import CertificateModal from "../../components/CertificateModal.jsx";
 import AvatarCropModal from "../../components/AvatarCropModal.jsx";
 import SkkniPicker from "../../components/SkkniPicker.jsx";
+import { useCompetencyPrepare } from "../../components/CompetencyPreparing.jsx";
 import { RANKS, rankName, rankOf } from "../../lib/rank.js";
 import { useLang, getLang, dateLocale } from "../../lib/i18n.jsx";
 
@@ -403,10 +405,7 @@ function SkkniSection({ chosen, doc, onChanged, picking, setPicking }) {
             </p>
           </div>
           {!doc?.unitsCached ? (
-            <div className="flex items-center gap-2 text-xs rounded-lg px-3 py-2.5" style={{ background: "var(--bg-muted)", color: "var(--text-3)" }}>
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-brand-600 shrink-0" />
-              {t("Menyiapkan daftar skill dari standar SKKNI Kemnaker… biasanya di bawah 1 menit. Halaman ini akan memperbarui sendiri.")}
-            </div>
+            <PrepareNotice docId={chosen.id} onReady={onChanged} onPickOther={() => setPicking(true)} />
           ) : doc?.units?.length ? (
             <div>
               <p className="text-xs flex items-center gap-1 mb-1.5" style={{ color: "var(--text-4)" }}><ListChecks className="w-3 h-3" /> {t("Unit kompetensi (skill terstandar)")}</p>
@@ -427,6 +426,60 @@ function SkkniSection({ chosen, doc, onChanged, picking, setPicking }) {
       )}
 
       {picking && <SkkniPicker onClose={() => setPicking(false)} onChosen={() => { setPicking(false); onChanged(); }} />}
+    </div>
+  );
+}
+
+// Status penarikan unit SKKNI di kartu kompetensi. Dulu di sini cuma ada spinner yang
+// bergantung pada `unitsCached`, jadi penarikan yang gagal - misalnya karena Kemnaker
+// membatasi permintaan - terlihat sebagai "sedang menyiapkan" tanpa akhir, dan tak ada
+// jalan keluar selain memilih ulang kompetensi tanpa tahu kenapa.
+function PrepareNotice({ docId, onReady, onPickOther }) {
+  const { t } = useLang();
+  const { data, retry, retrying, failed, empty, ready, autoIn } = useCompetencyPrepare(docId);
+
+  useEffect(() => { if (ready) onReady?.(); }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (empty) {
+    return (
+      <div className="text-xs rounded-lg px-3 py-2.5 space-y-2" style={{ background: "var(--bg-muted)", color: "var(--text-3)" }}>
+        <p className="flex items-start gap-2">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+          {t("Data resmi SKKNI belum merinci unit untuk kompetensi ini, jadi Skill Gap dan Kelas tidak bisa dihitung. Silakan pilih kompetensi lain yang sudah lengkap.")}
+        </p>
+        <button onClick={onPickOther} className="btn-outline text-xs py-1 px-2.5">{t("Pilih kompetensi lain")}</button>
+      </div>
+    );
+  }
+
+  if (failed) {
+    return (
+      <div className="text-xs rounded-lg px-3 py-2.5 space-y-2" style={{ background: "var(--bg-muted)", color: "var(--text-3)" }}>
+        <p className="flex items-start gap-2">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+          {t("Penarikan daftar skill berhenti - sumber data SKKNI sedang membatasi permintaan. Datanya tidak akan menyusul sendiri, jadi coba lagi bila sudah siap.")}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={retry} disabled={retrying} className="btn-primary text-xs py-1 px-2.5 flex items-center gap-1.5 disabled:opacity-60">
+            {retrying ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />} {t("Coba lagi")}
+          </button>
+          <button onClick={onPickOther} className="btn-outline text-xs py-1 px-2.5">{t("Pilih kompetensi lain")}</button>
+        </div>
+        {autoIn > 0 && (
+          <p className="text-[11px]" style={{ color: "var(--text-4)" }}>
+            {t("Mencoba lagi otomatis dalam {n} detik.", { n: autoIn })}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 text-xs rounded-lg px-3 py-2.5" style={{ background: "var(--bg-muted)", color: "var(--text-3)" }}>
+      <Loader2 className="w-3.5 h-3.5 animate-spin text-brand-600 shrink-0" />
+      {data?.state === "running" || !data
+        ? t("Menyiapkan daftar skill dari standar SKKNI Kemnaker… biasanya di bawah 1 menit. Halaman ini akan memperbarui sendiri.")
+        : t("Menunggu antrean ke sumber data SKKNI. Sumbernya membatasi sekitar satu permintaan per menit.")}
     </div>
   );
 }
