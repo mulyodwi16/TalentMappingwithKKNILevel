@@ -7,7 +7,7 @@ import {
   GraduationCap, ChevronDown, Star, Compass, TrendingUp, AlertTriangle,
   FileText, PenLine, Award, MapPin, MessageCircle, ArrowRight, ScanLine, Hourglass,
 } from "lucide-react";
-import api from "../../api/client.js";
+import api, { AI_TIMEOUT, isTimeout } from "../../api/client.js";
 import { rankName, rankColor } from "../../lib/rank.js";
 import { planCoverage } from "../../lib/planprogress.js";
 import RankIcon from "../../components/RankIcon.jsx";
@@ -376,7 +376,9 @@ export default function LearningPath() {
   });
 
   const generate = useMutation({
-    mutationFn: () => api.post("/learning-path/generate", {}, { timeout: 90_000 }),
+    mutationFn: () => api.post("/learning-path/generate", {}, { timeout: AI_TIMEOUT }),
+    retry: (n, e) => isTimeout(e) && n < 2,
+    retryDelay: 4000,
     onSuccess: (res) => {
       // stale ikut dinolkan: rencana ini baru saja disusun dari data terkini.
       qc.setQueryData(["learning-path"], (old) => ({ ...(old || {}), ...res, stale: false, llmAvailable: old?.llmAvailable }));

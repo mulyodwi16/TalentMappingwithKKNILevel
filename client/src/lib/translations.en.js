@@ -685,6 +685,12 @@ export default {
   "kuasai {n} unit lagi": "master {n} more units",
   "Babak menuju {rank}": "Chapter to {rank}",
   "Kamu di sini": "You are here",
+  "Penyusunan soal berjalan di server - aman ditinggal. Kalau halaman tertutup, buka lagi dan soalnya tetap dilanjutkan.":
+    "The questions are being written on the server - you can leave this page. Close it and come back; the work carries on.",
+  "AI sedang menyusun soal unit ini": "The AI is writing questions for this unit",
+  "Disusun sekali saja, setelah itu langsung tersedia.": "Written once, then available instantly.",
+  "AI masih menyusun - tunggu sebentar lalu coba lagi, hasilnya tidak hilang.":
+    "The AI is still writing - wait a moment and try again, your progress is not lost.",
   "Ganti Kompetensi": "Change Competency",
   "Kompetensi ini belum punya unit yang bisa dipelajari": "This competency has no units to study yet",
   "Rincian unitnya belum tersedia di data Kemnaker, atau standarnya sudah dicabut. Pilih kompetensi lain supaya Kelas, Latihan Unit, dan Skill Gap punya bahan.":
@@ -744,7 +750,6 @@ export default {
   "Kompetensi: {title} - {n} unit": "Competency: {title} - {n} units",
   "Kompetensi: {title}. Dari {total} unit, tes memilih {n} yang mewakili dari dasar sampai lanjutan supaya tetap ringkas.": "Competency: {title}. Out of {total} units, the test picks {n} representative ones from basic to advanced to keep it concise.",
   "Menyusun soal…": "Building questions…",
-  "Penyusunan soal pertama kali bisa memakan waktu sekitar satu menit, setelah itu tersimpan.": "Building the questions the first time can take about a minute, after that they are saved.",
   "Terakhir diambil {d}: skor {n}%, {a} dari {b} unit dikuasai.": "Last taken {d}: score {n}%, {a} of {b} units mastered.",
   "Baseline saat ini": "Current baseline",
   "Hasil per unit": "Result per unit",

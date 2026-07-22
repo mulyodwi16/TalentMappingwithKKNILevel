@@ -6,7 +6,7 @@ import {
   CheckCircle2, Lock, BookOpen, PlayCircle, RotateCcw, GraduationCap, Award, ArrowLeft, ArrowRight, Sparkles,
   History, XCircle, X, Loader2,
 } from "lucide-react";
-import api from "../../api/client.js";
+import api, { AI_TIMEOUT, isTimeout } from "../../api/client.js";
 import { groupByTier, TierHeader, TierLockedHint } from "../../components/TierSection.jsx";
 import { useLang, getLang, dateLocale } from "../../lib/i18n.jsx";
 
@@ -281,10 +281,16 @@ export default function Exam() {
 
   const { data: examData, isLoading, error: examError } = useQuery({
     queryKey: ["exam", unitMode ? unitParam : "legacy"],
-    queryFn: () => api.get(examUrl),
+    // Soal latihan unit disusun AI saat pertama kali diminta. Penyusunannya jalan di LATAR:
+    // server membalas `preparing` alih-alih menahan permintaan, dan kita menanyakannya lagi
+    // tiap 4 detik sampai soalnya siap. Batas tunggu tetap dilonggarkan sebagai jaring pengaman.
+    queryFn: () => api.get(examUrl, { timeout: AI_TIMEOUT }),
     enabled: examEnabled,
-    retry: false,
+    retry: (n, e) => isTimeout(e) && n < 2,
+    retryDelay: 4000,
+    refetchInterval: (q) => (q.state.data?.preparing ? 4000 : false),
   });
+  const menyusunSoal = !!examData?.preparing;
 
   const submit = useMutation({
     mutationFn: () => api.post(submitUrl, { answers }),
@@ -329,6 +335,21 @@ export default function Exam() {
   }
 
   if (isLoading) return <div className="flex items-center justify-center h-64" style={{ color: "var(--text-4)" }}>{unitMode ? t("Menyiapkan soal unit…") : t("Memuat soal…")}</div>;
+
+  // Soal sedang disusun AI di server. Bukan kegagalan - halaman boleh ditinggal, penyusunannya
+  // lanjut dan hasilnya tersimpan permanen.
+  if (menyusunSoal && !result) {
+    return (
+      <div className="max-w-xl mx-auto card p-8 text-center space-y-3">
+        <Loader2 className="w-8 h-8 animate-spin mx-auto text-brand-500" />
+        <h2 className="font-semibold" style={{ color: "var(--text-base)" }}>{t("AI sedang menyusun soal unit ini")}</h2>
+        <p className="text-sm" style={{ color: "var(--text-3)" }}>
+          {t("Penyusunan soal berjalan di server - aman ditinggal. Kalau halaman tertutup, buka lagi dan soalnya tetap dilanjutkan.")}
+        </p>
+        <p className="text-xs" style={{ color: "var(--text-4)" }}>{t("Disusun sekali saja, setelah itu langsung tersedia.")}</p>
+      </div>
+    );
+  }
 
   if (examError && !result) {
     return (

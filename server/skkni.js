@@ -14,6 +14,29 @@ import { prisma } from "./prisma.js";
 import { chatComplete, isLlmConfigured } from "./llm.js";
 import { buildRankLadder, evaluateLadder } from "./unitrank.js";
 import { UNIT_MASTERY, FINAL_PASS_SCORE } from "./thresholds.js";
+import { once } from "./inflight.js";
+
+// Kunci pekerjaan penyusunan AI. Dipakai DUA tempat: `once` di dalam fungsi penyusun, dan
+// pelacak status di rute. Keduanya WAJIB memakai kunci yang sama - kalau berbeda, rute akan
+// memulai pekerjaan kedua untuk paket yang sedang disusun, persis masalah yang mau dihindari.
+export const PLACEMENT_JOB = (docId) => `placement:${docId}`;
+export const FINAL_JOB = (docId) => `final:${docId}`;
+export const UNIT_EXAM_JOB = (docId, code) => `unitexam:${docId}:${code}`;
+export const COURSE_JOB = (docId, code) => `course:${docId}:${code}`;
+export const LESSONS_JOB = (docId, code) => `lessons:${docId}:${code}`;
+
+// Simpan hasil penyusunan yang MAHAL, tahan terhadap perlombaan. `once` sudah mencegah dua
+// penyusunan dalam satu proses, tapi tidak melindungi dari proses lain (mis. beberapa instance
+// server, atau restart tepat sesudah penyusunan selesai). Kalau baris uniknya sudah keburu
+// ditulis pihak lain (P2002), pakai punya mereka - hasilnya setara dan pekerjaan tak terbuang.
+async function simpanSekali(tulis, baca) {
+  try {
+    return await tulis();
+  } catch (e) {
+    if (e?.code !== "P2002") throw e;
+    return baca();
+  }
+}
 
 const BASE = "https://skkni-api.kemnaker.go.id/v1/public";
 const MIN_GAP_MS = 70_000;   // jarak minimal antar request keluar (window per-IP nyatanya > 60dtk)
@@ -466,12 +489,21 @@ async function generateUnitCourseContent(compTitle, unit) {
 
 // Ambil/generate materi kelas 1 unit (cache di UnitCourse). Butuh LLM aktif untuk generate.
 export async function ensureUnitCourse(docId, unit) {
-  const existing = await prisma.unitCourse.findUnique({ where: { docId_unitCode: { docId, unitCode: unit.code } } });
+  const kunci = { docId_unitCode: { docId, unitCode: unit.code } };
+  const existing = await prisma.unitCourse.findUnique({ where: kunci });
   if (existing) return existing;
-  const doc = await prisma.skkniDocument.findUnique({ where: { id: docId }, select: { title: true } });
-  const content = await generateUnitCourseContent(doc?.title || "Kompetensi", unit);
-  return prisma.unitCourse.create({
-    data: { docId, unitCode: unit.code, unitTitle: unit.title, content: JSON.stringify(content) },
+
+  return once(COURSE_JOB(docId, unit.code), async () => {
+    const lagi = await prisma.unitCourse.findUnique({ where: kunci });
+    if (lagi) return lagi;
+    const doc = await prisma.skkniDocument.findUnique({ where: { id: docId }, select: { title: true } });
+    const content = await generateUnitCourseContent(doc?.title || "Kompetensi", unit);
+    return simpanSekali(
+      () => prisma.unitCourse.create({
+        data: { docId, unitCode: unit.code, unitTitle: unit.title, content: JSON.stringify(content) },
+      }),
+      () => prisma.unitCourse.findUnique({ where: kunci }),
+    );
   });
 }
 
@@ -571,6 +603,13 @@ async function validateLessonSources(lessons) {
 
 // Ambil/generate pelajaran mendalam (lazy, merge ke UnitCourse.content.lessons).
 export async function ensureUnitLessons(docId, unit) {
+  // Penyusunan pelajaran mendalam paling lama di antara semua jalur AI (puluhan detik sampai
+  // menit). Dibungkus `once` supaya pengguna yang mengulang setelah kehabisan waktu memanen
+  // pekerjaan yang sedang berjalan, bukan memicu penyusunan kedua.
+  return once(LESSONS_JOB(docId, unit.code), () => susunPelajaran(docId, unit));
+}
+
+async function susunPelajaran(docId, unit) {
   const row = await ensureUnitCourse(docId, unit);
   let content = {};
   try { content = JSON.parse(row.content); } catch { /* rusak → regenerasi lessons saja */ }
@@ -717,18 +756,27 @@ export async function ensurePlacementPackage(docId) {
   if (existing) return existing;
   if (!isLlmConfigured()) return null;
 
-  const doc = await prisma.skkniDocument.findUnique({ where: { id: docId }, select: { title: true, weightMaxRank: true } });
-  const allUnits = await prisma.skkniUnit.findMany({ where: { documentId: docId }, orderBy: { code: "asc" }, select: { code: true, title: true } });
-  const units = pickPlacementUnits(allUnits, doc?.weightMaxRank || 9);
-  if (!units.length) return null;
+  // Dibungkus `once`: penyusunan makan puluhan detik, lebih lama dari batas tunggu klien.
+  // Percobaan ulang setelah kehabisan waktu menumpang pekerjaan yang sedang jalan, bukan
+  // memulai penyusunan kedua dari nol.
+  return once(PLACEMENT_JOB(docId), async () => {
+    const lagi = await prisma.placementPackage.findUnique({ where: { docId } });
+    if (lagi) return lagi;                       // selesai selagi kita mengantre
 
-  // Dibatch supaya satu panggilan tak kepanjangan; berurutan agar kegagalan mudah ditelusuri.
-  const questions = await buildExamQuestions(doc?.title || "Kompetensi", units, generatePlacementBatch, "placement");
-  if (!questions.length) return null;
+    const doc = await prisma.skkniDocument.findUnique({ where: { id: docId }, select: { title: true, weightMaxRank: true } });
+    const allUnits = await prisma.skkniUnit.findMany({ where: { documentId: docId }, orderBy: { code: "asc" }, select: { code: true, title: true } });
+    const units = pickPlacementUnits(allUnits, doc?.weightMaxRank || 9);
+    if (!units.length) return null;
 
-  const covered = new Set(questions.map((q) => q.unitCode));
-  return prisma.placementPackage.create({
-    data: { docId, questions: JSON.stringify(questions), unitCount: covered.size },
+    // Dibatch supaya satu panggilan tak kepanjangan; berurutan agar kegagalan mudah ditelusuri.
+    const questions = await buildExamQuestions(doc?.title || "Kompetensi", units, generatePlacementBatch, "placement");
+    if (!questions.length) return null;
+
+    const covered = new Set(questions.map((q) => q.unitCode));
+    return simpanSekali(
+      () => prisma.placementPackage.create({ data: { docId, questions: JSON.stringify(questions), unitCount: covered.size } }),
+      () => prisma.placementPackage.findUnique({ where: { docId } }),
+    );
   });
 }
 
@@ -810,17 +858,23 @@ export async function ensureFinalExamPackage(docId) {
   if (existing) return existing;
   if (!isLlmConfigured()) return null;
 
-  const doc = await prisma.skkniDocument.findUnique({ where: { id: docId }, select: { title: true, weightMaxRank: true } });
-  const allUnits = await prisma.skkniUnit.findMany({ where: { documentId: docId }, orderBy: { code: "asc" }, select: { code: true, title: true } });
-  const units = pickPlacementUnits(allUnits, doc?.weightMaxRank || 9);  // sebaran lintas tier yang sama
-  if (!units.length) return null;
+  return once(FINAL_JOB(docId), async () => {
+    const lagi = await prisma.competencyExamPackage.findUnique({ where: { docId } });
+    if (lagi) return lagi;
 
-  const questions = await buildExamQuestions(doc?.title || "Kompetensi", units, generateFinalBatch, "final");
-  if (!questions.length) return null;
+    const doc = await prisma.skkniDocument.findUnique({ where: { id: docId }, select: { title: true, weightMaxRank: true } });
+    const allUnits = await prisma.skkniUnit.findMany({ where: { documentId: docId }, orderBy: { code: "asc" }, select: { code: true, title: true } });
+    const units = pickPlacementUnits(allUnits, doc?.weightMaxRank || 9);  // sebaran lintas tier yang sama
+    if (!units.length) return null;
 
-  const covered = new Set(questions.map((q) => q.unitCode));
-  return prisma.competencyExamPackage.create({
-    data: { docId, questions: JSON.stringify(questions), unitCount: covered.size },
+    const questions = await buildExamQuestions(doc?.title || "Kompetensi", units, generateFinalBatch, "final");
+    if (!questions.length) return null;
+
+    const covered = new Set(questions.map((q) => q.unitCode));
+    return simpanSekali(
+      () => prisma.competencyExamPackage.create({ data: { docId, questions: JSON.stringify(questions), unitCount: covered.size } }),
+      () => prisma.competencyExamPackage.findUnique({ where: { docId } }),
+    );
   });
 }
 
@@ -866,13 +920,23 @@ export function buildPlacementInstance(pkg) {
 
 // Ambil/generate paket soal 1 unit (cache di UnitExamPackage). Butuh LLM untuk generate.
 export async function ensureUnitExamPackage(docId, unit) {
-  const existing = await prisma.unitExamPackage.findUnique({ where: { docId_unitCode: { docId, unitCode: unit.code } } });
+  const kunci = { docId_unitCode: { docId, unitCode: unit.code } };
+  const existing = await prisma.unitExamPackage.findUnique({ where: kunci });
   if (existing) return existing;
-  const doc = await prisma.skkniDocument.findUnique({ where: { id: docId }, select: { title: true } });
-  const questions = await generateSingleUnitExam(doc?.title || "Kompetensi", unit);
-  if (!questions.length) return null;
-  return prisma.unitExamPackage.create({
-    data: { docId, unitCode: unit.code, unitTitle: unit.title, questions: JSON.stringify(questions), questionCount: questions.length },
+
+  return once(UNIT_EXAM_JOB(docId, unit.code), async () => {
+    const lagi = await prisma.unitExamPackage.findUnique({ where: kunci });
+    if (lagi) return lagi;
+
+    const doc = await prisma.skkniDocument.findUnique({ where: { id: docId }, select: { title: true } });
+    const questions = await generateSingleUnitExam(doc?.title || "Kompetensi", unit);
+    if (!questions.length) return null;
+    return simpanSekali(
+      () => prisma.unitExamPackage.create({
+        data: { docId, unitCode: unit.code, unitTitle: unit.title, questions: JSON.stringify(questions), questionCount: questions.length },
+      }),
+      () => prisma.unitExamPackage.findUnique({ where: kunci }),
+    );
   });
 }
 

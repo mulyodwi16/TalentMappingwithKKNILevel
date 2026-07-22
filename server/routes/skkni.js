@@ -14,11 +14,13 @@ import {
   ensureExamPackage, buildShuffledInstance, courseCoverage, COURSE_UNITS,
   ensureUnitExamPackage, buildUnitExamInstance, unitStates, ensureCompetencyWeight, gradeFreeText,
   prepareDoc, getPrepareState, usableUnitCount,
+  PLACEMENT_JOB, FINAL_JOB, UNIT_EXAM_JOB,
   ensurePlacementPackage, buildPlacementInstance, reviewPlacement, PLACEMENT_MINUTES_PER_UNIT, PLACEMENT_MAX_UNITS,
   PLACEMENT_FREE_ATTEMPTS, PLACEMENT_UNLOCK_COST, placementGate,
   ensureFinalExamPackage, FINAL_PASS_SCORE, FINAL_MINUTES_PER_UNIT,
 } from "../skkni.js";
 import { isLlmConfigured } from "../llm.js";
+import { readyOrStart } from "../inflight.js";
 import { awardOnce, award, getBalance, COIN } from "../gamification.js";
 import { refreshReadiness } from "../readiness.js";
 import { refreshRank } from "../rankcalc.js";
@@ -142,6 +144,18 @@ async function chosenDoc(userId) {
   return u?.chosenSkkniId ? u : null;
 }
 
+// ── Paket soal disusun di LATAR, bukan sambil menahan permintaan ──────────────
+// Menyusun satu paket soal makan puluhan detik sampai beberapa menit. Selama itu ditunggu di
+// dalam satu permintaan HTTP, siapa pun boleh memutusnya duluan - batas tunggu klien, batas
+// proxy, atau pengguna yang menutup tab - dan hasilnya terlihat GAGAL padahal servernya
+// menyelesaikan pekerjaan dengan baik. Sekarang permintaan langsung menjawab "sedang disusun"
+// dan klien memungut hasilnya lewat panggilan berikutnya. Pola yang sama sudah dipakai
+// penyiapan kompetensi (`prepareDoc`). Mesinnya ada di inflight.js (`readyOrStart`).
+async function paketSoal({ key, baca, susun }) {
+  const { hasil, pending } = await readyOrStart({ key, read: baca, work: susun });
+  return { pkg: hasil, pending };
+}
+
 // Status tes penempatan untuk kompetensi yang sedang dipilih.
 router.get("/placement", async (req, res) => {
   const u = await chosenDoc(req.user.id);
@@ -200,8 +214,15 @@ router.post("/placement/start", async (req, res) => {
       if (!gate.canStart) {
         return res.status(403).json({ error: "Tes penempatan terkunci. Buka lagi dengan menukar Koin di Toko.", locked: true, unlockCost: PLACEMENT_UNLOCK_COST });
       }
-      const pkg = await ensurePlacementPackage(u.chosenSkkniId);
-      if (!pkg) return res.status(503).json({ error: "Belum bisa menyusun soal untuk kompetensi ini." });
+      // Penyusunan berjalan di latar. Jatah SENGAJA belum dipotong di sini - menunggu soal
+      // bukan "memulai tes", dan memotongnya sekarang akan menghanguskan jatah orang yang
+      // koneksinya putus selagi soal disusun.
+      const { pkg, pending } = await paketSoal({
+        key: PLACEMENT_JOB(u.chosenSkkniId),
+        baca: () => prisma.placementPackage.findUnique({ where: { docId: u.chosenSkkniId } }),
+        susun: () => ensurePlacementPackage(u.chosenSkkniId),
+      });
+      if (pending) return res.status(pending.failed ? 502 : 202).json(pending);
       const questions = buildPlacementInstance(pkg);
       // Catat jatah terpakai SEBELUM instance dibuat, jadi menutup tab lalu memulai lagi tetap
       // memakan jatah (mencegah "intip soal lalu batal" untuk menghafal tanpa biaya).
@@ -381,8 +402,12 @@ router.post("/final/start", async (req, res) => {
   try {
     let inst = await prisma.competencyExamInstance.findUnique({ where: { userId: req.user.id } });
     if (!inst || inst.docId !== u.chosenSkkniId) {
-      const pkg = await ensureFinalExamPackage(u.chosenSkkniId);
-      if (!pkg) return res.status(503).json({ error: "Belum bisa menyusun soal untuk kompetensi ini." });
+      const { pkg, pending } = await paketSoal({
+        key: FINAL_JOB(u.chosenSkkniId),
+        baca: () => prisma.competencyExamPackage.findUnique({ where: { docId: u.chosenSkkniId } }),
+        susun: () => ensureFinalExamPackage(u.chosenSkkniId),
+      });
+      if (pending) return res.status(pending.failed ? 502 : 202).json(pending);
       const questions = buildPlacementInstance(pkg);   // pengacakan opsi MC yang sama
       const unitCount = new Set(questions.map((q) => q.unitCode)).size;
       const expiresAt = new Date(Date.now() + unitCount * FINAL_MINUTES_PER_UNIT * 60_000);
@@ -650,10 +675,12 @@ router.get("/exam/:code", async (req, res) => {
   if (active) return res.json(shapeUnitExam(JSON.parse(active.questions), unit, u.chosenSkkniTitle));
 
   if (!isLlmConfigured()) return res.status(503).json({ error: "Ujian butuh AI aktif. Hubungi admin." });
-  let pkg;
-  try { pkg = await ensureUnitExamPackage(u.chosenSkkniId, { code: unit.code, title: unit.title }); }
-  catch (e) { return res.status(502).json({ error: "Gagal menyiapkan soal: " + e.message }); }
-  if (!pkg) return res.status(503).json({ error: "Unit ini belum bisa dibuatkan soal." });
+  const { pkg, pending } = await paketSoal({
+    key: UNIT_EXAM_JOB(u.chosenSkkniId, code),
+    baca: () => prisma.unitExamPackage.findUnique({ where: { docId_unitCode: { docId: u.chosenSkkniId, unitCode: code } } }),
+    susun: () => ensureUnitExamPackage(u.chosenSkkniId, { code: unit.code, title: unit.title }),
+  });
+  if (pending) return res.status(pending.failed ? 502 : 202).json(pending);
 
   const instance = buildUnitExamInstance(pkg);
   await prisma.unitExamInstance.upsert({

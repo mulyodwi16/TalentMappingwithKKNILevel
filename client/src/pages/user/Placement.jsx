@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   Target, Loader2, CheckCircle2, AlertTriangle, Sparkles, RotateCcw, MessageSquareQuote, Lock, Coins,
 } from "lucide-react";
-import api from "../../api/client.js";
+import api, { AI_TIMEOUT, isTimeout } from "../../api/client.js";
 import { rankName, rankColor } from "../../lib/rank.js";
 import RankIcon from "../../components/RankIcon.jsx";
 import ExamRunner from "../../components/ExamRunner.jsx";
@@ -59,11 +59,29 @@ export default function Placement() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remaining, session]);
 
+  // Penyusunan soal jalan di LATAR: server langsung menjawab "sedang disusun" (preparing)
+  // alih-alih menahan permintaan sampai selesai. Jadi koneksi putus / tab ditutup / batas tunggu
+  // habis tak lagi membatalkan apa pun - kita tinggal menanyakannya lagi sampai soalnya siap.
+  const [preparing, setPreparing] = useState(null);      // { sinceMs } | null
+  const pollRef = useRef(null);
+  useEffect(() => () => clearTimeout(pollRef.current), []);
+
   const start = useMutation({
-    mutationFn: () => api.post("/skkni/placement/start"),
-    onSuccess: (d) => { setSession(d); setAnswers({}); setStep(0); setResult(null); lockExam(t("Tes Penempatan")); },
-    onError: (e) => toast.error(typeof e === "string" ? e : t("Gagal memulai tes")),
+    mutationFn: () => api.post("/skkni/placement/start", {}, { timeout: AI_TIMEOUT }),
+    retry: (n, e) => isTimeout(e) && n < 2,
+    retryDelay: 4000,
+    onSuccess: (d) => {
+      if (d?.preparing) {                                // soal belum siap - tanya lagi sebentar lagi
+        setPreparing({ sinceMs: d.elapsedMs || 0 });
+        pollRef.current = setTimeout(() => start.mutate(), 4000);
+        return;
+      }
+      setPreparing(null);
+      setSession(d); setAnswers({}); setStep(0); setResult(null); lockExam(t("Tes Penempatan"));
+    },
+    onError: (e) => { setPreparing(null); toast.error(typeof e === "string" ? t(e) : t("Gagal memulai tes")); },
   });
+  const menyusun = start.isPending || !!preparing;
 
   const unlock = useMutation({
     mutationFn: () => api.post("/skkni/placement/unlock"),
@@ -224,15 +242,15 @@ export default function Placement() {
               </div>
             ) : (
               <>
-                <button onClick={() => start.mutate()} disabled={start.isPending}
+                <button onClick={() => start.mutate()} disabled={menyusun}
                   className="btn-primary text-sm flex items-center gap-2 disabled:opacity-70">
-                  {start.isPending
+                  {menyusun
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> {t("Menyusun soal…")}</>
                     : <><Target className="w-4 h-4" /> {status?.taken ? t("Ulangi Tes Penempatan") : t("Mulai Tes Penempatan")}</>}
                 </button>
                 <p className="text-xs" style={{ color: "var(--text-4)" }}>
-                  {start.isPending
-                    ? t("Penyusunan soal pertama kali bisa memakan waktu sekitar satu menit, setelah itu tersimpan.")
+                  {menyusun
+                    ? t("Penyusunan soal berjalan di server - aman ditinggal. Kalau halaman tertutup, buka lagi dan soalnya tetap dilanjutkan.")
                     : t("Sisa kesempatan: {n} kali.", { n: status?.attemptsLeft ?? 2 })}
                 </p>
               </>

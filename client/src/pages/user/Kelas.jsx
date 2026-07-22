@@ -7,7 +7,7 @@ import {
   Coins, Sparkles, Star, Lightbulb, Briefcase, Clock, Loader2, X, ArrowLeft, ArrowRight,
   ExternalLink, Youtube, ListChecks, Trophy, BookX,
 } from "lucide-react";
-import api from "../../api/client.js";
+import api, { AI_TIMEOUT, isTimeout } from "../../api/client.js";
 import { useCoins } from "../../hooks/useCoins.js";
 import { groupByTier, TierHeader, TierLockedHint } from "../../components/TierSection.jsx";
 import { useLang } from "../../lib/i18n.jsx";
@@ -210,12 +210,16 @@ function CoursePlayer({ code, onBack, onComplete, busyComplete }) {
 
   const { data: meta } = useQuery({
     queryKey: ["kelas-course", code],
-    queryFn: () => api.get(`/kelas/unit/${encodeURIComponent(code)}`, { timeout: 90_000 }),
+    queryFn: () => api.get(`/kelas/unit/${encodeURIComponent(code)}`, { timeout: AI_TIMEOUT }),
+    retry: (n, e) => isTimeout(e) && n < 2,
     staleTime: 10 * 60 * 1000,
   });
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["kelas-lessons", code],
-    queryFn: () => api.get(`/kelas/unit/${encodeURIComponent(code)}/lessons`, { timeout: 180_000 }),
+    // Materi mendalam disusun AI sekali lalu disimpan permanen; penyusunannya lama, dan
+    // kehabisan waktu bukan kegagalan - percobaan berikutnya memanen hasil yang sudah jadi.
+    queryFn: () => api.get(`/kelas/unit/${encodeURIComponent(code)}/lessons`, { timeout: AI_TIMEOUT }),
+    retry: (n, e) => isTimeout(e) && n < 2,
     staleTime: 30 * 60 * 1000,
     retry: 1,
   });

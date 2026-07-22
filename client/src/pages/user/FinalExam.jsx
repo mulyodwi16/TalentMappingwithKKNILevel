@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Award, Loader2, CheckCircle2, AlertTriangle, XCircle, MessageSquareQuote } from "lucide-react";
-import api from "../../api/client.js";
+import api, { AI_TIMEOUT, isTimeout } from "../../api/client.js";
 import { rankName, rankColor } from "../../lib/rank.js";
 import RankIcon from "../../components/RankIcon.jsx";
 import ExamRunner from "../../components/ExamRunner.jsx";
@@ -51,11 +51,29 @@ export default function FinalExam() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remaining, session]);
 
+  // Sama seperti tes penempatan: penyusunan soal berjalan di LATAR. Server menjawab
+  // "preparing" alih-alih menahan permintaan, jadi tak ada lagi pekerjaan yang terlihat gagal
+  // hanya karena koneksinya diputus lebih dulu.
+  const [preparing, setPreparing] = useState(null);
+  const pollRef = useRef(null);
+  useEffect(() => () => clearTimeout(pollRef.current), []);
+
   const start = useMutation({
-    mutationFn: () => api.post("/skkni/final/start"),
-    onSuccess: (d) => { setSession(d); setAnswers({}); setStep(0); setResult(null); lockExam(t("Ujian Kompetensi Utama")); },
-    onError: (e) => toast.error(typeof e === "string" ? e : t("Gagal memulai ujian")),
+    mutationFn: () => api.post("/skkni/final/start", {}, { timeout: AI_TIMEOUT }),
+    retry: (n, e) => isTimeout(e) && n < 2,
+    retryDelay: 4000,
+    onSuccess: (d) => {
+      if (d?.preparing) {
+        setPreparing({ sinceMs: d.elapsedMs || 0 });
+        pollRef.current = setTimeout(() => start.mutate(), 4000);
+        return;
+      }
+      setPreparing(null);
+      setSession(d); setAnswers({}); setStep(0); setResult(null); lockExam(t("Ujian Kompetensi Utama"));
+    },
+    onError: (e) => { setPreparing(null); toast.error(typeof e === "string" ? t(e) : t("Gagal memulai ujian")); },
   });
+  const menyusun = start.isPending || !!preparing;
 
   const submit = useMutation({
     mutationFn: () => api.post("/skkni/final/submit", { answers }),
@@ -191,14 +209,14 @@ export default function FinalExam() {
           <p className="text-xs" style={{ color: "var(--text-4)" }}>
             {t("Kompetensi: {title} - {n} unit", { title: status?.competencyTitle || "-", n: status?.unitCount || 0 })}
           </p>
-          <button onClick={() => start.mutate()} disabled={start.isPending}
+          <button onClick={() => start.mutate()} disabled={menyusun}
             className="btn-primary text-sm flex items-center gap-2 disabled:opacity-70">
-            {start.isPending
+            {menyusun
               ? <><Loader2 className="w-4 h-4 animate-spin" /> {t("Menyusun soal…")}</>
               : <><Award className="w-4 h-4" /> {cert ? t("Ulangi Ujian Kompetensi") : t("Mulai Ujian Kompetensi")}</>}
           </button>
-          {start.isPending && (
-            <p className="text-xs" style={{ color: "var(--text-4)" }}>{t("Penyusunan soal pertama kali bisa memakan waktu sekitar satu menit, setelah itu tersimpan.")}</p>
+          {menyusun && (
+            <p className="text-xs" style={{ color: "var(--text-4)" }}>{t("Penyusunan soal berjalan di server - aman ditinggal. Kalau halaman tertutup, buka lagi dan soalnya tetap dilanjutkan.")}</p>
           )}
         </div>
       )}
