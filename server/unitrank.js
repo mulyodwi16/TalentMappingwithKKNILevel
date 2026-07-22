@@ -101,7 +101,7 @@ export const TIER_TOLERANCE = 0.8;
 // Sudah mentok cap bobot kompetensi (butuh bukti eksternal untuk lanjut) → atTop.
 // Mengembalikan LEVEL angka saja (tanpa nama) - klien yang memberi nama & warna rank.
 export function rankChapter({ ladder = [], next = null, effective = 0 } = {}) {
-  const map = ladder.map((s) => ({ level: s.level, total: s.total, done: s.done, complete: s.complete }));
+  const map = ladder.map((s) => ({ level: s.level, total: s.total, done: s.done, complete: s.complete, achieved: s.achieved }));
   const top = ladder.length ? ladder[ladder.length - 1].level : effective;
   const targetLevel = Math.max((effective || EARNED_FLOOR) + 1, next?.level || 0);
 
@@ -139,11 +139,18 @@ export function evaluateLadder(ladder, mastered, tolerance = TIER_TOLERANCE) {
     const reached = cumTotal > 0 && cumDone / cumTotal >= tolerance;
     // Berapa unit lagi (mana pun, termasuk tier bawah yang tertinggal) untuk mencapai tier ini.
     const need = Math.max(0, Math.ceil(tolerance * cumTotal) - cumDone);
+    // `reached` saja BELUM berarti tier itu didapat. Rasio kumulatif bisa turun di tier bawah
+    // lalu pulih di tier atas (mis. 1/2, 2/3, 3/3, 3/3 → Diamond 9/11 = 82%), sehingga tier
+    // atas tampak tercapai padahal rank berhenti di tier pertama yang gagal. `achieved` = benar
+    // benar didapat: tier ini DAN seluruh tier di bawahnya lolos. Ini yang dipakai tampilan
+    // (centang tangga rank) dan gerbang Kelas/Ujian, supaya tak pernah berselisih dengan `earned`.
+    const achieved = !blocked && reached;
     const s = {
       level: step.level,
       total,
       done,
       complete: reached,
+      achieved,
       need,
       cumDone,
       cumTotal,

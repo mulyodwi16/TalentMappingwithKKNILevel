@@ -685,6 +685,9 @@ export default {
   "kuasai {n} unit lagi": "master {n} more units",
   "Babak menuju {rank}": "Chapter to {rank}",
   "Kamu di sini": "You are here",
+  "Menunggu tier di bawahnya": "Waiting on the tier below",
+  "Ada tier atas yang unitnya sudah kamu kuasai, tapi belum dihitung selama tier di bawahnya masih bolong. Tutup unit dasarnya dulu - rank akan langsung menyusul.":
+    "You have finished the units in a higher tier, but it will not count while a tier below still has gaps. Close the foundational units first - your rank will follow right away.",
   "{a}/{b} unit babak ini": "{a}/{b} units this chapter",
   "{a}/{b} unit babak ini · {c} langkah prioritas siap": "{a}/{b} units this chapter · {c} priority steps ready",
   "Bar reset & maju ke tier berikutnya saat kamu naik rank.": "The bar resets and advances to the next tier when you rank up.",

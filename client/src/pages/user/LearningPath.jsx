@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import {
   Sparkles, Target, Loader2, RefreshCw, CheckCircle2, CircleDashed, CircleDot,
   GraduationCap, ChevronDown, Star, Compass, TrendingUp, AlertTriangle,
-  FileText, PenLine, Award, MapPin, MessageCircle, ArrowRight, ScanLine,
+  FileText, PenLine, Award, MapPin, MessageCircle, ArrowRight, ScanLine, Hourglass,
 } from "lucide-react";
 import api from "../../api/client.js";
 import { rankName, rankColor } from "../../lib/rank.js";
@@ -84,6 +84,10 @@ function JourneyArt({ done = 0, total = 0 }) {
 function LadderMap({ ladder = [], target, earned }) {
   const { t } = useLang();
   if (!ladder.length) return null;
+  // Tier yang unitnya sudah habis dikuasai TAPI belum terhitung, karena ada tier di bawahnya
+  // yang masih bolong. Tanpa penjelasan, "3/3" di tier atas berdampingan dengan rank yang
+  // rendah terbaca sebagai salah hitung.
+  const held = ladder.some((s) => s.total > 0 && s.done >= s.total && !(s.achieved ?? s.complete));
   return (
     <div className="pt-1">
       <p className="text-[11px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-4)" }}>{t("Tangga Rank")}</p>
@@ -93,6 +97,10 @@ function LadderMap({ ladder = [], target, earned }) {
           const isTarget = s.level === target;
           const col = rankColor(s.level);
           const pct = s.total ? Math.round((s.done / s.total) * 100) : 0;
+          // `achieved` = tier ini DAN semua tier di bawahnya lolos. Memakai `complete` di sini
+          // dulu memberi centang hijau pada tier atas yang rank-nya belum diraih.
+          const done = s.achieved ?? s.complete;
+          const full = s.total > 0 && s.done >= s.total && !done;   // penuh tapi tertahan
           return (
             <div key={s.level} className="shrink-0 rounded-lg px-2.5 py-2 flex flex-col items-center gap-1 min-w-[76px]"
               style={{
@@ -101,19 +109,25 @@ function LadderMap({ ladder = [], target, earned }) {
               }}>
               <div className="flex items-center gap-1">
                 <RankIcon level={s.level} size={16} />
-                {s.complete && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
-                {isTarget && !s.complete && <Target className="w-3 h-3" style={{ color: col }} />}
+                {done && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
+                {full && <Hourglass className="w-3 h-3" style={{ color: "var(--text-4)" }} title={t("Menunggu tier di bawahnya")} />}
+                {isTarget && !done && !full && <Target className="w-3 h-3" style={{ color: col }} />}
               </div>
-              <span className="text-[10px] font-semibold" style={{ color: s.complete ? "#10b981" : (isCurrent || isTarget) ? col : "var(--text-4)" }}>{rankName(s.level)}</span>
+              <span className="text-[10px] font-semibold" style={{ color: done ? "#10b981" : (isCurrent || isTarget) ? col : "var(--text-4)" }}>{rankName(s.level)}</span>
               <span className="text-[10px] tabular-nums" style={{ color: "var(--text-4)" }}>{s.done}/{s.total}</span>
               <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: "var(--bg-muted)" }}>
-                <div className="h-full rounded-full" style={{ width: `${pct}%`, background: s.complete ? "#10b981" : col }} />
+                <div className="h-full rounded-full" style={{ width: `${pct}%`, background: done ? "#10b981" : col, opacity: full ? 0.45 : 1 }} />
               </div>
               {isCurrent && <span className="text-[9px] font-semibold leading-none" style={{ color: col }}>{t("Kamu di sini")}</span>}
             </div>
           );
         })}
       </div>
+      {held && (
+        <p className="text-[11px] mt-1" style={{ color: "var(--text-4)" }}>
+          {t("Ada tier atas yang unitnya sudah kamu kuasai, tapi belum dihitung selama tier di bawahnya masih bolong. Tutup unit dasarnya dulu - rank akan langsung menyusul.")}
+        </p>
+      )}
     </div>
   );
 }

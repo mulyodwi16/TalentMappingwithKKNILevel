@@ -151,6 +151,52 @@ test("ambang kumulatif memberi toleransi satu unit yang tertinggal", () => {
   assert.equal(r.earned, 6, "10 dari 11 unit harus tetap meraih tier puncak");
 });
 
+// Rasio kumulatif bisa TURUN di tier bawah lalu PULIH di tier atas, sehingga sebuah tier
+// tampak `complete` padahal rank berhenti di tier pertama yang gagal. Tampilan tangga rank
+// dan gerbang Kelas/Ujian harus memakai `achieved` (tier ini + semua tier di bawahnya lolos),
+// kalau tidak pengguna melihat centang hijau di Diamond sementara rank-nya masih Gold.
+test("`achieved` tidak pernah melampaui rank yang diraih", () => {
+  const l = buildRankLadder(UNIT_VIDEO, 6);            // tier 3..6, isi 2/3/3/3
+  // Lulus: 1 dari Gold, 2 dari Platinum, seluruh Emerald & Diamond → kumulatif 9/11 = 82%.
+  const mastered = new Set([
+    l[0].units[0].code,
+    ...l[1].units.slice(0, 2).map((u) => u.code),
+    ...l[2].units.map((u) => u.code),
+    ...l[3].units.map((u) => u.code),
+  ]);
+  const r = evaluateLadder(l, mastered);
+  const puncak = r.steps[r.steps.length - 1];
+
+  assert.equal(r.earned, 0, "tier dasar bolong → belum meraih tier mana pun");
+  assert.equal(puncak.complete, true, "kumulatif puncak memang tembus ambang");
+  assert.equal(puncak.achieved, false, "tapi tak boleh dinyatakan didapat selama dasarnya bolong");
+  assert.ok(r.steps.every((s) => !s.achieved), "tak satu pun tier boleh tampak tuntas di sini");
+});
+
+test("`achieved` menyala untuk tier yang benar-benar dilewati berurutan", () => {
+  const l = buildRankLadder(UNIT_VIDEO, 6);
+  const semua = UNIT_VIDEO.map((u) => u.code);
+  const r = evaluateLadder(l, new Set(semua));
+  assert.equal(r.earned, 6);
+  assert.ok(r.steps.every((s) => s.achieved), "semua unit dikuasai → seluruh tier didapat");
+});
+
+test("`achieved` selalu berhenti tepat di rank yang diraih", () => {
+  const l = buildRankLadder(UNIT_VIDEO, 6);
+  const semua = UNIT_VIDEO.map((u) => u.code);
+  for (let n = 0; n <= semua.length; n++) {
+    const r = evaluateLadder(l, new Set(semua.slice(0, n)));
+    const tertinggi = r.steps.filter((s) => s.achieved).map((s) => s.level).pop() || 0;
+    assert.equal(tertinggi, r.earned, `n=${n}: tier tertinggi yang tampak tuntas harus = rank diraih`);
+  }
+});
+
+test("babak: peta ladder ikut membawa `achieved`", () => {
+  const r = rankLike(UNIT_VIDEO, 6, UNIT_VIDEO.map((u) => u.code));
+  const ch = rankChapter(r);
+  assert.ok(ch.ladder.every((s) => s.achieved === true), "peta babak harus meneruskan achieved apa adanya");
+});
+
 test("toleransi tidak boleh dilonggarkan diam-diam", () => {
   assert.equal(TIER_TOLERANCE, 0.8);
 });

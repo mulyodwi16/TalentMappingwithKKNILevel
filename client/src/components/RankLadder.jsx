@@ -36,7 +36,9 @@ export default function RankLadder({ rank, compact = false }) {
 
       <div className="space-y-3">
         {steps.map((s) => {
-          const reached = s.complete;
+          // `achieved`, bukan `complete`: sebuah tier hanya boleh tampak tuntas kalau seluruh
+          // tier di bawahnya juga tuntas - kalau tidak, centangnya bertabrakan dengan rank nyata.
+          const reached = s.achieved ?? s.complete;
           const isNext = s.level === nextLevel;
           const color = rankColor(s.level);
           return (

@@ -954,10 +954,12 @@ export async function unitStates(userId, docId) {
   const lad = evaluateLadder(ladder, passedCodes);
   const tierOf = {};
   ladder.forEach((step) => step.units.forEach((u) => { tierOf[u.code] = step.level; }));
-  // Tier terbuka bila tier PERTAMA, atau tier tepat di bawahnya sudah "complete" (ambang
-  // kumulatif tercapai). `lad.steps` sejajar urutan `ladder`.
+  // Tier terbuka bila tier PERTAMA, atau tier tepat di bawahnya sudah `achieved` (ambang
+  // kumulatif tercapai DAN tak ada tier di bawahnya yang bolong). Sengaja BUKAN `complete`:
+  // rasio kumulatif bisa pulih di tier atas walau tier dasar gagal, dan itu akan membuka kelas
+  // lanjutan untuk orang yang rank-nya sendiri masih tertahan di bawah. `lad.steps` sejajar `ladder`.
   const tierOpen = {};
-  lad.steps.forEach((s, idx) => { tierOpen[s.level] = idx === 0 || lad.steps[idx - 1].complete; });
+  lad.steps.forEach((s, idx) => { tierOpen[s.level] = idx === 0 || lad.steps[idx - 1].achieved; });
 
   // Urutan tampilan = urutan tangga (tier bawah dulu, lalu susunan dalam-tier dari buildRankLadder).
   const ordered = ladder.flatMap((step) => step.units);
