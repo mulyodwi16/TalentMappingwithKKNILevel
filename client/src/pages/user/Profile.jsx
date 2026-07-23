@@ -347,7 +347,8 @@ function ReadinessCard({ readiness, rankInfo, rank, level }) {
         )}
 
         <div className="flex flex-wrap gap-1 mt-2">
-          {RANKS.filter((x) => x.level >= 3).map((x) => {
+          {/* Saringan ">= 3" tak lagi perlu: RANKS sendiri sudah mulai dari KKNI 3. */}
+          {RANKS.map((x) => {
             const capped = rank?.weightCap && x.level > rank.weightCap;
             return (
               <span key={x.level} className="text-[10px] px-1.5 py-0.5 rounded-full"
@@ -563,7 +564,7 @@ function EditableIdentity({ profile, onSaved, compact = false }) {
           <Field label={t("Target Rank")}>
             <select className="input text-sm" value={form.targetKkniLevel} onChange={(e) => setForm({ ...form, targetKkniLevel: e.target.value })}>
               <option value="">{t("- tidak diset -")}</option>
-              {RANKS.map((r) => <option key={r.level} value={r.level}>{r.name} (Rank {r.level})</option>)}
+              {RANKS.map((r) => <option key={r.level} value={r.level}>{r.name} (KKNI {r.level})</option>)}
             </select>
           </Field>
         </div>

@@ -127,6 +127,135 @@ export function matchJob(job, profile) {
 
 export function safeArr(json) { try { const a = JSON.parse(json || "[]"); return Array.isArray(a) ? a : []; } catch { return []; } }
 
+// ── Jembatan AI: syarat posisi vs unit yang SUDAH dibuktikan ─────────────────
+// `similar()` di atas hanya melihat KATA. Nama unit SKKNI ditulis sebagai kalimat prosedural
+// ("Menerapkan prinsip kerja sama dalam tim") sedangkan syarat posisi ditulis sebagai istilah
+// pasar ("Bisa bekerjasama dalam tim") - maknanya sama, katanya tidak cukup beririsan, dan
+// pengguna melihat "belum ada bukti" untuk sesuatu yang sudah dia lulusi.
+//
+// Maka: cocokkan deterministik DULU, dan HANYA sisanya yang ditanyakan ke AI.
+//
+// INVARIAN YANG TIDAK BOLEH GOYAH: ini bukan jalan pintas menuju "kompetensi tanpa ujian".
+// Buktinya tetap unit yang LULUS UJIAN - AI hanya menjembatani perbedaan istilah. Karena itu
+// AI WAJIB menyebut unit mana yang menutupi, dan jawabannya DIVERIFIKASI ulang di sini: unit
+// yang disebut harus benar-benar ada di daftar tervalidasi. Kalau AI mengarang nama unit,
+// jawabannya dibuang. Tanpa penjagaan ini, satu halusinasi langsung menaikkan skor kecocokan.
+const NEGATIF = { covered: false, unit: null, note: "" };
+
+// Sidik jari daftar unit tervalidasi - dipakai sebagai bagian kunci cache supaya hasilnya
+// otomatis kedaluwarsa begitu pengguna lulus unit baru.
+function fingerprint(list) {
+  return list.map((s) => norm(s)).sort().join("|");
+}
+
+// Cache HANYA di memori: hasilnya turunan dari data yang bisa berubah, dan menyimpannya di
+// basis data berarti menambah tabel yang harus diinvalidasi sendiri. Konsekuensi jujurnya -
+// cache hilang saat server restart, jadi pembukaan pertama sesudah deploy memanggil AI lagi.
+const jembatanCache = new Map();
+const CACHE_MAX = 500;
+
+function cacheSet(key, val) {
+  if (jembatanCache.size >= CACHE_MAX) jembatanCache.delete(jembatanCache.keys().next().value);
+  jembatanCache.set(key, val);
+}
+
+// Panggilan LLM sungguhan. Kembalikan array mentah hasil parse (atau lempar bila LLM mati /
+// balasannya bukan JSON) - `bridgeMissingSkills` yang memvalidasi isinya.
+async function defaultAsk(validated, perlu, lang) {
+  if (!isLlmConfigured()) throw new Error("LLM tak terkonfigurasi");
+  const r = await chatComplete([{ role: "user", content: PROMPT[lang === "en" ? "en" : "id"](validated, perlu) }],
+    { temperature: 0.1, maxTokens: 180 * perlu.length + 400 });
+  const m = r.content.match(/\[[\s\S]*\]/);
+  return JSON.parse(m ? m[0] : r.content);
+}
+
+const PROMPT = {
+  id: (units, reqs) =>
+    `Kamu penilai kesetaraan kompetensi di TalentaAI. Pengguna sudah LULUS UJIAN untuk unit-unit ` +
+    `kompetensi SKKNI berikut (nama resminya panjang & formal):\n${units.map((u, i) => `${i + 1}. ${u}`).join("\n")}\n\n` +
+    `Perekrut menulis syarat posisi dengan bahasa pasar yang lebih singkat. Untuk TIAP syarat di bawah, ` +
+    `tentukan apakah salah satu unit di atas SUDAH mencakup maksudnya.\n` +
+    `SYARAT:\n${reqs.map((s, i) => `${i + 1}. ${s}`).join("\n")}\n\n` +
+    `Aturan: bersikap KRITIS. Cocokkan MAKSUD pekerjaannya, bukan kemiripan kata. Alat/aplikasi ` +
+    `spesifik (mis. "menguasai Adobe Premiere") TIDAK tercakup oleh unit umum tentang menyunting video. ` +
+    `Kalau ragu, jawab tidak tercakup - lebih baik pengguna diminta membuktikan daripada diberi ` +
+    `pengakuan palsu.\n` +
+    `Balas HANYA JSON array: [{"syarat":"<salin persis>","unit":"<salin PERSIS nama unit dari daftar, atau null>","alasan":"<1 kalimat singkat>"}]`,
+  en: (units, reqs) =>
+    `You assess competency equivalence for TalentaAI. The user has PASSED EXAMS for these Indonesian ` +
+    `SKKNI competency units (their official names are long and formal):\n${units.map((u, i) => `${i + 1}. ${u}`).join("\n")}\n\n` +
+    `Recruiters phrase job requirements in shorter market language. For EACH requirement below, decide ` +
+    `whether one of the units above already covers what it means.\n` +
+    `REQUIREMENTS:\n${reqs.map((s, i) => `${i + 1}. ${s}`).join("\n")}\n\n` +
+    `Rules: be STRICT. Match the work being described, not word similarity. A specific tool or app ` +
+    `(e.g. "proficient in Adobe Premiere") is NOT covered by a general unit about editing video. ` +
+    `When in doubt, answer not covered - better to ask the user to prove it than to grant false credit.\n` +
+    `Reply with JSON array ONLY: [{"syarat":"<copy exactly>","unit":"<copy the unit name EXACTLY from the list, or null>","alasan":"<one short sentence>"}]`,
+};
+
+// Kembalikan Map<syarat, {unit, note}> untuk syarat yang MEMANG tercakup unit tervalidasi.
+// `ask` bisa disuntik di tes supaya perilakunya bisa diperiksa TANPA menembak LLM (mahal &
+// tak deterministik) - di produksi ia default ke chatComplete sungguhan.
+export async function bridgeMissingSkills(missing, validated, lang = "id", ask = defaultAsk) {
+  const out = new Map();
+  if (!missing?.length || !validated?.length) return out;
+
+  const fp = fingerprint(validated);
+  const perlu = [];
+  for (const s of missing) {
+    const key = `${lang}|${fp}|${norm(s)}`;
+    if (jembatanCache.has(key)) {
+      const v = jembatanCache.get(key);
+      if (v.covered) out.set(s, v);
+    } else perlu.push(s);
+  }
+  if (!perlu.length) return out;
+
+  // Satu panggilan untuk SEMUA syarat sisa: lebih murah, dan modelnya melihat seluruh
+  // daftar unit sekaligus sehingga tak menilai tiap syarat dalam ruang hampa.
+  let arr = [];
+  try {
+    arr = await ask(validated, perlu, lang);
+    if (!Array.isArray(arr)) arr = [];
+  } catch (e) {
+    console.warn("[jobmatch] jembatan AI gagal:", e.message);
+    return out;   // gagal = perilaku lama (deterministik saja), bukan galat ke pengguna
+  }
+
+  const sah = new Map(validated.map((u) => [norm(u), u]));
+  const jawab = new Map(arr.map((x) => [norm(x?.syarat), x]));
+
+  for (const s of perlu) {
+    const key = `${lang}|${fp}|${norm(s)}`;
+    const x = jawab.get(norm(s));
+    const unit = x?.unit ? sah.get(norm(x.unit)) : null;   // ← penjaga anti-halusinasi
+    if (!unit) { cacheSet(key, NEGATIF); continue; }
+    const v = { covered: true, unit, note: String(x.alasan || "").slice(0, 200) };
+    cacheSet(key, v);
+    out.set(s, v);
+  }
+  return out;
+}
+
+// Versi `matchJob` yang memakai jembatan AI untuk syarat yang belum terdeteksi.
+// Sengaja TERPISAH dari `matchJob`: kolam talenta HRD memanggil pencocokan N pengguna x M
+// posisi sekaligus, dan menaruh panggilan AI di jalur itu berarti ratusan permintaan per
+// pembukaan halaman. Yang ini dipakai di layar detail posisi - satu pengguna, satu posisi.
+export async function matchJobDeep(job, profile, lang = "id", ask = defaultAsk) {
+  const base = matchJob(job, profile);
+  if (!base.missingSkills.length) return base;
+
+  const validated = profile.validatedSkills || profile.skills || [];
+  const bridged = await bridgeMissingSkills(base.missingSkills, validated, lang, ask);
+  if (!bridged.size) return base;
+
+  // Hitung ulang lewat `matchJob` yang SAMA dengan menambahkan nama syarat sebagai alias
+  // tervalidasi - jangan menyalin rumus skornya ke sini, dua salinan pasti akan berbeda.
+  const deep = matchJob(job, { ...profile, validatedSkills: [...validated, ...bridged.keys()] });
+  deep.bridged = [...bridged.entries()].map(([skill, v]) => ({ skill, unit: v.unit, note: v.note }));
+  return deep;
+}
+
 // ── Deteksi bukti skill dari CV + portofolio (Peta Posisi #5) ────────────────
 // AI membaca ringkasan CV pengguna + deskripsi/tautan portofolio yang dikirim,
 // lalu menilai apakah ADA indikasi kuat penguasaan `skill`. Hasil ini HANYA "klaim

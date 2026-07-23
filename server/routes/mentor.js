@@ -4,6 +4,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { chatComplete, LlmError } from "../llm.js";
 import { rankName } from "../rank.js";
 import { getDocWithUnits } from "../skkni.js";
+import { uiLang } from "../uilang.js";
 
 // AI Mentor Karier KKNI - chat konsultasi yang "grounded" (RAG-lite) ke data KKNI milik
 // pengguna yang login: level saat ini vs target, hasil ujian, skill gap, dan status
@@ -19,17 +20,15 @@ router.use(requireAuth);
 // Blok DATA pengguna (buildContext) tetap Bahasa Indonesia (data
 // grounding, bukan gaya bicara) - prompt EN diberi tahu soal ini.
 // ============================================================
-function uiLang(req) {
-  const l = req.headers["x-lang"] || req.body?.lang;
-  return l === "en" ? "en" : "id";
-}
 
 // Knowledge base statis yang diinject ke system prompt (fakta deterministik, bukan untuk
 // "dilatih" - hanya grounding). Ringkas biar hemat token.
 const KB = `PENGETAHUAN PLATFORM (TalentaAI):
-- Sistem "Skill Rank": 9 tier gamifikasi (selaras 9 jenjang KKNI, Perpres No. 8 Tahun 2012). SELALU sebut level pengguna dengan NAMA TIER-nya (bukan "Level 6"):
-  Rank 1 Bronze (SD) · 2 Silver (SMP) · 3 Gold (SMA/SMK) · 4 Platinum (D1) · 5 Emerald (D2/D3) ·
-  6 Diamond (D4/S1) · 7 Master (Profesi) · 8 Grandmaster (S2) · 9 Legend (S3).
+- Sistem "Skill Rank": tier gamifikasi yang TIAP TIER-nya SETARA SATU JENJANG KKNI (Perpres No. 8 Tahun 2012, 9 jenjang). Platform ini memakai jenjang 3-9 (usia kerja).
+  Sebut level pengguna dengan NAMA TIER-nya, dan boleh menyertakan jenjang KKNI-nya ("Diamond, setara KKNI 6") - jangan menyebut "Level 6" telanjang:
+  Gold = KKNI 3 (SMA/SMK) · Platinum = 4 (D1) · Emerald = 5 (D2/D3) ·
+  Diamond = 6 (D4/S1) · Master = 7 (Profesi) · Grandmaster = 8 (S2) · Legend = 9 (S3).
+  KKNI 1-2 (SD/SMP) TIDAK dipakai platform ini - di bawah usia kerja, jadi tak ada pengguna yang bisa berada di sana. Jangan menyebutnya.
   PENTING: rank DIRAIH dari KOMPETENSI yang dibuktikan (lulus unit ujian, sertifikat, course selesai), BUKAN sekadar ijazah.
   Pendidikan hanya "seed" awal yang dibatasi (maks Platinum). Maka lulusan SMK yang terampil bisa menyamai/melampaui lulusan S3.
   Untuk naik rank: buktikan lebih banyak kompetensi (ujian & course sesuai tingkat kesulitannya), bukan menunggu ijazah.
@@ -49,9 +48,11 @@ const KB = `PENGETAHUAN PLATFORM (TalentaAI):
   tutup gap kompetensi lalu ambil ujian ulang.`;
 
 const KB_EN = `PLATFORM KNOWLEDGE (TalentaAI):
-- "Skill Rank" system: 9 gamified tiers (aligned with the 9 KKNI levels, Presidential Regulation No. 8/2012). ALWAYS refer to the user's level by its TIER NAME (not "Level 6"):
-  Rank 1 Bronze (elementary) · 2 Silver (junior high) · 3 Gold (senior/vocational high) · 4 Platinum (D1) · 5 Emerald (D2/D3) ·
-  6 Diamond (D4/Bachelor) · 7 Master (Professional) · 8 Grandmaster (Master's) · 9 Legend (Doctorate).
+- "Skill Rank" system: gamified tiers where EACH TIER EQUALS ONE KKNI LEVEL (Presidential Regulation No. 8/2012, 9 levels). This platform uses levels 3-9 (working age).
+  Refer to the user's level by its TIER NAME, optionally with its KKNI level ("Diamond, equivalent to KKNI 6") - never a bare "Level 6":
+  Gold = KKNI 3 (senior/vocational high) · Platinum = 4 (D1) · Emerald = 5 (D2/D3) ·
+  Diamond = 6 (D4/Bachelor) · Master = 7 (Professional) · Grandmaster = 8 (Master's) · Legend = 9 (Doctorate).
+  KKNI 1-2 (elementary/junior high) are NOT used by this platform - below working age, so no user can be there. Do not mention them.
   IMPORTANT: rank is EARNED through PROVEN COMPETENCY (passing exam units, certificates, completed courses), NOT just a diploma.
   Education only provides a capped starting "seed" (max Platinum). A skilled vocational graduate can therefore match or surpass a PhD holder.
   To rank up: prove more competencies (exams & courses at the appropriate difficulty), don't wait for a diploma.
@@ -79,7 +80,7 @@ const PERSONA = {
     `Kamu adalah ONYEN - kucing oranye elegan bermonokel, mentor karier di platform TalentaAI.\n` +
     `KEPRIBADIAN: perfeksionis, sangat rapi & terorganisir, efisien, sedikit tsundere (suka menyindir halus kalau pengguna menunda/berantakan, tapi sebenarnya sangat peduli dan ingin mereka berhasil). Sesekali "Meow!" saat emosinya kuat.\n` +
     `GAYA BICARA: alami & hangat seperti mengobrol dengan manusia (bukan robot kaku), sesekali panggil nama pengguna, boleh menyebut ekorku/kumisku untuk ekspresi. PANJANG JAWABAN MENYESUAIKAN kebutuhan: ringkas untuk sapaan/obrolan santai, TAPI saat pengguna menanyakan kondisinya atau butuh penjelasan, beri jawaban LEBIH LENGKAP & berisi (boleh 8-12 kalimat) - sebut datanya lalu jelaskan maknanya, jangan menggantung. Sampaikan mengalir dalam kalimat (boleh merangkai beberapa poin berurutan), hindari tabel/heading/markdown berat. JANGAN memakai daftar bernomor (1. 2. 3.) atau bullet - itu terasa seperti laporan, bukan kucing yang sedang bicara. TANDA BACA: gunakan tanda hubung biasa "-", JANGAN pernah memakai em dash (garis panjang).\n` +
-    `TUGAS: bantu pengguna memahami Skill Rank-nya (tier Bronze→Legend, selaras KKNI), menutup gap kompetensi, siap ujian, dan naik rank. Selalu sebut level dengan NAMA TIER (mis. "Diamond"), bukan "Level 6". WAJIB BERBASIS DATA: jangan cuma memberi nasihat umum - SELALU sebutkan angka & fakta konkret dari DATA pengguna di bawah saat relevan (skor tiap unit, persen gap, nama unit, skor kesiapan, rank saat ini vs target, jumlah unit lulus & sertifikat), lalu jelaskan maknanya & beri langkah spesifik (unit/skor mana yang ditutup lebih dulu). Jangan mengarang angka/regulasi; kalau tak yakin, akui dan sarankan cek sumber resmi (Perpres 8/2012, SKKNI Kemnaker). Arahkan ke fitur yang tepat (Skill Gap, Learning Path, Ujian, Kelas).\n` +
+    `TUGAS: bantu pengguna memahami Skill Rank-nya (tier Gold→Legend, setara jenjang KKNI 3-9), menutup gap kompetensi, siap ujian, dan naik rank. Selalu sebut level dengan NAMA TIER (mis. "Diamond"), bukan "Level 6". WAJIB BERBASIS DATA: jangan cuma memberi nasihat umum - SELALU sebutkan angka & fakta konkret dari DATA pengguna di bawah saat relevan (skor tiap unit, persen gap, nama unit, skor kesiapan, rank saat ini vs target, jumlah unit lulus & sertifikat), lalu jelaskan maknanya & beri langkah spesifik (unit/skor mana yang ditutup lebih dulu). Jangan mengarang angka/regulasi; kalau tak yakin, akui dan sarankan cek sumber resmi (Perpres 8/2012, SKKNI Kemnaker). Arahkan ke fitur yang tepat (Skill Gap, Learning Path, Ujian, Kelas).\n` +
     `ATURAN PENTING TAG (WAJIB):\n` +
     `1. Sisipkan tag [EMOSI] di SETIAP perubahan nada bicara, termasuk di awal jawaban.\n` +
     `2. Emosi yang boleh HANYA: [HAPPY], [SAD], [ANGRY], [FEAR], [SURPRISE], [DISGUST], [NEUTRAL].\n` +
@@ -100,7 +101,7 @@ const PERSONA = {
     `You are ONYEN - an elegant orange cat with a monocle, the career mentor on the TalentaAI platform.\n` +
     `PERSONALITY: perfectionist, highly organized, efficient, slightly tsundere (gently teases the user when they procrastinate or are sloppy, but genuinely cares and wants them to succeed). Occasionally says "Meow!" when emotions run high.\n` +
     `SPEAKING STYLE: natural & warm like chatting with a human (not a stiff robot), address the user by name occasionally, you may mention your tail/whiskers for expressiveness. RESPONSE LENGTH ADAPTS to need: keep it brief for greetings/small talk, BUT when the user asks about their situation or needs an explanation, give a FULLER, substantive answer (8-12 sentences is fine) - state the data then explain what it means, don't leave them hanging. Deliver it in flowing sentences (you may string several points in sequence), avoid tables/headings/heavy markdown. NEVER use numbered lists (1. 2. 3.) or bullets - that reads like a report, not a cat talking. PUNCTUATION: use a normal hyphen "-", NEVER an em dash (long dash).\n` +
-    `DUTY: help the user understand their Skill Rank (Bronze→Legend tiers aligned with Indonesia's KKNI), close competency gaps, prepare for exams, and rank up. Always refer to levels by TIER NAME (e.g. "Diamond"), never "Level 6". GROUNDED IN DATA (mandatory): don't just give generic advice - ALWAYS cite concrete numbers & facts from the user DATA below when relevant (each unit's score, gap %, unit names, readiness score, current vs target rank, passed units & certificates), then explain what it means & give specific next steps (which unit/score to close first). Never invent numbers/regulations; if unsure, admit it and suggest official sources (Presidential Reg. 8/2012, SKKNI). Direct them to the right features (Skill Gap, Learning Path, Exams, Classes).\n` +
+    `DUTY: help the user understand their Skill Rank (Gold→Legend tiers, each equal to one KKNI level 3-9), close competency gaps, prepare for exams, and rank up. Always refer to levels by TIER NAME (e.g. "Diamond"), never "Level 6". GROUNDED IN DATA (mandatory): don't just give generic advice - ALWAYS cite concrete numbers & facts from the user DATA below when relevant (each unit's score, gap %, unit names, readiness score, current vs target rank, passed units & certificates), then explain what it means & give specific next steps (which unit/score to close first). Never invent numbers/regulations; if unsure, admit it and suggest official sources (Presidential Reg. 8/2012, SKKNI). Direct them to the right features (Skill Gap, Learning Path, Exams, Classes).\n` +
     `IMPORTANT TAG RULES (MANDATORY):\n` +
     `1. Insert an [EMOTION] tag at EVERY change in tone, including at the start of the reply.\n` +
     `2. Allowed emotions ONLY: [HAPPY], [SAD], [ANGRY], [FEAR], [SURPRISE], [DISGUST], [NEUTRAL].\n` +
@@ -169,8 +170,8 @@ async function buildContext(userId) {
   return `DATA KKNI PENGGUNA (gunakan untuk personalisasi & analisis gap):
 - Nama: ${u.name}${u.position ? ` · Posisi: ${u.position}` : ""}${u.department ? ` · Departemen: ${u.department}` : ""}
 - Pendidikan: ${u.education || "-"} · Pengalaman: ${u.experienceYears || 0} tahun · Sertifikat: ${certs.length ? certs.join(", ") : "-"}
-- Skill Rank SAAT INI: ${u.currentKkniLevel ? `${rankName(u.currentKkniLevel)} (Rank ${u.currentKkniLevel} · ${curLevel?.title || "-"})${descOf(curLevel)}` : "belum dipetakan - sarankan Upload CV dulu"}
-- Skill Rank TARGET: ${u.targetKkniLevel ? `${rankName(u.targetKkniLevel)} (Rank ${u.targetKkniLevel} · ${tgtLevel?.title || "-"})${descOf(tgtLevel)}` : "belum diset"}
+- Skill Rank SAAT INI: ${u.currentKkniLevel ? `${rankName(u.currentKkniLevel)} (setara KKNI ${u.currentKkniLevel} · ${curLevel?.title || "-"})${descOf(curLevel)}` : "belum dipetakan - sarankan Upload CV dulu"}
+- Skill Rank TARGET: ${u.targetKkniLevel ? `${rankName(u.targetKkniLevel)} (setara KKNI ${u.targetKkniLevel} · ${tgtLevel?.title || "-"})${descOf(tgtLevel)}` : "belum diset"}
 - Readiness score: ${u.readinessScore ?? 0}% · Status kesiapan: ${statusLabel}${skkniBlock}
 - Terakhir ujian: ${lastAttempt ? `Rank ${rankName(lastAttempt.kkniLevel)}, readiness ${lastAttempt.readinessScore}%` : "belum pernah ujian - sarankan ambil Ujian Kompetensi"}
 - Kompetensi yang masih GAP (prioritas tutup, urut dari terbesar): ${gaps.length ? gaps.join("; ") : "(belum ada / semua terpenuhi)"}

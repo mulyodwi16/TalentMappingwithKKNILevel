@@ -3,7 +3,8 @@ import xlsx from "xlsx";
 import { prisma } from "../prisma.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { rankName } from "../rank.js";
-import { buildSkillProfile, matchJob, safeArr, detectSkillEvidence } from "../jobmatch.js";
+import { buildSkillProfile, matchJob, matchJobDeep, safeArr, detectSkillEvidence } from "../jobmatch.js";
+import { uiLang } from "../uilang.js";
 
 // Peta Posisi & Kesiapan (talent mapping internal - BUKAN rekrutmen eksternal):
 // HRD memposting profil posisi berkriteria (level KKNI, skill, pengalaman, sertifikasi) + modul
@@ -135,7 +136,10 @@ router.get("/:id", async (req, res) => {
   const job = shapeJob(j);
   let match = null, targeted = false, claims = [];
   if (req.user.role === "user") {
-    match = matchJob(job, await buildSkillProfile(req.user.id));
+    // Detail posisi = satu pengguna x satu posisi, jadi di SINILAH jembatan AI dipakai untuk
+    // syarat yang tak tertangkap pencocokan kata. Daftar posisi (`GET /`) & kolam talenta HRD
+    // TETAP memakai matchJob biasa - di sana pencocokan terjadi N x M dan AI akan meledak.
+    match = await matchJobDeep(job, await buildSkillProfile(req.user.id), uiLang(req));
     targeted = !!(await prisma.jobApplication.findUnique({ where: { jobId_userId: { jobId: j.id, userId: req.user.id } } }));
     claims = await prisma.skillClaim.findMany({ where: { userId: req.user.id, jobId: j.id }, orderBy: { createdAt: "desc" } }).catch(() => []);
   }

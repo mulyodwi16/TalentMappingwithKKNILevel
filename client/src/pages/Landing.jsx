@@ -8,8 +8,7 @@ import useIsDark from "../lib/useIsDark.js";
 import { applyTheme } from "../lib/theme.js";
 
 const LEVELS = [
-  { n: 1, title: "Operator Dasar",  edu: "SD" },
-  { n: 2, title: "Operator",        edu: "SMP" },
+// Mulai KKNI 3: jenjang 1-2 (SD/SMP) di bawah usia kerja, lihat lib/rank.js.
   { n: 3, title: "Op. Terampil",    edu: "SMA/SMK" },
   { n: 4, title: "Teknisi Junior",  edu: "D1" },
   { n: 5, title: "Teknisi",         edu: "D2/D3" },
@@ -144,7 +143,10 @@ export default function Landing() {
       {/* ── KKNI Levels ── */}
       <section style={{ padding: "72px 24px", background: dark ? "#0b1120" : "#eff6ff" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <h2 style={{ textAlign: "center", fontSize: "clamp(1.6rem,3vw,2.2rem)", fontWeight: 800, marginBottom: 40 }}>{t("9 Tier Skill Rank")}</h2>
+          <h2 style={{ textAlign: "center", fontSize: "clamp(1.6rem,3vw,2.2rem)", fontWeight: 800, marginBottom: 8 }}>{t("Skill Rank Selaras KKNI")}</h2>
+          <p style={{ textAlign: "center", fontSize: 14, opacity: 0.8, marginBottom: 40, maxWidth: 640, marginLeft: "auto", marginRight: "auto" }}>
+            {t("KKNI punya 9 jenjang (Perpres 8/2012). TalentaAI mulai dari Gold (KKNI 3) - jenjang usia kerja; KKNI 1-2 (SD/SMP) tidak dipakai.")}
+          </p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(100px,1fr))", gap: 12 }}>
             {LEVELS.map(({ n, edu }) => (
               <div key={n} style={{ background: dark ? "rgba(59,130,246,0.1)" : "#ffffff", border: `1px solid ${dark ? "rgba(59,130,246,0.2)" : "#bfdbfe"}`, borderRadius: 14, padding: "14px 10px", textAlign: "center" }}>

@@ -240,7 +240,7 @@ export default function JobBoard() {
             <div><label className="text-xs" style={{ color: "var(--text-3)" }}>{t("Perusahaan/Unit")}</label>{inp("company", { placeholder: "PT Kreatif" })}</div>
             <div><label className="text-xs" style={{ color: "var(--text-3)" }}>{t("Lokasi")}</label>{inp("location", { placeholder: "Jakarta" })}</div>
             <div><label className="text-xs" style={{ color: "var(--text-3)" }}>{t("Departemen")}</label>{inp("department", { placeholder: t("Produksi") })}</div>
-            <div><label className="text-xs" style={{ color: "var(--text-3)" }}>{t("Min. Skill Rank (1=Bronze … 9=Legend)")}</label>{inp("kkniLevel", { type: "number", min: 1, max: 9 })}</div>
+            <div><label className="text-xs" style={{ color: "var(--text-3)" }}>{t("Min. Skill Rank (KKNI 3=Gold … 9=Legend)")}</label>{inp("kkniLevel", { type: "number", min: 3, max: 9 })}</div>
             <div><label className="text-xs" style={{ color: "var(--text-3)" }}>{t("Min. Pengalaman (th)")}</label>{inp("minExperience", { type: "number", min: 0 })}</div>
           </div>
           <div>

@@ -1,11 +1,11 @@
-import { rankOf, rankName, RANKS } from "../lib/rank.js";
+import { rankOf, rankName, RANKS, KKNI_FLOOR } from "../lib/rank.js";
 import RankIcon from "./RankIcon.jsx";
 import { useLang } from "../lib/i18n.jsx";
 import useIsDark from "../lib/useIsDark.js";
 
 // Panggung rank ala main-menu game ranked - komponen rank terbesar & tersorot.
 // Dipakai di Dashboard (hero) & Profile (pusat). Selalu panel gelap dramatis;
-// warna aksen mengikuti tier rank (Bronze→Legend).
+// warna aksen mengikuti tier rank (Gold→Legend, setara KKNI 3-9).
 //
 // props:
 //  rank       : objek dari /user/overview.rank (effective, masteryScore, weightCap, next, dsb.)
@@ -21,7 +21,9 @@ export default function RankHero({
 }) {
   const { t } = useLang();
   const dark = useIsDark();
-  const level = rank?.effective || rank?.earned || 1;
+  // Cadangannya KKNI_FLOOR, bukan 1: jenjang 1-2 sudah tidak ada di RANKS, jadi angka 1
+  // akan membuat rankOf() gagal dan emblemnya jatuh ke tier yang salah.
+  const level = rank?.effective || rank?.earned || KKNI_FLOOR;
   const r = rankOf(level) || RANKS[0];
   const c = r.color;
   const cap = rank?.weightCap || 9;
@@ -82,10 +84,16 @@ export default function RankHero({
               WebkitTextStroke: `0.5px ${c}` }}>
             {r.name}
           </h2>
+          {/* Nomornya disebut sebagai JENJANG KKNI, bukan "Rank 3": tier ini gamifikasi di
+              atas standar resmi, dan tanpa penyebutan itu pengguna (juga HRD) membacanya
+              sebagai peringkat karangan aplikasi. */}
           <p className="mt-1.5 text-sm text-slate-300">
-            <span className="font-semibold text-slate-200">Rank {level}</span>
+            <span className="font-semibold text-slate-200">{t("Setara KKNI Level {n}", { n: level })}</span>
             {rankInfo?.title ? <> · {rankInfo.title}</> : null}
             {rankInfo?.jobGroup ? <span className="text-slate-300"> · {rankInfo.jobGroup}</span> : null}
+          </p>
+          <p className="mt-0.5 text-[11px] text-slate-400">
+            {t("Kerangka Kualifikasi Nasional Indonesia - Perpres 8/2012")}
           </p>
 
           {rank?.boostedByEvidence && (
@@ -123,7 +131,7 @@ export default function RankHero({
             </p>
           </div>
 
-          {/* Ladder 9 tier */}
+          {/* Ladder tier - mulai Gold (KKNI 3), lihat lib/rank.js */}
           <div className="mt-5 flex items-center justify-center gap-1.5">
             {RANKS.map((x) => {
               const active = x.level === level;

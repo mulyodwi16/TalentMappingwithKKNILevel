@@ -1,8 +1,9 @@
-// Sistem "Skill Rank" (gamifikasi) - memetakan 9 jenjang internal (selaras KKNI) ke tier
-// ala esports. Cermin dari client/src/lib/rank.js. Jaga tetap sinkron.
+// Sistem "Skill Rank" (gamifikasi) di atas jenjang KKNI (Perpres 8/2012). Cermin dari
+// client/src/lib/rank.js - jaga tetap sinkron (dijaga server/tests/rank-sync.test.js).
+// `level` = NOMOR JENJANG KKNI, bukan nomor urut tier; daftarnya mulai 3 karena KKNI 1-2
+// setara SD/SMP (di bawah usia kerja) dan lantainya sudah dikunci `RANK_FLOOR`.
+export const KKNI_FLOOR = 3;
 export const RANKS = [
-  { level: 1, name: "Bronze" },
-  { level: 2, name: "Silver" },
   { level: 3, name: "Gold" },
   { level: 4, name: "Platinum" },
   { level: 5, name: "Emerald" },
@@ -15,8 +16,8 @@ export const RANKS = [
 export function rankName(level) {
   return RANKS.find((r) => r.level === level)?.name || "Unranked";
 }
-// mis. "Diamond (Rank 6)"
+// mis. "Diamond (KKNI 6)" - nomornya jenjang KKNI, bukan urutan tier.
 export function rankLabel(level) {
   const r = RANKS.find((x) => x.level === level);
-  return r ? `${r.name} (Rank ${r.level})` : "Unranked";
+  return r ? `${r.name} (KKNI ${r.level})` : "Unranked";
 }

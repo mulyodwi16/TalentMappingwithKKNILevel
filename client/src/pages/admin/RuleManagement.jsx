@@ -120,7 +120,7 @@ export default function RuleManagement() {
               <div>
                 <label className="text-sm font-medium text-slate-300 mb-1.5 block">{t("→ Prediksi Rank")}</label>
                 <select className="input" value={form.predictedLevel} onChange={(e) => upd("predictedLevel", parseInt(e.target.value))}>
-                  {[1,2,3,4,5,6,7,8,9].map((l) => <option key={l} value={l}>{rankName(l)} (Rank {l})</option>)}
+                  {[3,4,5,6,7,8,9].map((l) => <option key={l} value={l}>{rankName(l)} (KKNI {l})</option>)}
                 </select>
               </div>
               <div className="flex gap-3 pt-2">

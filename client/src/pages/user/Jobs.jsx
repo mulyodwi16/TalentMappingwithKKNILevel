@@ -18,8 +18,12 @@ function matchColor(score) {
 }
 
 // Status validasi sebuah skill terhadap invariant proyek: bukti sah = LULUS UJIAN.
+// `bridged` = tervalidasi juga, tapi lewat unit yang NAMANYA berbeda dari syarat posisi;
+// AI yang menjembatani istilahnya. Dibedakan warnanya supaya pengguna paham dari mana
+// pengakuannya datang - tetap hijau (sah), tapi dengan catatan unit sumbernya.
 const SKILL_STATUS = {
   validated: { label: "Tervalidasi", sub: "lulus ujian", Icon: ShieldCheck, color: "#10b981", chip: "bg-emerald-500/15 text-emerald-500" },
+  bridged:   { label: "Diakui lewat unit setara", sub: "lulus ujian unit terkait", Icon: ShieldCheck, color: "#10b981", chip: "bg-emerald-500/15 text-emerald-500" },
   claimed:   { label: "Terdeteksi CV/portofolio", sub: "menunggu validasi ujian", Icon: Clock, color: "#f59e0b", chip: "bg-amber-500/15 text-amber-500" },
   missing:   { label: "Belum ada bukti", sub: "pelajari & buktikan", Icon: XCircle, color: "#ef4444", chip: "bg-red-500/10 text-red-400" },
 };
@@ -63,9 +67,12 @@ function FulfillmentPlan({ job, onChanged }) {
   const [claimFor, setClaimFor] = useState(null);
   if (!m) return null;
   const claimNote = (skill) => (job.claims || []).find((c) => c.skill === skill)?.aiNote;
+  // Nama syarat yang diakui lewat unit setara → catatan unit sumbernya (dari matchJobDeep).
+  const bridgeInfo = new Map((m.bridged || []).map((b) => [b.skill, b]));
 
   const skillRow = (skill, status) => {
     const s = SKILL_STATUS[status];
+    const bridge = status === "bridged" ? bridgeInfo.get(skill) : null;
     return (
       <div key={skill} className="rounded-lg p-2.5" style={{ background: "var(--bg-raised)", border: "1px solid var(--border)" }}>
         <div className="flex items-center gap-2 flex-wrap">
@@ -73,6 +80,12 @@ function FulfillmentPlan({ job, onChanged }) {
           <span className="text-sm font-medium" style={{ color: "var(--text-base)" }}>{skill}</span>
           <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${s.chip}`}>{t(s.label)}</span>
         </div>
+        {bridge && (
+          <p className="text-[11px] mt-1 pl-6" style={{ color: "var(--text-4)" }}>
+            {t("Dipenuhi oleh unit:")} <b style={{ color: "var(--text-3)" }}>{bridge.unit}</b>
+            {bridge.note ? ` - ${bridge.note}` : ""}
+          </p>
+        )}
         {status === "claimed" && (
           <p className="text-[11px] mt-1 pl-6" style={{ color: "var(--text-4)" }}>
             {claimNote(skill) || t("Terindikasi dari CV/portofolio.")} <b style={{ color: s.color }}>{t("Lulus ujiannya agar kompetensi ini sah.")}</b>
@@ -126,9 +139,19 @@ function FulfillmentPlan({ job, onChanged }) {
           <Target className="w-3.5 h-3.5 text-brand-600" /> {t("Skill yang diminta ({a}/{b} tervalidasi)", { a: m.matchedSkills?.length || 0, b: job.skills.length })}
         </p>
         <div className="space-y-1.5">
-          {(m.matchedSkills || []).map((s) => skillRow(s, "validated"))}
-          {(m.claimedSkills || []).map((s) => skillRow(s, "claimed"))}
-          {(m.missingSkills || []).map((s) => skillRow(s, "missing"))}
+          {(() => {
+            // `matchedSkills` dari matchJobDeep memuat syarat asli DAN yang dijembatani AI.
+            // Pisahkan supaya yang setara-lewat-unit tampil dengan catatan sumbernya.
+            const bridgedSet = new Set((m.bridged || []).map((b) => b.skill));
+            const pure = (m.matchedSkills || []).filter((s) => !bridgedSet.has(s));
+            const bridged = (m.matchedSkills || []).filter((s) => bridgedSet.has(s));
+            return [
+              ...pure.map((s) => skillRow(s, "validated")),
+              ...bridged.map((s) => skillRow(s, "bridged")),
+              ...(m.claimedSkills || []).map((s) => skillRow(s, "claimed")),
+              ...(m.missingSkills || []).map((s) => skillRow(s, "missing")),
+            ];
+          })()}
         </div>
       </div>
 

@@ -15,6 +15,9 @@ import { chatComplete, isLlmConfigured } from "./llm.js";
 import { buildRankLadder, evaluateLadder } from "./unitrank.js";
 import { UNIT_MASTERY, FINAL_PASS_SCORE } from "./thresholds.js";
 import { once, setProgress } from "./inflight.js";
+// Nama tier per JENJANG KKNI - satu sumber di rank.js (dulu ada salinan ke-3 di sini,
+// termasuk Bronze/Silver yang tak pernah dipakai).
+import { rankName as rankNameKkni } from "./rank.js";
 
 // Kunci pekerjaan penyusunan AI. Dipakai DUA tempat: `once` di dalam fungsi penyusun, dan
 // pelacak status di rute. Keduanya WAJIB memakai kunci yang sama - kalau berbeda, rute akan
@@ -1103,7 +1106,6 @@ export async function unitStates(userId, docId) {
 // Tiap kompetensi punya "berat" berbeda: petani ≠ ahli pertanian. Bobot menentukan
 // rank MAKSIMAL yang bisa diraih dari lulus ujian kita (cegah overcapacity). Untuk
 // melampaui butuh bukti eksternal terverifikasi. Di-klasifikasi AI (cache), fallback heuristik.
-const RANK_NAMES = ["", "Bronze", "Silver", "Gold", "Platinum", "Emerald", "Diamond", "Master", "Grandmaster", "Legend"];
 
 function heuristicWeight(title, unitTitles) {
   const text = `${title} ${unitTitles.join(" ")}`.toLowerCase();
@@ -1119,7 +1121,7 @@ async function classifyWeightLlm(title, unitTitles) {
   const prompt =
     `Nilai TINGKAT KESULITAN/BOBOT kompetensi SKKNI berikut untuk menentukan RANK MAKSIMAL yang pantas ` +
     `bila seseorang menguasai SELURUH unitnya lewat ujian standar.\n` +
-    `Skala rank (9 tier): 3 Gold, 4 Platinum, 5 Emerald, 6 Diamond, 7 Master, 8 Grandmaster, 9 Legend.\n` +
+    `Skala rank = jenjang KKNI (mulai 3, jenjang usia kerja): 3 Gold, 4 Platinum, 5 Emerald, 6 Diamond, 7 Master, 8 Grandmaster, 9 Legend.\n` +
     `Pedoman: kompetensi OPERASIONAL/dasar (mis. editing video dasar, entri data) → maks 5-6. ` +
     `TEKNIS/menengah → 6-7. SPESIALIS/AHLI (mis. CG/VFX lanjutan, machine learning, bedah, arsitektur sistem) → 8-9.\n` +
     `Kompetensi: "${title}"\nUnit:\n${list}\n\n` +
@@ -1152,4 +1154,4 @@ export async function ensureCompetencyWeight(docId) {
   });
 }
 
-export function rankNameOf(level) { return RANK_NAMES[level] || "Unranked"; }
+export function rankNameOf(level) { return rankNameKkni(level); }

@@ -27,7 +27,7 @@ function steps(name, t) {
     {
       art: "dashboard", Icon: LayoutDashboard, color: "from-brand-600 to-brand-400",
       title: t("Dashboard - Panggung Rank"),
-      body: t("Skill Rank kamu ditonjolkan ala main-menu game ranked: emblem, progres menuju rank berikutnya, ladder 9 tier, dan statistik (unit lulus, sertifikat, kesiapan). Saat kamu naik rank, ada animasi perayaan."),
+      body: t("Skill Rank kamu ditonjolkan ala main-menu game ranked: emblem, progres menuju rank berikutnya, ladder tier KKNI, dan statistik (unit lulus, sertifikat, kesiapan). Saat kamu naik rank, ada animasi perayaan."),
       tip: t("Klaim Bonus Login Harian & kerjakan Course Harian di sini untuk kumpulkan Koin."),
       href: "/app/dashboard", hrefLabel: t("Buka Dashboard"),
     },
@@ -99,9 +99,10 @@ function steps(name, t) {
 // Penjelasan cara kerja sistem inti (permintaan #6): skoring, ranking, AI, validasi.
 const SYSTEMS = [
   {
-    Icon: Trophy, color: "#a855f7", title: "Skill Rank (Bronze → Legend)",
+    Icon: Trophy, color: "#a855f7", title: "Skill Rank (Gold → Legend, setara KKNI 3-9)",
     points: [
-      "9 tier: Bronze, Silver, Gold, Platinum, Emerald, Diamond, Master, Grandmaster, Legend.",
+      "Tiap tier setara satu jenjang KKNI (Perpres 8/2012 - ada 9 jenjang): Gold = KKNI 3, Platinum = 4, Emerald = 5, Diamond = 6, Master = 7, Grandmaster = 8, Legend = 9.",
+      "Tangga mulai dari Gold (KKNI 3) - jenjang usia kerja. KKNI 1-2 (SD/SMP) memang ada di standar, tapi tidak dipakai platform ini.",
       "Rank ditentukan KOMPETENSI yang dibuktikan - bukan ijazah. Lulusan SMK terampil bisa menyalip S3.",
       "Pendidikan hanya jadi titik awal; rank efektif = nilai tertinggi dari titik awal, kompetensi, & bukti.",
     ],

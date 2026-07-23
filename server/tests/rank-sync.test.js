@@ -1,8 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { RANKS, rankName, rankLabel } from "../rank.js";
-import { RANKS as RANKS_KLIEN, rankName as rankNameKlien } from "../../client/src/lib/rank.js";
+import { RANKS, rankName, rankLabel, KKNI_FLOOR } from "../rank.js";
+import { RANKS as RANKS_KLIEN, rankName as rankNameKlien, KKNI_FLOOR as KKNI_FLOOR_KLIEN,
+  rankLabel as rankLabelKlien } from "../../client/src/lib/rank.js";
 import { EARNED_FLOOR, MAX_RANK } from "../unitrank.js";
+import { RANK_FLOOR } from "../onboarding.js";
 
 // `client/src/lib/rank.js` dan `server/rank.js` adalah dua salinan daftar tier yang sama.
 // Selama ini keduanya dijaga sinkron hanya lewat catatan "jaga tetap sinkron" di komentar.
@@ -20,8 +22,37 @@ test("rankName memberi nama yang sama di kedua sisi", () => {
   for (const r of RANKS) assert.equal(rankName(r.level), rankNameKlien(r.level));
 });
 
-test("level 1..9 berurutan tanpa lompatan", () => {
-  assert.deepEqual(RANKS.map((r) => r.level), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+test("tangga mulai KKNI 3 sampai 9, berurutan tanpa lompatan", () => {
+  // KKNI 1-2 (SD/SMP) sengaja tidak ada: di bawah usia kerja, dan lantai sistem memang
+  // sudah dikunci di 3. Kalau keduanya dikembalikan, pengguna melihat dua tier yang
+  // mustahil ditapaki dan mengira dirinya memulai jauh dari bawah.
+  assert.deepEqual(RANKS.map((r) => r.level), [3, 4, 5, 6, 7, 8, 9]);
+});
+
+test("lantai tangga sama di keempat tempat yang mendefinisikannya", () => {
+  // KKNI_FLOOR (tampilan) harus sejalan dengan RANK_FLOOR (seed pendidikan) dan
+  // EARNED_FLOOR (tangga unit). Kalau salah satu bergeser sendiri, akan ada rank yang
+  // bisa dihitung tapi tak punya nama - atau nama yang tak pernah bisa diraih.
+  assert.equal(KKNI_FLOOR, 3);
+  assert.equal(KKNI_FLOOR_KLIEN, KKNI_FLOOR, "KKNI_FLOOR klien & server berbeda");
+  assert.equal(RANK_FLOOR, KKNI_FLOOR, "RANK_FLOOR (onboarding) tak sejalan");
+  assert.equal(EARNED_FLOOR, KKNI_FLOOR, "EARNED_FLOOR (tangga unit) tak sejalan");
+  assert.equal(Math.min(...RANKS.map((r) => r.level)), KKNI_FLOOR);
+});
+
+test("label rank menyebut jenjang KKNI, bukan nomor urut tier", () => {
+  // Permintaan tim: gamifikasinya boleh, tapi sumbernya harus tetap terbaca. "Rank 3"
+  // terbaca sebagai tier ketiga; padahal angkanya adalah jenjang KKNI.
+  assert.match(rankLabel(3), /KKNI 3/);
+  assert.match(rankLabelKlien(3), /KKNI 3/);
+  assert.doesNotMatch(rankLabel(6), /Rank 6/);
+  assert.doesNotMatch(rankLabelKlien(6), /Rank 6/);
+});
+
+test("jenjang di bawah usia kerja tidak punya nama tier", () => {
+  for (const l of [1, 2]) {
+    assert.equal(rankName(l), "Unranked", `KKNI ${l} seharusnya tak dipakai platform ini`);
+  }
 });
 
 test("nama tier unik - dua tier bernama sama akan membingungkan di mana pun", () => {

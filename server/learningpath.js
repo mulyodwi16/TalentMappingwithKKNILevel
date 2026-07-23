@@ -273,7 +273,7 @@ async function generateWithLlm(inputs) {
   const context =
     `PROFIL PENGGUNA:\n` +
     `- Nama: ${inputs.user.name} · Pendidikan: ${inputs.user.education || inputs.user.academicStatus || "-"} · Pengalaman: ${inputs.user.experienceYears} tahun\n` +
-    `- Skill Rank SAAT INI: ${inputs.rank.currentName} (Rank ${inputs.rank.current}) → TARGET: ${inputs.rank.targetName} (Rank ${inputs.rank.target})\n` +
+    `- Skill Rank SAAT INI: ${inputs.rank.currentName} (setara KKNI ${inputs.rank.current}) → TARGET: ${inputs.rank.targetName} (KKNI ${inputs.rank.target})\n` +
     `- Skor Kesiapan: ${inputs.readiness.total}/100 (CV ${inputs.readiness.cv}, Ujian ${inputs.readiness.exam}, Sertifikat ${inputs.readiness.cert}) · status ${inputs.readiness.status}\n` +
     `- PROFESI DITARGETKAN: ${inputs.user.targetRole || "(belum diisi - simpulkan dari kompetensi)"}\n` +
     `- Tingkat kesulitan dasar yang pas: ${inputs.baseDifficulty}\n\n` +

@@ -1,8 +1,15 @@
-// Sistem "Skill Rank" (gamifikasi) - memetakan 9 jenjang internal ke tier ala esports.
-// Struktur 9-level tetap SELARAS KKNI di dalam; ini murni lapisan tampilan (display).
+// Sistem "Skill Rank" (gamifikasi) di atas jenjang KKNI (Perpres 8/2012).
+// `level` di sini BUKAN nomor urut tier - ia adalah NOMOR JENJANG KKNI yang disetarakan.
+// Karena itu daftarnya mulai dari 3, bukan 1, dan label selalu menyebut "KKNI <n>":
+// tanpa itu pengguna membaca "Rank 3" sebagai tier ketiga dan kehilangan asal-usulnya.
+//
+// KKNI 1-2 SENGAJA TIDAK ADA. Keduanya setara jenjang SD/SMP - di bawah usia kerja,
+// sedangkan pengguna produk ini paling rendah lulusan SMA/SMK. Lantainya memang sudah
+// terkunci di 3 (`RANK_FLOOR` di server/onboarding.js & `EARNED_FLOOR` di unitrank.js),
+// jadi dua tier itu tak pernah bisa ditapaki siapa pun - memajangnya hanya membuat
+// tangga terlihat panjang lalu pengguna mengira dirinya memulai dari bawah sekali.
+export const KKNI_FLOOR = 3;   // WAJIB sama dengan RANK_FLOOR/EARNED_FLOOR di server
 export const RANKS = [
-  { level: 1, name: "Bronze",      color: "#b8763e" },
-  { level: 2, name: "Silver",      color: "#9aa4b2" },
   { level: 3, name: "Gold",        color: "#e0b400" },
   { level: 4, name: "Platinum",    color: "#2dd4bf" },
   { level: 5, name: "Emerald",     color: "#10b981" },
@@ -18,10 +25,11 @@ export function rankOf(level) {
 export function rankName(level) {
   return rankOf(level)?.name || "-";
 }
-// mis. "Gold · Rank 3"
+// mis. "Gold · KKNI 3". Nomornya SELALU disebut sebagai jenjang KKNI, bukan "Rank 3" -
+// itu permintaan tim: gamifikasinya boleh, tapi sumbernya harus tetap terbaca.
 export function rankLabel(level) {
   const r = rankOf(level);
-  return r ? `${r.name} · Rank ${r.level}` : "Belum ada rank";
+  return r ? `${r.name} · KKNI ${r.level}` : "Belum ada rank";
 }
 export function rankColor(level) {
   return rankOf(level)?.color || "#94a3b8";
