@@ -3,8 +3,8 @@ import express from "express";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import cors from "cors";
-import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import { securityHeaders } from "./security.js";
 import { prisma } from "./prisma.js";
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/user.js";
@@ -25,15 +25,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Izinkan aplikasi di-embed sebagai iframe di situs lain (Canvas/eJourney kolega).
-// frameguard:false → hapus X-Frame-Options (yang tak bisa whitelist banyak domain).
-// CORP cross-origin → aset (JS/CSS) tetap termuat saat di-embed lintas-origin.
-app.use(helmet({
-  contentSecurityPolicy: false,
-  frameguard: false,
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-  crossOriginOpenerPolicy: false,
-}));
+// Header keamanan + alasan tiap pilihannya ada di security.js (dipisah agar bisa diuji).
+app.use(securityHeaders());
 // Kontrol SIAPA yang boleh nge-embed via CSP frame-ancestors. Kosong = izinkan semua.
 // Set FRAME_ANCESTORS (dipisah koma, mis. "https://canvas.univ.ac.id") untuk mengunci.
 const FRAME_ANCESTORS = (process.env.FRAME_ANCESTORS || "").split(",").map((s) => s.trim()).filter(Boolean);
