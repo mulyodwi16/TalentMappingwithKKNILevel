@@ -53,6 +53,11 @@ export default function RankLadder({ rank, compact = false }) {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold flex items-center gap-1.5" style={{ color }}>
                     {rankName(s.level)}
+                    {/* Tangga ini justru tempat paling tepat menyebut jenjangnya: di sinilah
+                        pengguna melihat urutannya, jadi asal-usul angkanya harus terbaca. */}
+                    <span className="text-[10px] font-medium" style={{ color: "var(--text-4)" }}>
+                      {t("setara level KKNI {n}", { n: s.level })}
+                    </span>
                     {reached && <Check className="w-3.5 h-3.5 text-emerald-500" />}
                     {s.level === earned && (
                       <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"

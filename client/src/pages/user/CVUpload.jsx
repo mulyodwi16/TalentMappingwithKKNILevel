@@ -98,6 +98,7 @@ export default function CVUpload() {
               <RankIcon level={shown.predictedLevel} size={84} title={rankName(shown.predictedLevel)} />
               <div className="min-w-0">
                 <p className="text-xl font-bold" style={{ color: rankColor(shown.predictedLevel) }}>{rankName(shown.predictedLevel)}</p>
+                <p className="text-xs" style={{ color: "var(--text-4)" }}>{t("setara level KKNI {n}", { n: shown.predictedLevel })}</p>
                 <p className="text-sm" style={{ color: "var(--text-3)" }}>{shown.levelInfo?.title}</p>
                 <p className="text-xs mt-0.5" style={{ color: "var(--text-4)" }}>{shown.levelInfo?.jobGroup}</p>
               </div>

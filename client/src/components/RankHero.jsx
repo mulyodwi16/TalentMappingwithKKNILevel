@@ -88,7 +88,7 @@ export default function RankHero({
               atas standar resmi, dan tanpa penyebutan itu pengguna (juga HRD) membacanya
               sebagai peringkat karangan aplikasi. */}
           <p className="mt-1.5 text-sm text-slate-300">
-            <span className="font-semibold text-slate-200">{t("Setara KKNI Level {n}", { n: level })}</span>
+            <span className="font-semibold text-slate-200">{t("setara level KKNI {n}", { n: level })}</span>
             {rankInfo?.title ? <> · {rankInfo.title}</> : null}
             {rankInfo?.jobGroup ? <span className="text-slate-300"> · {rankInfo.jobGroup}</span> : null}
           </p>

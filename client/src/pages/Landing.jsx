@@ -145,7 +145,7 @@ export default function Landing() {
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <h2 style={{ textAlign: "center", fontSize: "clamp(1.6rem,3vw,2.2rem)", fontWeight: 800, marginBottom: 8 }}>{t("Skill Rank Selaras KKNI")}</h2>
           <p style={{ textAlign: "center", fontSize: 14, opacity: 0.8, marginBottom: 40, maxWidth: 640, marginLeft: "auto", marginRight: "auto" }}>
-            {t("KKNI punya 9 jenjang (Perpres 8/2012). TalentaAI mulai dari Gold (KKNI 3) - jenjang usia kerja; KKNI 1-2 (SD/SMP) tidak dipakai.")}
+            {t("Tiap tier setara satu jenjang KKNI (Perpres 8/2012). Perjalananmu dimulai dari Gold, jenjang yang setara lulusan SMA/SMK - usia standar masuk dunia kerja.")}
           </p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(100px,1fr))", gap: 12 }}>
             {LEVELS.map(({ n, edu }) => (

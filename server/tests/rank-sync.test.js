@@ -1,10 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { RANKS, rankName, rankLabel, KKNI_FLOOR } from "../rank.js";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import { RANKS, rankName, rankLabel, KKNI_FLOOR, KKNI_TERM } from "../rank.js";
 import { RANKS as RANKS_KLIEN, rankName as rankNameKlien, KKNI_FLOOR as KKNI_FLOOR_KLIEN,
-  rankLabel as rankLabelKlien } from "../../client/src/lib/rank.js";
+  rankLabel as rankLabelKlien, KKNI_TERM as KKNI_TERM_KLIEN } from "../../client/src/lib/rank.js";
 import { EARNED_FLOOR, MAX_RANK } from "../unitrank.js";
 import { RANK_FLOOR } from "../onboarding.js";
+
+const here = dirname(fileURLToPath(import.meta.url));
 
 // `client/src/lib/rank.js` dan `server/rank.js` adalah dua salinan daftar tier yang sama.
 // Selama ini keduanya dijaga sinkron hanya lewat catatan "jaga tetap sinkron" di komentar.
@@ -76,5 +81,44 @@ test("level di luar rentang tidak melempar, hanya tak dikenali", () => {
 test("setiap tier klien punya warna - dipakai emblem & bingkai sertifikat", () => {
   for (const r of RANKS_KLIEN) {
     assert.match(r.color, /^#[0-9a-f]{6}$/i, `warna tier ${r.name} tidak valid`);
+  }
+});
+
+// ── Frasa penyebutan jenjang: SATU bentuk di semua fitur ────────────────────
+// Permintaan tim: gamifikasi boleh, tapi tiap angka rank harus terbaca sebagai jenjang
+// KKNI. Sempat ada tiga bentuk berbeda ("Setara KKNI Level 6", "· KKNI 6", "(KKNI 6)")
+// untuk angka yang sama - pengguna membacanya sebagai tiga hal berbeda.
+
+test("frasa jenjang sama persis di klien & server", () => {
+  assert.equal(KKNI_TERM(6), "setara level KKNI 6");
+  assert.equal(KKNI_TERM_KLIEN(6), KKNI_TERM(6), "frasa klien & server berbeda");
+});
+
+test("tak ada varian penulisan jenjang yang tercecer di teks pengguna", () => {
+  const src = join(here, "../../client/src");
+  const berkas = [
+    "components/RankHero.jsx", "components/RankBadge.jsx", "components/RankLadder.jsx",
+    "components/TierSection.jsx", "pages/user/CVUpload.jsx", "pages/user/Profile.jsx",
+    "pages/hrd/JobBoard.jsx", "pages/admin/QuestionBank.jsx", "pages/admin/RuleManagement.jsx",
+  ];
+  for (const f of berkas) {
+    const isi = readFileSync(join(src, f), "utf8")
+      .split("\n").filter((l) => !l.trim().startsWith("//") && !l.trim().startsWith("*")).join("\n");
+    assert.doesNotMatch(isi, /Setara KKNI Level/, `${f}: pakai "setara level KKNI {n}"`);
+    assert.doesNotMatch(isi, /· KKNI \$?\{/, `${f}: pakai frasa lengkap, bukan "· KKNI n"`);
+    assert.doesNotMatch(isi, /\(KKNI \{/, `${f}: pakai frasa lengkap, bukan "(KKNI n)"`);
+    assert.doesNotMatch(isi, /Rank \{(r|s)\.level\}|\(Rank \{/, `${f}: nomor rank = jenjang KKNI, bukan "Rank n"`);
+  }
+});
+
+test("catatan bergaya-internal tidak bocor ke teks pengguna", () => {
+  // "KKNI 1-2 tidak dipakai" menjelaskan keputusan INTERNAL, bukan hal yang perlu dipikirkan
+  // pengguna - dan menyebut sesuatu yang tak ada justru memunculkan pertanyaan baru.
+  // Penjelasan yang benar berbentuk positif: mulai dari jenjang usia kerja.
+  const src = join(here, "../../client/src");
+  for (const f of ["pages/Landing.jsx", "components/HelpButton.jsx", "components/RankHero.jsx"]) {
+    const isi = readFileSync(join(src, f), "utf8")
+      .split("\n").filter((l) => !l.trim().startsWith("//") && !l.trim().startsWith("*")).join("\n");
+    assert.doesNotMatch(isi, /tidak dipakai|tak dipakai|TIDAK dipakai/, `${f}: jelaskan lantai tangga secara positif`);
   }
 });

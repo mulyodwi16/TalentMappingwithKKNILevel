@@ -25,11 +25,17 @@ export function rankOf(level) {
 export function rankName(level) {
   return rankOf(level)?.name || "-";
 }
-// mis. "Gold · KKNI 3". Nomornya SELALU disebut sebagai jenjang KKNI, bukan "Rank 3" -
-// itu permintaan tim: gamifikasinya boleh, tapi sumbernya harus tetap terbaca.
+// SATU frasa baku untuk menyebut jenjang: "setara level KKNI 6".
+// Dipakai di SEMUA fitur supaya pengguna tak menemui tiga cara penulisan berbeda untuk
+// angka yang sama. Di komponen React tulis `t("setara level KKNI {n}", { n })` agar ikut
+// diterjemahkan - helper ini untuk tempat yang tak punya akses `t`.
+export const KKNI_TERM = (level) => `setara level KKNI ${level}`;
+
+// mis. "Gold · setara level KKNI 3". Nomornya SELALU disebut sebagai jenjang KKNI, bukan
+// "Rank 3" - itu permintaan tim: gamifikasinya boleh, tapi sumbernya harus tetap terbaca.
 export function rankLabel(level) {
   const r = rankOf(level);
-  return r ? `${r.name} · KKNI ${r.level}` : "Belum ada rank";
+  return r ? `${r.name} · ${KKNI_TERM(r.level)}` : "Belum ada rank";
 }
 export function rankColor(level) {
   return rankOf(level)?.color || "#94a3b8";

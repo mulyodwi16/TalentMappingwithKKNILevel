@@ -101,8 +101,8 @@ const SYSTEMS = [
   {
     Icon: Trophy, color: "#a855f7", title: "Skill Rank (Gold → Legend, setara KKNI 3-9)",
     points: [
-      "Tiap tier setara satu jenjang KKNI (Perpres 8/2012 - ada 9 jenjang): Gold = KKNI 3, Platinum = 4, Emerald = 5, Diamond = 6, Master = 7, Grandmaster = 8, Legend = 9.",
-      "Tangga mulai dari Gold (KKNI 3) - jenjang usia kerja. KKNI 1-2 (SD/SMP) memang ada di standar, tapi tidak dipakai platform ini.",
+      "Tiap tier setara satu jenjang KKNI (Perpres 8/2012): Gold = setara level KKNI 3, Platinum = 4, Emerald = 5, Diamond = 6, Master = 7, Grandmaster = 8, Legend = 9.",
+      "Perjalanan dimulai dari Gold - jenjang yang setara lulusan SMA/SMK, usia standar masuk dunia kerja.",
       "Rank ditentukan KOMPETENSI yang dibuktikan - bukan ijazah. Lulusan SMK terampil bisa menyalip S3.",
       "Pendidikan hanya jadi titik awal; rank efektif = nilai tertinggi dari titik awal, kompetensi, & bukti.",
     ],

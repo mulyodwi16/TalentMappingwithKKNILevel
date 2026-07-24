@@ -564,7 +564,7 @@ function EditableIdentity({ profile, onSaved, compact = false }) {
           <Field label={t("Target Rank")}>
             <select className="input text-sm" value={form.targetKkniLevel} onChange={(e) => setForm({ ...form, targetKkniLevel: e.target.value })}>
               <option value="">{t("- tidak diset -")}</option>
-              {RANKS.map((r) => <option key={r.level} value={r.level}>{r.name} (KKNI {r.level})</option>)}
+              {RANKS.map((r) => <option key={r.level} value={r.level}>{r.name} ({t("setara level KKNI {n}", { n: r.level })})</option>)}
             </select>
           </Field>
         </div>

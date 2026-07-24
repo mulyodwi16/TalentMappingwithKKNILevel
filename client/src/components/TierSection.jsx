@@ -35,6 +35,7 @@ export function TierHeader({ tier, total, passed, locked }) {
     <div className="flex items-center gap-2.5 flex-wrap">
       <RankIcon level={tier} size={26} title={rankName(tier)} />
       <h3 className="text-sm font-bold" style={{ color: col }}>{rankName(tier)}</h3>
+      <span className="text-[11px]" style={{ color: "var(--text-4)" }}>{t("setara level KKNI {n}", { n: tier })}</span>
       <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: "var(--bg-muted)", color: "var(--text-4)" }}>
         {t("{a}/{b} dikuasai", { a: passed, b: total })}
       </span>

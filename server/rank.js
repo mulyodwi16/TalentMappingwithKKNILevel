@@ -16,8 +16,11 @@ export const RANKS = [
 export function rankName(level) {
   return RANKS.find((r) => r.level === level)?.name || "Unranked";
 }
-// mis. "Diamond (KKNI 6)" - nomornya jenjang KKNI, bukan urutan tier.
+// Frasa baku penyebutan jenjang - cermin `KKNI_TERM` di client/src/lib/rank.js.
+export const KKNI_TERM = (level) => `setara level KKNI ${level}`;
+
+// mis. "Diamond (setara level KKNI 6)" - nomornya jenjang KKNI, bukan urutan tier.
 export function rankLabel(level) {
   const r = RANKS.find((x) => x.level === level);
-  return r ? `${r.name} (KKNI ${r.level})` : "Unranked";
+  return r ? `${r.name} (${KKNI_TERM(r.level)})` : "Unranked";
 }
